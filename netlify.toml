@@ -1,0 +1,33 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Environment variables for Netlify
+[context.production.environment]
+  VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
+  VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
+
+[context.deploy-preview.environment]
+  VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
+  VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
+
+[context.branch-deploy.environment]
+  VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
+  VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"

@@ -1,13 +1,6 @@
-// src/destinations/DestinationCard.jsx
-import React, { useState } from 'react';
+import React from 'react';
 
 const DestinationCard = ({ destination, onSelectDestination }) => {
-  const [imageError, setImageError] = useState(false);
-
-  const handleImageError = () => {
-    setImageError(true);
-  };
-
   return (
     <div 
       className="card h-100 shadow-sm" 
@@ -21,7 +14,6 @@ const DestinationCard = ({ destination, onSelectDestination }) => {
           alt={destination.name} 
           className="card-img-top h-100 w-100"
           style={{ objectFit: 'cover' }}
-          onError={handleImageError}
         />
       </div>
       <div className="card-body text-center d-flex align-items-center justify-content-center">

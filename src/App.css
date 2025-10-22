@@ -430,6 +430,27 @@
   min-height: 100vh;
 }
 
+/* Ensure all images maintain quality and proper sizing */
+img {
+  object-fit: cover;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  max-width: 100%;
+  height: auto;
+}
+
+/* For background images in sliders */
+.slider-image {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Prevent blurry images on zoom/scale */
+.image-container img {
+  image-rendering: high-quality;
+}
+
 .main-content-area {
   flex: 1;
   overflow-y: auto;

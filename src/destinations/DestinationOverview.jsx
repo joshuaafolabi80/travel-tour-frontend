@@ -1,4 +1,3 @@
-// src/destinations/DestinationOverview.jsx
 import React, { useState } from 'react';
 
 const FAQItem = ({ faq }) => {

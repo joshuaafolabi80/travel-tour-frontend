@@ -1,4 +1,4 @@
-// src/App.jsx - COMPLETE FIXED VERSION WITHOUT ROUTER
+// src/App.jsx - COMPLETE FIXED VERSION WITH INTEGRATED NAVIGATION
 import React, { useState, useEffect } from 'react';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { jwtDecode } from 'jwt-decode';
@@ -377,44 +377,99 @@ const App = () => {
     setShowSplash(true); 
   };
 
+  // FIXED: Enhanced destination selection with better error handling and fallback routes
   const handleSelectDestination = async (destinationId) => {
+    console.log('📍 Selecting destination:', destinationId);
     setCurrentPage('loading');
+    
     try {
-      const response = await api.get(`/courses/${destinationId}`);
-      if (response.data.success) {
+      // Try the new route first for better destination lookup
+      const response = await api.get(`/courses/destination/${destinationId}`);
+      
+      if (response.data.success && response.data.course) {
+        console.log('✅ Course found via destination route:', response.data.course.name);
         setSelectedCourse(response.data.course);
         setCurrentPage('destination-overview');
       } else {
+        console.log('❌ Course not found in response');
         setAlert({ type: 'error', message: 'Could not find course details.' });
         setCurrentPage('destinations');
       }
     } catch (error) {
-      console.error('Error fetching course:', error);
-      setAlert({ type: 'error', message: 'Failed to fetch course data.' });
+      console.error('❌ Error with destination route, trying fallback:', error);
+      
+      // Fallback to the original route
+      try {
+        const fallbackResponse = await api.get(`/courses/${destinationId}`);
+        
+        if (fallbackResponse.data.success && fallbackResponse.data.course) {
+          console.log('✅ Course found via fallback route:', fallbackResponse.data.course.name);
+          setSelectedCourse(fallbackResponse.data.course);
+          setCurrentPage('destination-overview');
+        } else {
+          throw new Error('Course not found in fallback response');
+        }
+      } catch (fallbackError) {
+        console.error('❌ Both routes failed:', fallbackError);
+        
+        // More specific error handling
+        if (fallbackError.response?.status === 404) {
+          setAlert({ type: 'error', message: `Course "${destinationId}" not found. Please try another destination.` });
+        } else if (fallbackError.response?.status === 500) {
+          setAlert({ type: 'error', message: 'Server error while fetching course. Please try again.' });
+        } else {
+          setAlert({ type: 'error', message: 'Failed to fetch course data. Please check your connection.' });
+        }
+        
+        setCurrentPage('destinations');
+      }
+    }
+  };
+
+  // FIXED: Enhanced start course function with validation
+  const handleStartCourse = () => {
+    if (selectedCourse) {
+      console.log('🚀 Starting course:', selectedCourse.name);
+      setCurrentPage('full-course-content');
+    } else {
+      console.error('❌ No course selected to start');
+      setAlert({ type: 'error', message: 'No course selected. Please select a course first.' });
       setCurrentPage('destinations');
     }
   };
 
-  const handleStartCourse = () => {
-    setCurrentPage('full-course-content');
-  };
-
-  const handleQuizComplete = () => {
+  // FIXED: Enhanced quiz completion with proper navigation
+  const handleQuizComplete = (score, answers) => {
+    console.log('🎉 Quiz completed with score:', score);
     setCurrentPage('quiz-scores');
   };
 
+  // FIXED: Enhanced quiz start function
   const handleTakeQuiz = () => {
-    setCurrentPage('quiz-platform');
+    if (selectedCourse) {
+      console.log('🧠 Starting quiz for course:', selectedCourse.name);
+      setCurrentPage('quiz-platform');
+    } else {
+      console.error('❌ No course selected for quiz');
+      setAlert({ type: 'error', message: 'No course selected. Please select a course first.' });
+      setCurrentPage('destinations');
+    }
   };
 
   const toggleMenu = () => {
     setShowMenu(!showMenu);
   };
 
+  // FIXED: Enhanced navigation with better logging
   const navigateTo = (page) => {
     console.log('📍 Navigating to:', page);
     setCurrentPage(page);
     setShowMenu(false);
+    
+    // Clear any existing alerts when navigating
+    if (alert.message) {
+      setAlert({ type: '', message: '' });
+    }
   };
 
   const renderNotificationBadge = (count) => {

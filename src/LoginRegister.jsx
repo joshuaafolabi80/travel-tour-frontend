@@ -114,7 +114,7 @@ const LoginRegister = ({ onLogin, onRegister }) => {
               <form onSubmit={handleSubmit}>
                 {!isLogin && (
                   <div className="mb-3">
-                    <label htmlFor="username" className="form-label">Username</label>
+                    <label htmlFor="username" className="form-label">Name and Surname</label>
                     <input
                       type="text"
                       className="form-control"
@@ -123,7 +123,7 @@ const LoginRegister = ({ onLogin, onRegister }) => {
                       value={formData.username}
                       onChange={handleInputChange}
                       required={!isLogin}
-                      placeholder="Enter your username"
+                      placeholder="Enter your Name and Surname"
                     />
                   </div>
                 )}

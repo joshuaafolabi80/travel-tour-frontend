@@ -1,4 +1,4 @@
-// src/App.jsx - COMPLETE FIXED VERSION WITH INTEGRATED NAVIGATION
+// src/App.jsx - COMPLETE INTEGRATED VERSION WITH VIDEO COURSES
 import React, { useState, useEffect } from 'react';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { jwtDecode } from 'jwt-decode';
@@ -25,6 +25,10 @@ import MasterclassCourseQuestions from './components/MasterclassCourseQuestions'
 import QuizAttempt from './components/QuizAttempt';
 import AdminCommunityTab from './components/AdminCommunityTab';
 import UserCommunityTab from './components/UserCommunityTab';
+// 🚨 ADDED: Video Components
+import VideoCourses from './components/VideoCourses';
+import MasterclassVideos from './components/MasterclassVideos';
+import AdminVideoCourses from './components/AdminVideoCourses';
 import './App.css';
 
 // Reusable Slider Component for both Splash Screen and Home Page
@@ -130,7 +134,10 @@ const App = () => {
     quizCompleted: 0,
     courseCompleted: 0,
     manageCourses: 0,
-    messagesFromStudents: 0
+    messagesFromStudents: 0,
+    videoCourses: 0, // 🚨 ADDED: Video courses notification count
+    generalVideos: 0, // 🚨 ADDED: General videos count
+    masterclassVideos: 0 // 🚨 ADDED: Masterclass videos count
   });
 
   const validateToken = (token) => {
@@ -157,6 +164,21 @@ const App = () => {
         const oneHour = 60 * 60 * 1000;
         
         const updatedCounts = { ...response.data.counts };
+
+        // 🚨 ADDED: Fetch video counts for both students and admin
+        try {
+          const videoCountsResponse = await api.get('/videos/count');
+          if (videoCountsResponse.data.success) {
+            updatedCounts.generalVideos = videoCountsResponse.data.generalVideos || 0;
+            updatedCounts.masterclassVideos = videoCountsResponse.data.masterclassVideos || 0;
+            updatedCounts.videoCourses = updatedCounts.generalVideos + updatedCounts.masterclassVideos;
+          }
+        } catch (videoError) {
+          console.error('Error fetching video counts:', videoError);
+          updatedCounts.generalVideos = 0;
+          updatedCounts.masterclassVideos = 0;
+          updatedCounts.videoCourses = 0;
+        }
 
         if (userRole === 'student') {
           try {
@@ -206,7 +228,10 @@ const App = () => {
         adminMessages: 0,
         quizCompleted: 0,
         courseCompleted: 0,
-        messagesFromStudents: 0
+        messagesFromStudents: 0,
+        videoCourses: 0,
+        generalVideos: 0,
+        masterclassVideos: 0
       });
     }
   };
@@ -286,6 +311,19 @@ const App = () => {
     }
     return () => clearInterval(interval);
   }, [isLoggedIn, userData, userRole]);
+
+  // 🚨 ADDED: Listen for video count updates
+  useEffect(() => {
+    const handleVideoCountsUpdate = () => {
+      fetchNotificationCounts();
+    };
+
+    window.addEventListener('videoCountsUpdated', handleVideoCountsUpdate);
+    
+    return () => {
+      window.removeEventListener('videoCountsUpdated', handleVideoCountsUpdate);
+    };
+  }, []);
 
   const handleStartClick = () => {
     setShowSplash(false);
@@ -377,7 +415,7 @@ const App = () => {
     setShowSplash(true); 
   };
 
-  // FIXED: Enhanced destination selection with better error handling and fallback routes
+  // FIXED: Enhanced destination selection with better error handling
   const handleSelectDestination = async (destinationId) => {
     console.log('📍 Selecting destination:', destinationId);
     setCurrentPage('loading');
@@ -426,7 +464,7 @@ const App = () => {
     }
   };
 
-  // FIXED: Enhanced start course function with validation
+  // FIXED: Enhanced start course function
   const handleStartCourse = () => {
     if (selectedCourse) {
       console.log('🚀 Starting course:', selectedCourse.name);
@@ -438,38 +476,22 @@ const App = () => {
     }
   };
 
-  // FIXED: Enhanced quiz completion with proper navigation
-  const handleQuizComplete = (score, answers) => {
-    console.log('🎉 Quiz completed with score:', score);
+  const handleQuizComplete = () => {
     setCurrentPage('quiz-scores');
   };
 
-  // FIXED: Enhanced quiz start function
   const handleTakeQuiz = () => {
-    if (selectedCourse) {
-      console.log('🧠 Starting quiz for course:', selectedCourse.name);
-      setCurrentPage('quiz-platform');
-    } else {
-      console.error('❌ No course selected for quiz');
-      setAlert({ type: 'error', message: 'No course selected. Please select a course first.' });
-      setCurrentPage('destinations');
-    }
+    setCurrentPage('quiz-platform');
   };
 
   const toggleMenu = () => {
     setShowMenu(!showMenu);
   };
 
-  // FIXED: Enhanced navigation with better logging
   const navigateTo = (page) => {
     console.log('📍 Navigating to:', page);
     setCurrentPage(page);
     setShowMenu(false);
-    
-    // Clear any existing alerts when navigating
-    if (alert.message) {
-      setAlert({ type: '', message: '' });
-    }
   };
 
   const renderNotificationBadge = (count) => {
@@ -511,6 +533,14 @@ const App = () => {
       notificationKey: 'masterclassCourses',
       notification: notificationCounts.masterclassCourses,
       action: () => navigateTo('masterclass-courses')
+    },
+    // 🚨 UPDATED: Video Courses with superscript count
+    { 
+      name: "Video Courses", 
+      icon: "fas fa-video",
+      notificationKey: 'videoCourses',
+      notification: notificationCounts.videoCourses,
+      action: () => navigateTo('video-courses')
     },
     { 
       name: "Important Information", 
@@ -586,6 +616,14 @@ const App = () => {
       notificationKey: 'manageCourses',
       notification: notificationCounts.manageCourses,
       action: () => navigateTo('admin-manage-courses')
+    },
+    // 🚨 UPDATED: Video Courses for admin with total video count
+    { 
+      name: "Video Courses", 
+      icon: "fas fa-video",
+      notificationKey: 'videoCourses',
+      notification: notificationCounts.videoCourses,
+      action: () => navigateTo('admin-video-courses')
     },
     { 
       name: "Send Information", 
@@ -703,7 +741,15 @@ const App = () => {
         </div>
       ) : isLoggedIn ? (
         <div className="main-app-content">
+          {/* FIXED HEADER WITH MULTI-ROW NAVIGATION */}
           <header className="app-header">
+            <div className="header-logo-container">
+              <img 
+                src="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg" 
+                alt="The Conclave Academy Logo" 
+                className="header-logo" 
+              />
+            </div>
             <button className="hamburger-menu-icon" onClick={toggleMenu}>
               <i className="fas fa-bars"></i>
             </button>
@@ -720,9 +766,6 @@ const App = () => {
                   {item.notification !== undefined && renderNotificationBadge(item.notification)}
                 </button>
               ))}
-            </div>
-            <div className="header-logo-container">
-              <img src="https://placehold.co/120x40/ff6f00/ffffff?text=TCTTTA" alt="Logo" className="header-logo" />
             </div>
             <div className="header-right-spacer"></div>
           </header>
@@ -788,6 +831,9 @@ const App = () => {
             {/* User Pages */}
             {currentPage === 'general-courses' && <GeneralCourses navigateTo={navigateTo} />}
             {currentPage === 'masterclass-courses' && <MasterclassCourses navigateTo={navigateTo} />}
+            {/* 🚨 ADDED: Video Pages */}
+            {currentPage === 'video-courses' && <VideoCourses navigateTo={navigateTo} />}
+            {currentPage === 'masterclass-videos' && <MasterclassVideos navigateTo={navigateTo} />}
             {currentPage === 'course-remarks' && <CourseAndRemarks />}
             {currentPage === 'contact-us' && <ContactUs />}
             {currentPage === 'admin-messages' && <MessageFromAdmin />}
@@ -801,6 +847,8 @@ const App = () => {
             {currentPage === 'admin-course-completed' && <AdminCourseCompleted />}
             {currentPage === 'admin-messages-from-students' && <MessageFromStudents />}
             {currentPage === 'admin-manage-courses' && <AdminManageCourses />}
+            {/* 🚨 ADDED: Admin Video Courses */}
+            {currentPage === 'admin-video-courses' && <AdminVideoCourses />}
             
             {/* Community Pages */}
             {currentPage === 'community' && userRole === 'admin' && <AdminCommunityTab />}

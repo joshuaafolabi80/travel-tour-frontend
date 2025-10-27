@@ -163,7 +163,7 @@ const AdminVideoCourses = () => {
       }
       
       if (file.size > 500 * 1024 * 1024) { // 500MB limit
-        showCustomAlert('File size must be less than 500MB', 'error');
+        showCustomAlert('File size must be less than 100MB', 'error');
         e.target.value = '';
         return;
       }
@@ -595,7 +595,7 @@ const AdminVideoCourses = () => {
                             accept="video/*"
                             onChange={handleFileSelect}
                           />
-                          <small className="text-muted">Supported formats: MP4, MOV, AVI, MKV, WEBM (Max 500MB)</small>
+                          <small className="text-muted">Supported formats: MP4, MOV, AVI, MKV, WEBM (Max 100MB)</small>
                         </div>
                         <button
                           className="btn btn-success btn-lg"
@@ -616,7 +616,7 @@ const AdminVideoCourses = () => {
                             <li>No access codes required</li>
                             <li>Users will see notification badges</li>
                             <li>Upload MP4, MOV, AVI, MKV, or WEBM files</li>
-                            <li>Maximum file size: 500MB</li>
+                            <li>Maximum file size: 100MB</li>
                             <li>Large videos may take several minutes to upload</li>
                           </ul>
                         </div>
@@ -700,7 +700,7 @@ const AdminVideoCourses = () => {
                             accept="video/*"
                             onChange={handleFileSelect}
                           />
-                          <small className="text-muted">Supported formats: MP4, MOV, AVI, MKV, WEBM (Max 500MB)</small>
+                          <small className="text-muted">Supported formats: MP4, MOV, AVI, MKV, WEBM (Max 100MB)</small>
                         </div>
                         <button
                           className="btn btn-warning btn-lg"

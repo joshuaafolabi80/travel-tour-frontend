@@ -161,7 +161,7 @@
   justify-content: center;
 }
 
-/* Text overlay */
+/* FIXED: Text overlay moved downward */
 .carousel-overlay {
   position: absolute;
   top: 0;
@@ -176,7 +176,7 @@
   text-align: center;
   color: var(--white);
   box-sizing: border-box;
-  padding-bottom: 8rem;
+  padding-bottom: 6rem; /* Reduced from 8rem to move text upward */
   margin-top: 10px;
 }
 
@@ -534,15 +534,16 @@
   background-color: #f8f9fa;
 }
 
+/* UPDATED: Larger icon and text sizes */
 .nav-icon {
-  font-size: 1.75rem;
+  font-size: 2rem; /* Increased from 1.75rem */
   color: var(--dark-blue-purple);
   margin-bottom: 0.5rem;
   flex-shrink: 0;
 }
 
 .nav-text {
-  font-size: 0.85rem;
+  font-size: 0.95rem; /* Increased from 0.85rem */
   font-weight: 600;
   color: var(--text-color-dark);
   line-height: 1.2;
@@ -567,12 +568,12 @@
   }
   
   .nav-icon {
-    font-size: 1.5rem;
+    font-size: 1.75rem; /* Increased from 1.5rem */
     margin-bottom: 0.25rem;
   }
   
   .nav-text {
-    font-size: 0.75rem;
+    font-size: 0.85rem; /* Increased from 0.75rem */
   }
 }
 
@@ -584,11 +585,11 @@
   }
   
   .nav-icon {
-    font-size: 2rem;
+    font-size: 2.25rem; /* Increased from 2rem */
   }
   
   .nav-text {
-    font-size: 0.9rem;
+    font-size: 1rem; /* Increased from 0.9rem */
   }
 }
 
@@ -599,7 +600,7 @@
   }
   
   .nav-text {
-    font-size: 1rem;
+    font-size: 1.1rem; /* Increased from 1rem */
   }
 }
 

@@ -667,7 +667,7 @@ const App = () => {
           </div>
         </div>
         
-        {/* UPDATED: Bootstrap Grid Navigation */}
+        {/* UPDATED: Bootstrap Grid Navigation with larger fonts */}
         <div className="navigation-grid-container">
           <div className="container-fluid">
             <div className="row g-2">

@@ -640,8 +640,8 @@
 /* FIXED NOTIFICATION BADGES */
 .notification-badge {
   position: absolute;
-  top: 0px;
-  right: 3.5px;
+  top: 2px;
+  right: 4px;
   background-color: #ff4757;
   color: white;
   border-radius: 50%;

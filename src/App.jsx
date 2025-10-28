@@ -666,32 +666,51 @@ const App = () => {
             </button>
           </div>
         </div>
-        <div className="navigation-grid">
-          <div className="nav-grid-item" onClick={() => navigateTo('destinations')}>
-            <i className="fas fa-umbrella-beach nav-icon"></i>
-            <span className="nav-text">Destinations</span>
-          </div>
-          <div className="nav-grid-item">
-            <i className="fas fa-hotel nav-icon"></i>
-            <span className="nav-text">Hotels</span>
-          </div>
-          <div className="nav-grid-item">
-            <i className="fas fa-coffee nav-icon"></i>
-            <span className="nav-text">Experiences</span>
-          </div>
-          <div className="nav-grid-item">
-            <i className="fas fa-briefcase nav-icon"></i>
-            <span className="nav-text">Business Course</span>
-          </div>
-          <div className="nav-grid-item">
-            <i className="fas fa-blog nav-icon"></i>
-            <span className="nav-text">Blog</span>
-          </div>
-          <div className="nav-grid-item">
-            <i className="fas fa-video nav-icon"></i>
-            <span className="nav-text">Online Webinar</span>
+        
+        {/* UPDATED: Bootstrap Grid Navigation */}
+        <div className="navigation-grid-container">
+          <div className="container-fluid">
+            <div className="row g-2">
+              <div className="col-4">
+                <div className="nav-grid-item" onClick={() => navigateTo('destinations')}>
+                  <i className="fas fa-umbrella-beach nav-icon"></i>
+                  <span className="nav-text">Destinations</span>
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="nav-grid-item">
+                  <i className="fas fa-hotel nav-icon"></i>
+                  <span className="nav-text">Hotels</span>
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="nav-grid-item">
+                  <i className="fas fa-coffee nav-icon"></i>
+                  <span className="nav-text">Experiences</span>
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="nav-grid-item">
+                  <i className="fas fa-briefcase nav-icon"></i>
+                  <span className="nav-text">Business Course</span>
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="nav-grid-item">
+                  <i className="fas fa-blog nav-icon"></i>
+                  <span className="nav-text">Blog</span>
+                </div>
+              </div>
+              <div className="col-4">
+                <div className="nav-grid-item">
+                  <i className="fas fa-video nav-icon"></i>
+                  <span className="nav-text">Online Webinar</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+        
         <section className="packages-section">
           <h3 className="packages-title">Explore Travel Packages ✈️</h3>
           <p className="packages-description">

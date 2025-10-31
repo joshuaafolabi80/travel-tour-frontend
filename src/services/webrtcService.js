@@ -1,6 +1,9 @@
+// webrtcService.js - Updated with screen sharing and video support
 class WebRTCService {
   constructor() {
     this.localStream = null;
+    this.localVideoStream = null;
+    this.localScreenStream = null;
     this.remoteStreams = new Map();
     this.peerConnections = new Map();
     this.socket = null;
@@ -13,11 +16,11 @@ class WebRTCService {
     this.setupSocketListeners();
   }
 
-  async startLocalStream() {
+  async startLocalStream(video = false) {
     try {
-      console.log('🎤 Starting local audio stream...');
+      console.log('🎤 Starting local stream...', { video });
       
-      this.localStream = await navigator.mediaDevices.getUserMedia({
+      const constraints = {
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -26,33 +29,161 @@ class WebRTCService {
           sampleRate: 48000,
           sampleSize: 16
         },
-        video: false
-      });
+        video: video ? {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 }
+        } : false
+      };
 
-      console.log('✅ Local audio stream acquired:', this.localStream.getAudioTracks()[0].label);
+      this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      console.log('✅ Local stream acquired:', {
+        audio: this.localStream.getAudioTracks()[0]?.label,
+        video: this.localStream.getVideoTracks()[0]?.label
+      });
       
       // Setup audio context for local stream visualization
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const analyser = this.audioContext.createAnalyser();
-      analyser.fftSize = 256;
-      
-      const source = this.audioContext.createMediaStreamSource(this.localStream);
-      source.connect(analyser);
-      
-      this.analysers.set('local', analyser);
+      if (this.localStream.getAudioTracks().length > 0) {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = this.audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        
+        const source = this.audioContext.createMediaStreamSource(this.localStream);
+        source.connect(analyser);
+        
+        this.analysers.set('local', analyser);
+      }
       
       return this.localStream;
     } catch (error) {
-      console.error('❌ Error accessing microphone:', error);
+      console.error('❌ Error accessing media devices:', error);
       throw error;
+    }
+  }
+
+  async startScreenShare() {
+    try {
+      console.log('🖥️ Starting screen share...');
+      
+      this.localScreenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          cursor: 'always',
+          displaySurface: 'window'
+        },
+        audio: true
+      });
+
+      console.log('✅ Screen share acquired:', {
+        video: this.localScreenStream.getVideoTracks()[0]?.label,
+        audio: this.localScreenStream.getAudioTracks()[0]?.label
+      });
+
+      // Replace video tracks in all peer connections
+      this.peerConnections.forEach((peerConnection, socketId) => {
+        const videoTrack = this.localScreenStream.getVideoTracks()[0];
+        if (videoTrack) {
+          const sender = peerConnection.getSenders().find(s => 
+            s.track && s.track.kind === 'video'
+          );
+          if (sender) {
+            sender.replaceTrack(videoTrack);
+            console.log(`✅ Replaced video track for ${socketId}`);
+          }
+        }
+      });
+
+      // Handle when user stops screen share
+      this.localScreenStream.getVideoTracks()[0].onended = () => {
+        console.log('🖥️ Screen share ended by user');
+        this.stopScreenShare();
+      };
+
+      return this.localScreenStream;
+    } catch (error) {
+      console.error('❌ Error starting screen share:', error);
+      throw error;
+    }
+  }
+
+  stopScreenShare() {
+    if (this.localScreenStream) {
+      console.log('🖥️ Stopping screen share');
+      this.localScreenStream.getTracks().forEach(track => track.stop());
+      this.localScreenStream = null;
+
+      // Restore camera video track if available
+      if (this.localStream && this.localStream.getVideoTracks().length > 0) {
+        this.peerConnections.forEach((peerConnection, socketId) => {
+          const videoTrack = this.localStream.getVideoTracks()[0];
+          if (videoTrack) {
+            const sender = peerConnection.getSenders().find(s => 
+              s.track && s.track.kind === 'video'
+            );
+            if (sender) {
+              sender.replaceTrack(videoTrack);
+              console.log(`✅ Restored camera video for ${socketId}`);
+            }
+          }
+        });
+      }
+    }
+  }
+
+  async startVideo() {
+    try {
+      if (!this.localStream) {
+        await this.startLocalStream(true);
+        return this.localStream;
+      }
+
+      // Add video track to existing audio stream
+      const videoStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 }
+        }
+      });
+
+      const videoTrack = videoStream.getVideoTracks()[0];
+      this.localStream.addTrack(videoTrack);
+
+      // Add video track to all peer connections
+      this.peerConnections.forEach((peerConnection, socketId) => {
+        peerConnection.addTrack(videoTrack, this.localStream);
+        console.log(`✅ Added video track to ${socketId}`);
+      });
+
+      console.log('✅ Video started');
+      return this.localStream;
+    } catch (error) {
+      console.error('❌ Error starting video:', error);
+      throw error;
+    }
+  }
+
+  stopVideo() {
+    if (this.localStream) {
+      const videoTracks = this.localStream.getVideoTracks();
+      videoTracks.forEach(track => {
+        track.stop();
+        this.localStream.removeTrack(track);
+      });
+      console.log('✅ Video stopped');
     }
   }
 
   stopLocalStream() {
     if (this.localStream) {
-      console.log('🔇 Stopping local audio stream');
+      console.log('🔇 Stopping local stream');
       this.localStream.getTracks().forEach(track => track.stop());
       this.localStream = null;
+    }
+
+    if (this.localScreenStream) {
+      this.localScreenStream.getTracks().forEach(track => track.stop());
+      this.localScreenStream = null;
     }
     
     if (this.audioContext) {
@@ -87,14 +218,14 @@ class WebRTCService {
 
     // Handle incoming remote stream
     peerConnection.ontrack = (event) => {
-      console.log(`🎧 Received remote track from ${targetUserName}`);
+      console.log(`🎧 Received remote track from ${targetUserName}`, event.track.kind);
       const [remoteStream] = event.streams;
       
-      if (remoteStream.getAudioTracks().length > 0) {
+      if (remoteStream.getAudioTracks().length > 0 || remoteStream.getVideoTracks().length > 0) {
         this.remoteStreams.set(targetSocketId, remoteStream);
         
-        // Setup analyser for remote stream
-        if (this.audioContext) {
+        // Setup analyser for remote audio stream
+        if (this.audioContext && remoteStream.getAudioTracks().length > 0) {
           const remoteAnalyser = this.audioContext.createAnalyser();
           remoteAnalyser.fftSize = 256;
           const remoteSource = this.audioContext.createMediaStreamSource(remoteStream);
@@ -102,17 +233,22 @@ class WebRTCService {
           this.analysers.set(targetSocketId, remoteAnalyser);
         }
         
-        // Emit event that remote audio is available
-        const audioEvent = new CustomEvent('remoteAudioAdded', {
+        // Emit event that remote media is available
+        const mediaEvent = new CustomEvent('remoteMediaAdded', {
           detail: { 
             socketId: targetSocketId, 
             stream: remoteStream,
-            userName: targetUserName
+            userName: targetUserName,
+            hasAudio: remoteStream.getAudioTracks().length > 0,
+            hasVideo: remoteStream.getVideoTracks().length > 0
           }
         });
-        window.dispatchEvent(audioEvent);
+        window.dispatchEvent(mediaEvent);
         
-        console.log(`✅ Remote audio stream ready for ${targetUserName}`);
+        console.log(`✅ Remote stream ready for ${targetUserName}`, {
+          audio: remoteStream.getAudioTracks().length,
+          video: remoteStream.getVideoTracks().length
+        });
       }
     };
 
@@ -138,11 +274,6 @@ class WebRTCService {
       }
     };
 
-    // Handle ICE gathering state
-    peerConnection.onicegatheringstatechange = () => {
-      console.log(`❄️ ICE gathering state for ${targetUserName}:`, peerConnection.iceGatheringState);
-    };
-
     this.peerConnections.set(targetSocketId, peerConnection);
     return peerConnection;
   }
@@ -153,7 +284,7 @@ class WebRTCService {
       const peerConnection = await this.createPeerConnection(targetSocketId, targetUserName);
       const offer = await peerConnection.createOffer({
         offerToReceiveAudio: true,
-        offerToReceiveVideo: false
+        offerToReceiveVideo: true
       });
       
       await peerConnection.setLocalDescription(offer);
@@ -179,7 +310,7 @@ class WebRTCService {
       
       const answer = await peerConnection.createAnswer({
         offerToReceiveAudio: true,
-        offerToReceiveVideo: false
+        offerToReceiveVideo: true
       });
       await peerConnection.setLocalDescription(answer);
 
@@ -258,7 +389,7 @@ class WebRTCService {
   isMuted() {
     if (!this.localStream) return true;
     const audioTrack = this.localStream.getAudioTracks()[0];
-    return !audioTrack.enabled;
+    return !audioTrack || !audioTrack.enabled;
   }
 
   setMuted(muted) {
@@ -281,6 +412,16 @@ class WebRTCService {
   // Get all active peer connections
   getActiveConnections() {
     return Array.from(this.peerConnections.keys());
+  }
+
+  // Check if video is available
+  hasVideo() {
+    return this.localStream && this.localStream.getVideoTracks().length > 0;
+  }
+
+  // Check if screen is being shared
+  isScreenSharing() {
+    return this.localScreenStream !== null;
   }
 }
 

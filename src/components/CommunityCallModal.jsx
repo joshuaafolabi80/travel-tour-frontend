@@ -166,9 +166,23 @@ const CommunityCallModal = ({
     }
   };
 
-  const toggleVideo = () => {
-    setIsVideoOn(!isVideoOn);
-    console.log(isVideoOn ? 'Video stopped' : 'Video started');
+  const toggleVideo = async () => {
+    if (!isVideoOn) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+        setIsVideoOn(true);
+        console.log('Video sharing started');
+      } catch (error) {
+        console.error('Error starting video:', error);
+        alert('Could not access camera. Please check permissions.');
+      }
+    } else {
+      setIsVideoOn(false);
+      console.log('Video sharing stopped');
+    }
   };
 
   const toggleScreenShare = async () => {
@@ -202,21 +216,6 @@ const CommunityCallModal = ({
     console.log(allMuted ? 'All users unmuted' : 'All users muted');
   };
 
-  const startVideoSharing = async () => {
-    if (!isVideoOn) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false
-        });
-        setIsVideoOn(true);
-        console.log('Video sharing started');
-      } catch (error) {
-        console.error('Error starting video:', error);
-      }
-    }
-  };
-
   const getConnectionStatus = (participant) => {
     if (participant.isYou) return 'connected';
     if (!participant.socketId) return 'disconnected';
@@ -229,6 +228,15 @@ const CommunityCallModal = ({
       case 'connecting': return 'warning';
       case 'failed': return 'danger';
       default: return 'secondary';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'connected': return 'fa-check-circle';
+      case 'connecting': return 'fa-spinner fa-spin';
+      case 'failed': return 'fa-exclamation-circle';
+      default: return 'fa-times-circle';
     }
   };
 
@@ -264,31 +272,46 @@ const CommunityCallModal = ({
           <div className="modal-body d-flex flex-column flex-md-row p-0">
             {/* Video/Audio Area */}
             <div className="flex-grow-1 p-3 d-flex flex-column">
-              {/* Audio Visualizers */}
+              {/* Simplified Audio Status Bar */}
               <div className="row mb-3">
-                {/* Local Audio Visualizer */}
-                <div className="col-md-6 mb-3">
-                  <AudioVisualizer
-                    audioContext={audioContext}
-                    analyser={analyser}
-                    isSpeaking={isSpeaking && !isMuted}
-                    label={`Your Audio (${isMuted ? 'Muted' : 'Live'})`}
-                    size="medium"
-                  />
-                </div>
-                
-                {/* Remote Audio Visualizers */}
-                {remoteStreams.map((remote, index) => (
-                  <div key={remote.socketId} className="col-md-6 mb-3">
-                    <AudioVisualizer
-                      audioContext={audioContext}
-                      analyser={webrtcService.getAnalyser(remote.socketId)}
-                      isSpeaking={true}
-                      label={`${remote.userName}'s Audio`}
-                      size="medium"
-                    />
+                <div className="col-12">
+                  <div className="d-flex justify-content-between align-items-center p-2 bg-dark bg-opacity-50 rounded">
+                    {/* Local Audio Status */}
+                    <div className="d-flex align-items-center">
+                      <div className={`me-2 ${isMuted ? 'text-danger' : 'text-success'}`}>
+                        <i className={`fas ${isMuted ? 'fa-microphone-slash' : 'fa-microphone'}`}></i>
+                      </div>
+                      <small className="text-muted">Your Audio: </small>
+                      <small className={isMuted ? 'text-danger' : 'text-success'}>
+                        {isMuted ? 'Muted' : 'Live'}
+                      </small>
+                    </div>
+
+                    {/* Remote Audio Status */}
+                    {remoteStreams.length > 0 && (
+                      <div className="d-flex align-items-center">
+                        <div className="text-success me-2">
+                          <i className="fas fa-headphones"></i>
+                        </div>
+                        <small className="text-muted">Remote Audio: </small>
+                        <small className="text-success ms-1">
+                          {remoteStreams.length} connected
+                        </small>
+                      </div>
+                    )}
+
+                    {/* Connection Status Summary */}
+                    <div className="d-flex align-items-center">
+                      <div className="text-info me-2">
+                        <i className="fas fa-signal"></i>
+                      </div>
+                      <small className="text-muted">Connections: </small>
+                      <small className="text-info ms-1">
+                        {Object.values(connectionStatus).filter(s => s === 'connected').length} active
+                      </small>
+                    </div>
                   </div>
-                ))}
+                </div>
               </div>
 
               {/* Hidden audio elements */}
@@ -299,104 +322,126 @@ const CommunityCallModal = ({
                 style={{ display: 'none' }}
               />
               
-              {/* Participants Grid */}
+              {/* Participants Grid - Simplified */}
               <div className="flex-grow-1 bg-black rounded position-relative">
                 <div className="row g-2 h-100 p-2">
                   {participants.map((participant, index) => {
                     const status = getConnectionStatus(participant);
                     const statusColor = getStatusColor(status);
+                    const statusIcon = getStatusIcon(status);
                     
                     return (
                       <div 
                         key={participant.id} 
                         className={`col-12 ${participants.length > 1 ? 'col-md-6' : ''} ${participants.length > 2 ? 'col-lg-4' : ''}`}
                       >
-                        <div className={`card h-100 ${participant.isYou ? 'border-primary' : 'border-secondary'}`}>
-                          <div className="card-body text-center d-flex flex-column justify-content-center bg-dark">
+                        <div className={`card h-100 ${participant.isYou ? 'border-primary' : 'border-secondary'} ${status === 'connected' ? 'border-success' : ''}`}>
+                          <div className="card-body text-center d-flex flex-column justify-content-center bg-dark position-relative">
+                            
+                            {/* Status Indicators in Top Right */}
+                            <div className="position-absolute top-0 end-0 p-2 d-flex flex-column gap-1">
+                              {/* Connection Status */}
+                              {!participant.isYou && (
+                                <span className={`badge bg-${statusColor}`} title={status}>
+                                  <i className={`fas ${statusIcon}`}></i>
+                                </span>
+                              )}
+                              
+                              {/* Mute Status */}
+                              {(isMuted && participant.isYou) && (
+                                <span className="badge bg-danger" title="You are muted">
+                                  <i className="fas fa-microphone-slash"></i>
+                                </span>
+                              )}
+                              
+                              {(allMuted && !participant.isAdmin && !participant.isYou) && (
+                                <span className="badge bg-warning text-dark" title="Admin muted all">
+                                  <i className="fas fa-volume-mute"></i>
+                                </span>
+                              )}
+                              
+                              {/* Admin Badge */}
+                              {participant.isAdmin && (
+                                <span className="badge bg-warning text-dark" title="Admin">
+                                  <i className="fas fa-crown"></i>
+                                </span>
+                              )}
+
+                              {/* Screen Share Indicator */}
+                              {isScreenSharing && participant.isYou && (
+                                <span className="badge bg-info" title="Screen sharing">
+                                  <i className="fas fa-desktop"></i>
+                                </span>
+                              )}
+                            </div>
+
                             {/* Video/Audio Placeholder */}
-                            <div className="position-relative mb-2">
+                            <div className="position-relative mb-2 mx-auto" style={{width: '100px', height: '100px'}}>
                               {isVideoOn && participant.isYou ? (
-                                <div className="video-feed-placeholder bg-success rounded">
-                                  <div className="text-center py-4">
-                                    <i className="fas fa-video fa-2x mb-2"></i>
+                                <div className="video-feed-placeholder bg-success rounded w-100 h-100 d-flex align-items-center justify-content-center">
+                                  <div className="text-center">
+                                    <i className="fas fa-video fa-2x mb-1"></i>
                                     <p className="mb-0 small">Live Video</p>
                                   </div>
                                 </div>
                               ) : (
-                                <div className="rounded-circle bg-secondary mx-auto d-flex align-items-center justify-content-center" 
-                                     style={{width: '80px', height: '80px'}}>
+                                <div className="rounded-circle bg-secondary w-100 h-100 d-flex align-items-center justify-content-center">
                                   <i className="fas fa-user fa-2x text-light"></i>
                                 </div>
                               )}
                               
-                              {/* Status Indicators */}
-                              {(isMuted && participant.isYou) && (
-                                <div className="position-absolute bottom-0 start-50 translate-middle-x">
-                                  <span className="badge bg-danger">
-                                    <i className="fas fa-microphone-slash"></i>
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {(allMuted && !participant.isAdmin && !participant.isYou) && (
-                                <div className="position-absolute bottom-0 start-50 translate-middle-x">
-                                  <span className="badge bg-warning text-dark">
-                                    <i className="fas fa-volume-mute"></i>
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {participant.isAdmin && (
+                              {/* Speaking Indicator */}
+                              {(isSpeaking && participant.isYou && !isMuted) && (
                                 <div className="position-absolute top-0 start-0">
-                                  <span className="badge bg-warning text-dark">
-                                    <i className="fas fa-crown"></i>
-                                  </span>
-                                </div>
-                              )}
-
-                              {isScreenSharing && participant.isYou && (
-                                <div className="position-absolute top-0 end-0">
-                                  <span className="badge bg-info">
-                                    <i className="fas fa-desktop"></i>
-                                  </span>
-                                </div>
-                              )}
-
-                              {/* Connection Status */}
-                              {!participant.isYou && (
-                                <div className="position-absolute top-0 end-0">
-                                  <span className={`badge bg-${statusColor}`}>
-                                    <i className={`fas ${
-                                      status === 'connected' ? 'fa-check' :
-                                      status === 'connecting' ? 'fa-spinner fa-spin' :
-                                      'fa-times'
-                                    } me-1`}></i>
-                                    {status}
+                                  <span className="badge bg-success pulse">
+                                    <i className="fas fa-volume-up"></i>
                                   </span>
                                 </div>
                               )}
                             </div>
                             
                             {/* Participant Info */}
-                            <div>
-                              <h6 className="mb-0">
+                            <div className="mt-2">
+                              <h6 className="mb-1">
                                 {participant.name}
-                                {participant.isYou && <span className="text-info"> (You)</span>}
+                                {participant.isYou && <span className="text-info ms-1">(You)</span>}
                               </h6>
-                              <small className={`text-${statusColor}`}>
-                                {status === 'connected' ? 'Audio Connected' :
-                                 status === 'connecting' ? 'Connecting...' :
-                                 'Disconnected'}
-                              </small>
-                              <br />
-                              <small className="text-muted">
-                                {((isMuted && participant.isYou) || (allMuted && !participant.isAdmin && !participant.isYou)) 
-                                  ? 'Muted' 
-                                  : (isSpeaking && participant.isYou && !isMuted) 
-                                    ? 'Speaking' 
-                                    : 'Active'
-                                }
-                              </small>
+                              
+                              {/* Simplified Status Text */}
+                              <div className="d-flex justify-content-center align-items-center gap-2">
+                                <small className={`text-${statusColor}`}>
+                                  <i className={`fas ${statusIcon} me-1`}></i>
+                                  {status === 'connected' ? 'Connected' :
+                                   status === 'connecting' ? 'Connecting' :
+                                   'Disconnected'}
+                                </small>
+                                
+                                {/* Audio Status Dot */}
+                                <span 
+                                  className={`rounded-circle ${
+                                    (isMuted && participant.isYou) || (allMuted && !participant.isAdmin && !participant.isYou) 
+                                      ? 'bg-danger' 
+                                      : (isSpeaking && participant.isYou && !isMuted)
+                                      ? 'bg-success pulse'
+                                      : status === 'connected'
+                                      ? 'bg-success'
+                                      : 'bg-secondary'
+                                  }`}
+                                  style={{
+                                    width: '8px',
+                                    height: '8px'
+                                  }}
+                                  title={
+                                    (isMuted && participant.isYou) || (allMuted && !participant.isAdmin && !participant.isYou) 
+                                      ? 'Muted' 
+                                      : (isSpeaking && participant.isYou && !isMuted)
+                                      ? 'Speaking'
+                                      : status === 'connected'
+                                      ? 'Audio Active'
+                                      : 'No Audio'
+                                  }
+                                ></span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -404,19 +449,30 @@ const CommunityCallModal = ({
                     );
                   })}
                   
-                  {/* Empty slots for demonstration */}
-                  {participants.length < 3 && Array.from({length: 3 - participants.length}).map((_, index) => (
-                    <div key={`empty-${index}`} className="col-12 col-md-6 col-lg-4">
-                      <div className="card h-100 border-dashed border-secondary">
-                        <div className="card-body text-center d-flex flex-column justify-content-center bg-dark">
-                          <div className="text-muted">
-                            <i className="fas fa-user-plus fa-2x mb-2"></i>
-                            <p className="mb-0">Waiting for participant...</p>
-                          </div>
-                        </div>
+                  {/* Empty slots removed for cleaner interface */}
+                </div>
+              </div>
+
+              {/* Single Audio Visualizer for Local Stream */}
+              <div className="row mt-3">
+                <div className="col-12">
+                  <div className="bg-dark bg-opacity-50 rounded p-3">
+                    <h6 className="text-center mb-3">
+                      <i className="fas fa-wave-square me-2"></i>
+                      Audio Levels
+                    </h6>
+                    <div className="row justify-content-center">
+                      <div className="col-md-6">
+                        <AudioVisualizer
+                          audioContext={audioContext}
+                          analyser={analyser}
+                          isSpeaking={isSpeaking && !isMuted}
+                          label={`Your Audio (${isMuted ? 'Muted' : 'Live'})`}
+                          size="medium"
+                        />
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -440,25 +496,26 @@ const CommunityCallModal = ({
             <div className="d-flex flex-wrap justify-content-center gap-2">
               <button 
                 onClick={toggleMute}
-                className={`btn ${isMuted ? 'btn-danger' : 'btn-secondary'} btn-lg`}
+                className={`btn ${isMuted ? 'btn-danger' : 'btn-success'} btn-lg`}
+                title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
               >
                 <i className={`fas ${isMuted ? 'fa-microphone-slash' : 'fa-microphone'}`}></i>
                 {isMuted ? ' Unmute' : ' Mute'}
               </button>
               
-              {isAdmin && (
-                <button 
-                  onClick={startVideoSharing}
-                  className={`btn ${isVideoOn ? 'btn-success' : 'btn-secondary'} btn-lg`}
-                >
-                  <i className={`fas ${isVideoOn ? 'fa-video' : 'fa-video-slash'}`}></i>
-                  {isVideoOn ? ' Video On' : ' Start Video'}
-                </button>
-              )}
+              <button 
+                onClick={toggleVideo}
+                className={`btn ${isVideoOn ? 'btn-success' : 'btn-secondary'} btn-lg`}
+                title={isVideoOn ? 'Turn off camera' : 'Turn on camera'}
+              >
+                <i className={`fas ${isVideoOn ? 'fa-video' : 'fa-video-slash'}`}></i>
+                {isVideoOn ? ' Video On' : ' Start Video'}
+              </button>
               
               <button 
                 onClick={toggleScreenShare}
                 className={`btn ${isScreenSharing ? 'btn-warning' : 'btn-secondary'} btn-lg`}
+                title={isScreenSharing ? 'Stop screen share' : 'Share screen'}
               >
                 <i className="fas fa-desktop"></i>
                 {isScreenSharing ? ' Stop Share' : ' Share Screen'}
@@ -468,13 +525,14 @@ const CommunityCallModal = ({
                 <button 
                   onClick={toggleMuteAll}
                   className={`btn ${allMuted ? 'btn-warning' : 'btn-secondary'} btn-lg`}
+                  title={allMuted ? 'Unmute all participants' : 'Mute all participants'}
                 >
                   <i className={`fas ${allMuted ? 'fa-volume-up' : 'fa-volume-mute'}`}></i>
                   {allMuted ? ' Unmute All' : ' Mute All'}
                 </button>
               )}
               
-              <button onClick={onClose} className="btn btn-danger btn-lg">
+              <button onClick={onClose} className="btn btn-danger btn-lg" title="Leave call">
                 <i className="fas fa-phone-slash"></i>
                 Leave Call
               </button>
@@ -495,6 +553,29 @@ const CommunityCallModal = ({
           )}
         </div>
       </div>
+
+      {/* Add pulse animation styles */}
+      <style>
+        {`
+          @keyframes pulse {
+            0% {
+              transform: scale(1);
+              opacity: 1;
+            }
+            50% {
+              transform: scale(1.1);
+              opacity: 0.7;
+            }
+            100% {
+              transform: scale(1);
+              opacity: 1;
+            }
+          }
+          .pulse {
+            animation: pulse 1.5s infinite;
+          }
+        `}
+      </style>
     </div>
   );
 };

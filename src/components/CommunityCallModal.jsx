@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import MessageThread from './MessageThread';
 import AudioVisualizer from './AudioVisualizer';
+import webrtcService from '../services/webrtcService';
+import socketService from '../services/socketService';
 
 const CommunityCallModal = ({ 
   isOpen, 
@@ -9,100 +11,159 @@ const CommunityCallModal = ({
   messages, 
   onSendMessage, 
   isAdmin,
-  onAddParticipant,
   currentUserName 
 }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [remoteStreams, setRemoteStreams] = useState([]);
   const [audioContext, setAudioContext] = useState(null);
   const [analyser, setAnalyser] = useState(null);
-  const [mediaStream, setMediaStream] = useState(null);
   const [allMuted, setAllMuted] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState({});
 
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const mediaStreamRef = useRef(null);
+  const localAudioRef = useRef(null);
+  const remoteAudioRefs = useRef(new Map());
+  const speakingDetectionRef = useRef(null);
 
   useEffect(() => {
-    // Initialize audio context for visualizer
-    const initAudio = async () => {
+    if (!isOpen) return;
+
+    console.log('🎮 Initializing CommunityCallModal with participants:', participants);
+
+    // Initialize WebRTC service with socket
+    const socket = socketService.getSocket();
+    webrtcService.setSocket(socket);
+
+    // Start local audio stream
+    const initializeAudio = async () => {
       try {
-        const context = new (window.AudioContext || window.webkitAudioContext)();
-        const audioAnalyser = context.createAnalyser();
-        audioAnalyser.fftSize = 256;
+        console.log('🎤 Starting audio initialization...');
+        const stream = await webrtcService.startLocalStream();
         
-        audioContextRef.current = context;
-        analyserRef.current = audioAnalyser;
-        
-        setAudioContext(context);
-        setAnalyser(audioAnalyser);
+        if (localAudioRef.current) {
+          localAudioRef.current.srcObject = stream;
+          localAudioRef.current.volume = 1.0;
+          console.log('✅ Local audio element configured');
+        }
+
+        // Get analyser for local stream visualization
+        const localAnalyser = webrtcService.getLocalAnalyser();
+        setAnalyser(localAnalyser);
+        setAudioContext(webrtcService.audioContext);
+
+        // Start speaking detection
+        startSpeakingDetection();
+
+        // Create peer connections with all other participants
+        participants.forEach(participant => {
+          if (!participant.isYou && participant.socketId) {
+            console.log(`🔗 Initiating connection to: ${participant.name} (${participant.socketId})`);
+            webrtcService.createOffer(participant.socketId, participant.name);
+          }
+        });
+
       } catch (error) {
-        console.error('Error initializing audio context:', error);
+        console.error('❌ Error initializing audio:', error);
+        alert('Could not access microphone. Please check permissions and try again.');
       }
     };
 
-    if (isOpen) {
-      initAudio();
-    }
-
-    return () => {
-      // Cleanup audio
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-    };
-  }, [isOpen]);
-
-  const startMicrophone = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: true,
-        video: false 
+    // Listen for remote audio streams
+    const handleRemoteAudio = (event) => {
+      const { socketId, stream, userName } = event.detail;
+      console.log(`🎧 Remote audio event for ${userName} (${socketId})`);
+      
+      setRemoteStreams(prev => {
+        const exists = prev.find(rs => rs.socketId === socketId);
+        if (!exists) {
+          return [...prev, { socketId, stream, userName }];
+        }
+        return prev;
       });
+
+      // Create and play remote audio element
+      const audioElement = document.createElement('audio');
+      audioElement.srcObject = stream;
+      audioElement.autoplay = true;
+      audioElement.volume = 1.0;
+      audioElement.setAttribute('data-socket-id', socketId);
+      remoteAudioRefs.current.set(socketId, audioElement);
       
-      mediaStreamRef.current = stream;
-      setMediaStream(stream);
+      console.log(`✅ Remote audio element created for ${userName}`);
+    };
+
+    // Listen for connection status changes
+    const updateConnectionStatus = () => {
+      const status = {};
+      participants.forEach(participant => {
+        if (!participant.isYou && participant.socketId) {
+          status[participant.socketId] = webrtcService.getConnectionState(participant.socketId);
+        }
+      });
+      setConnectionStatus(status);
+    };
+
+    // Setup event listeners
+    window.addEventListener('remoteAudioAdded', handleRemoteAudio);
+    
+    // Periodically update connection status
+    const statusInterval = setInterval(updateConnectionStatus, 3000);
+
+    initializeAudio();
+
+    // Cleanup function
+    return () => {
+      console.log('🧹 Cleaning up CommunityCallModal');
+      window.removeEventListener('remoteAudioAdded', handleRemoteAudio);
+      clearInterval(statusInterval);
       
-      if (audioContextRef.current && analyserRef.current) {
-        const source = audioContextRef.current.createMediaStreamSource(stream);
-        source.connect(analyserRef.current);
-        
-        // Simulate speaking detection (in real app, use actual audio analysis)
-        const simulateSpeaking = () => {
-          setIsSpeaking(prev => !prev);
-          setTimeout(simulateSpeaking, Math.random() * 3000 + 1000);
-        };
-        simulateSpeaking();
+      if (speakingDetectionRef.current) {
+        clearInterval(speakingDetectionRef.current);
       }
-    } catch (error) {
-      console.error('Error accessing microphone:', error);
-    }
-  };
 
-  const stopMicrophone = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      setMediaStream(null);
-      setIsSpeaking(false);
-    }
-  };
+      // Close all peer connections
+      participants.forEach(participant => {
+        if (!participant.isYou && participant.socketId) {
+          webrtcService.closeConnection(participant.socketId);
+        }
+      });
 
-  useEffect(() => {
-    if (!isMuted && isOpen) {
-      startMicrophone();
-    } else {
-      stopMicrophone();
+      // Stop local stream
+      webrtcService.stopLocalStream();
+      
+      // Clear remote audio elements
+      remoteAudioRefs.current.forEach(audio => {
+        audio.srcObject = null;
+      });
+      remoteAudioRefs.current.clear();
+    };
+  }, [isOpen, participants]);
+
+  const startSpeakingDetection = () => {
+    if (speakingDetectionRef.current) {
+      clearInterval(speakingDetectionRef.current);
     }
-  }, [isMuted, isOpen]);
+
+    speakingDetectionRef.current = setInterval(() => {
+      // Simulate speaking detection - in real app, use audio analysis
+      // For now, we'll randomly set speaking state for demo
+      if (!isMuted && Math.random() > 0.7) {
+        setIsSpeaking(true);
+        setTimeout(() => setIsSpeaking(false), 1000);
+      }
+    }, 2000);
+  };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted);
-    console.log(isMuted ? 'Unmuted' : 'Muted');
+    const newMutedState = !isMuted;
+    const success = webrtcService.setMuted(newMutedState);
+    
+    if (success) {
+      setIsMuted(newMutedState);
+      console.log(`🔊 ${newMutedState ? 'Muted' : 'Unmuted'} microphone`);
+    }
   };
 
   const toggleVideo = () => {
@@ -150,11 +211,24 @@ const CommunityCallModal = ({
         });
         setIsVideoOn(true);
         console.log('Video sharing started');
-        
-        // In real implementation, you'd send this stream via WebRTC
       } catch (error) {
         console.error('Error starting video:', error);
       }
+    }
+  };
+
+  const getConnectionStatus = (participant) => {
+    if (participant.isYou) return 'connected';
+    if (!participant.socketId) return 'disconnected';
+    return connectionStatus[participant.socketId] || 'connecting';
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'connected': return 'success';
+      case 'connecting': return 'warning';
+      case 'failed': return 'danger';
+      default: return 'secondary';
     }
   };
 
@@ -192,105 +266,143 @@ const CommunityCallModal = ({
             <div className="flex-grow-1 p-3 d-flex flex-column">
               {/* Audio Visualizers */}
               <div className="row mb-3">
-                <div className="col-md-6">
+                {/* Local Audio Visualizer */}
+                <div className="col-md-6 mb-3">
                   <AudioVisualizer
                     audioContext={audioContext}
                     analyser={analyser}
                     isSpeaking={isSpeaking && !isMuted}
-                    label="Your Microphone"
+                    label={`Your Audio (${isMuted ? 'Muted' : 'Live'})`}
                     size="medium"
                   />
                 </div>
-                <div className="col-md-6">
-                  <AudioVisualizer
-                    audioContext={audioContext}
-                    analyser={analyser}
-                    isSpeaking={true} // Simulate admin speaking
-                    label="Admin Audio"
-                    size="medium"
-                  />
-                </div>
+                
+                {/* Remote Audio Visualizers */}
+                {remoteStreams.map((remote, index) => (
+                  <div key={remote.socketId} className="col-md-6 mb-3">
+                    <AudioVisualizer
+                      audioContext={audioContext}
+                      analyser={webrtcService.getAnalyser(remote.socketId)}
+                      isSpeaking={true}
+                      label={`${remote.userName}'s Audio`}
+                      size="medium"
+                    />
+                  </div>
+                ))}
               </div>
 
+              {/* Hidden audio elements */}
+              <audio 
+                ref={localAudioRef} 
+                autoPlay 
+                muted={isMuted}
+                style={{ display: 'none' }}
+              />
+              
+              {/* Participants Grid */}
               <div className="flex-grow-1 bg-black rounded position-relative">
-                {/* Participants Grid */}
                 <div className="row g-2 h-100 p-2">
-                  {participants.map((participant, index) => (
-                    <div 
-                      key={participant.id} 
-                      className={`col-12 ${participants.length > 1 ? 'col-md-6' : ''} ${participants.length > 2 ? 'col-lg-4' : ''}`}
-                    >
-                      <div className={`card h-100 ${participant.isYou ? 'border-primary' : 'border-secondary'}`}>
-                        <div className="card-body text-center d-flex flex-column justify-content-center bg-dark">
-                          {/* Video/Audio Placeholder */}
-                          <div className="position-relative mb-2">
-                            {isVideoOn && participant.isYou ? (
-                              <div className="video-feed-placeholder bg-success rounded">
-                                <div className="text-center py-4">
-                                  <i className="fas fa-video fa-2x mb-2"></i>
-                                  <p className="mb-0 small">Live Video</p>
+                  {participants.map((participant, index) => {
+                    const status = getConnectionStatus(participant);
+                    const statusColor = getStatusColor(status);
+                    
+                    return (
+                      <div 
+                        key={participant.id} 
+                        className={`col-12 ${participants.length > 1 ? 'col-md-6' : ''} ${participants.length > 2 ? 'col-lg-4' : ''}`}
+                      >
+                        <div className={`card h-100 ${participant.isYou ? 'border-primary' : 'border-secondary'}`}>
+                          <div className="card-body text-center d-flex flex-column justify-content-center bg-dark">
+                            {/* Video/Audio Placeholder */}
+                            <div className="position-relative mb-2">
+                              {isVideoOn && participant.isYou ? (
+                                <div className="video-feed-placeholder bg-success rounded">
+                                  <div className="text-center py-4">
+                                    <i className="fas fa-video fa-2x mb-2"></i>
+                                    <p className="mb-0 small">Live Video</p>
+                                  </div>
                                 </div>
-                              </div>
-                            ) : (
-                              <div className="rounded-circle bg-secondary mx-auto d-flex align-items-center justify-content-center" 
-                                   style={{width: '80px', height: '80px'}}>
-                                <i className="fas fa-user fa-2x text-light"></i>
-                              </div>
-                            )}
-                            
-                            {/* Status Indicators */}
-                            {(isMuted && participant.isYou) && (
-                              <div className="position-absolute bottom-0 start-50 translate-middle-x">
-                                <span className="badge bg-danger">
-                                  <i className="fas fa-microphone-slash"></i>
-                                </span>
-                              </div>
-                            )}
-                            
-                            {(allMuted && !participant.isAdmin && !participant.isYou) && (
-                              <div className="position-absolute bottom-0 start-50 translate-middle-x">
-                                <span className="badge bg-warning text-dark">
-                                  <i className="fas fa-volume-mute"></i>
-                                </span>
-                              </div>
-                            )}
-                            
-                            {participant.isAdmin && (
-                              <div className="position-absolute top-0 start-0">
-                                <span className="badge bg-warning text-dark">
-                                  <i className="fas fa-crown"></i>
-                                </span>
-                              </div>
-                            )}
+                              ) : (
+                                <div className="rounded-circle bg-secondary mx-auto d-flex align-items-center justify-content-center" 
+                                     style={{width: '80px', height: '80px'}}>
+                                  <i className="fas fa-user fa-2x text-light"></i>
+                                </div>
+                              )}
+                              
+                              {/* Status Indicators */}
+                              {(isMuted && participant.isYou) && (
+                                <div className="position-absolute bottom-0 start-50 translate-middle-x">
+                                  <span className="badge bg-danger">
+                                    <i className="fas fa-microphone-slash"></i>
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {(allMuted && !participant.isAdmin && !participant.isYou) && (
+                                <div className="position-absolute bottom-0 start-50 translate-middle-x">
+                                  <span className="badge bg-warning text-dark">
+                                    <i className="fas fa-volume-mute"></i>
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {participant.isAdmin && (
+                                <div className="position-absolute top-0 start-0">
+                                  <span className="badge bg-warning text-dark">
+                                    <i className="fas fa-crown"></i>
+                                  </span>
+                                </div>
+                              )}
 
-                            {isScreenSharing && participant.isYou && (
-                              <div className="position-absolute top-0 end-0">
-                                <span className="badge bg-info">
-                                  <i className="fas fa-desktop"></i>
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Participant Info */}
-                          <div>
-                            <h6 className="mb-0">
-                              {participant.name}
-                              {participant.isYou && <span className="text-info"> (You)</span>}
-                            </h6>
-                            <small className="text-muted">
-                              {((isMuted && participant.isYou) || (allMuted && !participant.isAdmin && !participant.isYou)) 
-                                ? 'Muted' 
-                                : (isSpeaking && participant.isYou && !isMuted) 
-                                  ? 'Speaking' 
-                                  : 'Connected'
-                              }
-                            </small>
+                              {isScreenSharing && participant.isYou && (
+                                <div className="position-absolute top-0 end-0">
+                                  <span className="badge bg-info">
+                                    <i className="fas fa-desktop"></i>
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Connection Status */}
+                              {!participant.isYou && (
+                                <div className="position-absolute top-0 end-0">
+                                  <span className={`badge bg-${statusColor}`}>
+                                    <i className={`fas ${
+                                      status === 'connected' ? 'fa-check' :
+                                      status === 'connecting' ? 'fa-spinner fa-spin' :
+                                      'fa-times'
+                                    } me-1`}></i>
+                                    {status}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Participant Info */}
+                            <div>
+                              <h6 className="mb-0">
+                                {participant.name}
+                                {participant.isYou && <span className="text-info"> (You)</span>}
+                              </h6>
+                              <small className={`text-${statusColor}`}>
+                                {status === 'connected' ? 'Audio Connected' :
+                                 status === 'connecting' ? 'Connecting...' :
+                                 'Disconnected'}
+                              </small>
+                              <br />
+                              <small className="text-muted">
+                                {((isMuted && participant.isYou) || (allMuted && !participant.isAdmin && !participant.isYou)) 
+                                  ? 'Muted' 
+                                  : (isSpeaking && participant.isYou && !isMuted) 
+                                    ? 'Speaking' 
+                                    : 'Active'
+                                }
+                              </small>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   
                   {/* Empty slots for demonstration */}
                   {participants.length < 3 && Array.from({length: 3 - participants.length}).map((_, index) => (
@@ -368,6 +480,19 @@ const CommunityCallModal = ({
               </button>
             </div>
           </div>
+
+          {/* Debug Info */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="modal-footer border-top-0">
+              <div className="w-100">
+                <small className="text-muted">
+                  <strong>Debug:</strong> Local Stream: {webrtcService.localStream ? '✅' : '❌'} | 
+                  Remote Streams: {remoteStreams.length} | 
+                  Peer Connections: {webrtcService.getActiveConnections().length}
+                </small>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

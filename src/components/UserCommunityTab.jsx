@@ -1,8 +1,8 @@
-// src/components/UserCommunityTab.jsx
 import React, { useState, useEffect } from 'react';
 import CommunityCallModal from './CommunityCallModal';
 import MessageThread from './MessageThread';
 import socketService from '../services/socketService';
+import webrtcService from '../services/webrtcService';
 
 const UserCommunityTab = () => {
   const [isCallActive, setIsCallActive] = useState(false);
@@ -13,6 +13,7 @@ const UserCommunityTab = () => {
   const [userName, setUserName] = useState('');
   const [activeCallInfo, setActiveCallInfo] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [socketId, setSocketId] = useState(null);
 
   useEffect(() => {
     // Check if there's an active call stored
@@ -43,16 +44,18 @@ const UserCommunityTab = () => {
 
     const socket = socketService.connect();
     
-    // Listen for connection
+    // Store socket ID for WebRTC
     socket.on('connect', () => {
-      console.log('✅ Connected to socket server');
+      console.log('✅ Connected to socket server with ID:', socket.id);
       setIsConnected(true);
+      setSocketId(socket.id);
       
       // Join the app with user data
       socket.emit('user_join', {
         userId: userData.id,
         userName: name,
-        role: userData.role || 'student'
+        role: userData.role || 'student',
+        socketId: socket.id
       });
     });
 
@@ -75,7 +78,8 @@ const UserCommunityTab = () => {
         callId: data.callId,
         adminName: data.adminName,
         startTime: data.startTime,
-        receivedAt: new Date()
+        receivedAt: new Date(),
+        withAudio: data.withAudio || true
       }));
     });
 
@@ -88,6 +92,9 @@ const UserCommunityTab = () => {
       setCurrentCallId(null);
       setCallParticipants([]);
       
+      // Cleanup WebRTC
+      webrtcService.stopLocalStream();
+      
       // Clear from localStorage
       localStorage.removeItem('activeCommunityCall');
     });
@@ -97,10 +104,11 @@ const UserCommunityTab = () => {
       console.log('📊 Participants updated:', data.participants);
       const userData = JSON.parse(localStorage.getItem('userData') || '{}');
       
-      // Mark current user as "isYou"
+      // Mark current user as "isYou" and add socket IDs
       const participantsWithYou = data.participants.map(participant => ({
         ...participant,
-        isYou: participant.userId === userData.id
+        isYou: participant.userId === userData.id,
+        socketId: participant.socketId || participant.id
       }));
       
       setCallParticipants(participantsWithYou);
@@ -114,12 +122,28 @@ const UserCommunityTab = () => {
 
     // Listen for user joining call
     socket.on('user_joined_call', (data) => {
-      console.log(`👤 ${data.userName} joined the call`);
+      console.log(`👤 ${data.userName} joined the call with socket ID: ${data.socketId}`);
     });
 
     // Listen for user leaving call
     socket.on('user_left_call', (data) => {
       console.log(`👤 ${data.userName} left the call`);
+    });
+
+    // WebRTC signaling events
+    socket.on('webrtc_offer', (data) => {
+      console.log('📥 Received WebRTC offer from admin:', data.senderName);
+      webrtcService.handleOffer(data);
+    });
+
+    socket.on('webrtc_answer', (data) => {
+      console.log('📥 Received WebRTC answer from:', data.senderSocketId);
+      webrtcService.handleAnswer(data);
+    });
+
+    socket.on('webrtc_ice_candidate', (data) => {
+      console.log('🧊 Received ICE candidate from:', data.senderSocketId);
+      webrtcService.handleICECandidate(data);
     });
 
     // Listen for errors
@@ -138,11 +162,19 @@ const UserCommunityTab = () => {
       socket.off('new_message');
       socket.off('user_joined_call');
       socket.off('user_left_call');
+      socket.off('webrtc_offer');
+      socket.off('webrtc_answer');
+      socket.off('webrtc_ice_candidate');
       socket.off('error');
+      
+      // Cleanup WebRTC if call is active
+      if (isCallActive) {
+        webrtcService.stopLocalStream();
+      }
     };
-  }, []);
+  }, [isCallActive]);
 
-  const joinCall = () => {
+  const joinCall = async () => {
     const socket = socketService.getSocket();
     
     if (!socket || !currentCallId) {
@@ -150,35 +182,51 @@ const UserCommunityTab = () => {
       return;
     }
 
-    console.log('🎯 Joining call:', currentCallId);
+    console.log('🎤 Joining call with WebRTC audio:', currentCallId);
     
-    // Emit join call event
-    socket.emit('join_call', { 
-      callId: currentCallId 
-    });
-    
-    setIsCallActive(true);
-    setHasCallNotification(false);
-    
-    // Add current user to local participants immediately for better UX
-    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-    const currentUser = {
-      id: userData.id,
-      userId: userData.id,
-      userName: userData.name || userData.username || 'User',
-      isMuted: false,
-      isAdmin: userData.role === 'admin',
-      isYou: true,
-      role: userData.role || 'student'
-    };
-    
-    setCallParticipants(prev => {
-      const exists = prev.some(p => p.userId === currentUser.userId);
-      if (!exists) {
-        return [...prev, currentUser];
-      }
-      return prev;
-    });
+    try {
+      // Initialize WebRTC service
+      webrtcService.setSocket(socket);
+      
+      // Start local audio stream
+      await webrtcService.startLocalStream();
+      
+      // Emit join call event
+      socket.emit('join_call', { 
+        callId: currentCallId,
+        withAudio: true
+      });
+      
+      setIsCallActive(true);
+      setHasCallNotification(false);
+      
+      // Add current user to local participants immediately for better UX
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const currentUser = {
+        id: userData.id,
+        userId: userData.id,
+        userName: userData.name || userData.username || 'User',
+        isMuted: false,
+        isAdmin: userData.role === 'admin',
+        isYou: true,
+        role: userData.role || 'student',
+        socketId: socket.id
+      };
+      
+      setCallParticipants(prev => {
+        const exists = prev.some(p => p.userId === currentUser.userId);
+        if (!exists) {
+          return [...prev, currentUser];
+        }
+        return prev;
+      });
+
+      console.log('✅ Joined call with WebRTC audio enabled');
+      
+    } catch (error) {
+      console.error('❌ Error joining call with audio:', error);
+      alert('Failed to join call with audio. Please check microphone permissions.');
+    }
   };
 
   const leaveCall = () => {
@@ -189,11 +237,21 @@ const UserCommunityTab = () => {
       socket.emit('leave_call', { callId: currentCallId });
     }
     
+    // Cleanup WebRTC
+    webrtcService.stopLocalStream();
+    callParticipants.forEach(participant => {
+      if (!participant.isYou) {
+        webrtcService.closeConnection(participant.socketId);
+      }
+    });
+    
     setIsCallActive(false);
     setCurrentCallId(null);
     setCallParticipants([]);
     setActiveCallInfo(null);
     setHasCallNotification(false);
+    
+    console.log('🔚 Left call and cleaned up WebRTC');
   };
 
   const addMessage = (message) => {
@@ -223,7 +281,8 @@ const UserCommunityTab = () => {
     activeCallInfo,
     callParticipants: callParticipants.length,
     messages: messages.length,
-    isConnected
+    isConnected,
+    socketId
   });
 
   return (
@@ -233,11 +292,16 @@ const UserCommunityTab = () => {
           <div className="card border-0 shadow-sm">
             <div className="card-body text-center">
               <h2 className="card-title h4 mb-2">Community Hub</h2>
-              <p className="text-muted mb-0">Connect with other learners and admins</p>
+              <p className="text-muted mb-0">Connect with other learners and admins with voice chat</p>
               <div className="mt-2">
                 <small className={`badge ${isConnected ? 'bg-success' : 'bg-warning'}`}>
                   {isConnected ? '🟢 Connected' : '🟡 Connecting...'}
                 </small>
+                {socketId && (
+                  <small className="badge bg-secondary ms-2">
+                    ID: {socketId.substring(0, 8)}...
+                  </small>
+                )}
               </div>
             </div>
           </div>
@@ -254,7 +318,8 @@ const UserCommunityTab = () => {
                   <strong>Debug:</strong> Call: {currentCallId ? '✅' : '❌'} | 
                   Notification: {hasCallNotification ? '🔔' : '🔕'} | 
                   Active: {isCallActive ? '🎙️' : '💤'} | 
-                  Participants: {callParticipants.length}
+                  Participants: {callParticipants.length} |
+                  WebRTC: {webrtcService.localStream ? '✅' : '❌'}
                 </small>
               </div>
             </div>
@@ -272,7 +337,13 @@ const UserCommunityTab = () => {
                   <i className="fas fa-phone-volume fa-2x me-3 text-warning"></i>
                   <div>
                     <strong className="h5 mb-1">{activeCallInfo.adminName} is starting a community call!</strong>
-                    <p className="mb-1">{activeCallInfo.message}</p>
+                    <p className="mb-1">
+                      {activeCallInfo.message} 
+                      <span className="text-success ms-2">
+                        <i className="fas fa-volume-up me-1"></i>
+                        Voice chat enabled
+                      </span>
+                    </p>
                     <small className="text-muted">
                       Started: {new Date(activeCallInfo.startTime).toLocaleTimeString()}
                     </small>
@@ -284,7 +355,7 @@ const UserCommunityTab = () => {
                     className="btn btn-success btn-lg px-4"
                   >
                     <i className="fas fa-phone me-2"></i>
-                    Join Call
+                    Join with Audio
                   </button>
                   <button 
                     type="button" 
@@ -309,7 +380,13 @@ const UserCommunityTab = () => {
                   <i className="fas fa-phone fa-2x me-3 text-info"></i>
                   <div>
                     <strong className="h5 mb-1">You're in the community call</strong>
-                    <p className="mb-1">Connected with {callParticipants.length} participant(s)</p>
+                    <p className="mb-1">
+                      Connected with {callParticipants.length} participant(s)
+                      <span className="text-success ms-2">
+                        <i className="fas fa-volume-up me-1"></i>
+                        Voice chat active
+                      </span>
+                    </p>
                   </div>
                 </div>
                 <button 
@@ -355,19 +432,25 @@ const UserCommunityTab = () => {
                 <div className="card-header bg-warning text-dark">
                   <h4 className="h6 mb-0">
                     <i className="fas fa-bell me-2"></i>
-                    Active Call Available
+                    Active Voice Call Available
                   </h4>
                 </div>
                 <div className="card-body">
                   <p className="mb-2">
-                    <strong>{activeCallInfo.adminName}</strong> is hosting a call.
+                    <strong>{activeCallInfo.adminName}</strong> is hosting a voice call.
                   </p>
+                  <div className="mb-2">
+                    <small className="text-success">
+                      <i className="fas fa-volume-up me-1"></i>
+                      Real-time audio enabled
+                    </small>
+                  </div>
                   <button 
                     onClick={joinCall} 
                     className="btn btn-success w-100"
                   >
                     <i className="fas fa-phone me-2"></i>
-                    Join Call Now
+                    Join with Audio
                   </button>
                   <button 
                     onClick={dismissNotification}
@@ -397,7 +480,7 @@ const UserCommunityTab = () => {
                     <i className="fas fa-phone text-primary me-2"></i>
                     <strong>Voice Calls</strong>
                     <p className="small text-muted mb-0 mt-1">
-                      Join community calls started by admins
+                      Join community voice calls with real audio
                     </p>
                   </li>
                   <li className="mb-3 p-2 border rounded">
@@ -425,7 +508,7 @@ const UserCommunityTab = () => {
                   <i className="fas fa-phone-slash fa-2x text-muted mb-3"></i>
                   <h5 className="text-muted">No Active Calls</h5>
                   <p className="small text-muted mb-0">
-                    When an admin starts a call, you'll see a notification here to join.
+                    When an admin starts a voice call, you'll see a notification here to join with audio.
                   </p>
                 </div>
               </div>

@@ -47,11 +47,14 @@ const AudioVisualizer = ({
         const x = i * (barWidth + gap);
         const y = canvas.height - barHeight;
         
-        // Gradient based on audio level
+        // Gradient based on audio level and speaking state
         const gradient = ctx.createLinearGradient(0, y, 0, canvas.height);
         if (isSpeaking) {
           gradient.addColorStop(0, '#10b981'); // Green when speaking
           gradient.addColorStop(1, '#059669');
+        } else if (normalizedLevel > 0.1) {
+          gradient.addColorStop(0, '#3b82f6'); // Blue when active
+          gradient.addColorStop(1, '#1d4ed8');
         } else {
           gradient.addColorStop(0, '#6b7280'); // Gray when silent
           gradient.addColorStop(1, '#4b5563');
@@ -63,6 +66,14 @@ const AudioVisualizer = ({
         // Add rounded corners
         ctx.beginPath();
         ctx.roundRect(x, y, barWidth, barHeight, 2);
+        ctx.fill();
+      }
+
+      // Draw peak indicator
+      if (normalizedLevel > 0.8) {
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(canvas.width - 10, 10, 4, 0, 2 * Math.PI);
         ctx.fill();
       }
     };
@@ -90,26 +101,49 @@ const AudioVisualizer = ({
     <div className="d-flex flex-column align-items-center p-2 bg-light bg-opacity-10 rounded border border-light border-opacity-20">
       <div className="d-flex justify-content-between align-items-center w-100 mb-1">
         <small className="text-muted">{label}</small>
-        <div className={`d-flex align-items-center gap-1 ${isSpeaking ? 'text-success fw-semibold' : 'text-secondary'}`}>
+        <div className={`d-flex align-items-center gap-1 ${
+          isSpeaking ? 'text-success fw-semibold' : 
+          audioLevel > 0.1 ? 'text-primary' : 'text-secondary'
+        }`}>
           <span 
-            className={`rounded-circle ${isSpeaking ? 'bg-success' : 'bg-secondary'}`}
+            className={`rounded-circle ${
+              isSpeaking ? 'bg-success' : 
+              audioLevel > 0.1 ? 'bg-primary' : 'bg-secondary'
+            }`}
             style={{
               width: '6px',
               height: '6px',
-              animation: isSpeaking ? 'pulse 1.5s infinite' : 'none'
+              animation: (isSpeaking || audioLevel > 0.1) ? 'pulse 1.5s infinite' : 'none'
             }}
           ></span>
-          <small>{isSpeaking ? 'Speaking' : 'Silent'}</small>
+          <small>
+            {isSpeaking ? 'Speaking' : 
+             audioLevel > 0.1 ? 'Active' : 'Silent'}
+          </small>
         </div>
       </div>
-      <div className="rounded overflow-hidden bg-dark bg-opacity-30">
+      <div className="rounded overflow-hidden bg-dark bg-opacity-30 position-relative">
         <canvas
           ref={canvasRef}
           width={width}
           height={height}
           className="d-block"
         />
+        {/* Audio level indicator */}
+        <div 
+          className="position-absolute bottom-0 start-0 bg-success bg-opacity-50"
+          style={{ 
+            height: `${audioLevel * 100}%`,
+            width: '100%',
+            transition: 'height 0.1s ease'
+          }}
+        ></div>
       </div>
+
+      {/* Audio level percentage */}
+      <small className="text-muted mt-1">
+        Level: {Math.round(audioLevel * 100)}%
+      </small>
 
       {/* Add pulse animation styles */}
       <style>

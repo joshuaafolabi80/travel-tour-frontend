@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import socketService from '../services/socketService';
-import './AgoraVideoCall.css';
 
 const AgoraVideoCall = ({ 
   isOpen, 
@@ -21,9 +20,9 @@ const AgoraVideoCall = ({
   const [newMessage, setNewMessage] = useState('');
   const [callId, setCallId] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [userNameMap, setUserNameMap] = useState({}); // Map UIDs to names
   
   const localStreamRef = useRef(null);
-  const remoteStreamsRef = useRef({});
   const agoraClientRef = useRef(null);
   const localTracksRef = useRef({
     audioTrack: null,
@@ -31,7 +30,7 @@ const AgoraVideoCall = ({
     screenTrack: null
   });
 
-  // Initialize Agora client - FIXED: Proper initialization
+  // Initialize Agora client
   useEffect(() => {
     if (typeof window !== 'undefined' && window.AgoraRTC) {
       agoraClientRef.current = window.AgoraRTC.createClient({ 
@@ -49,7 +48,7 @@ const AgoraVideoCall = ({
     };
   }, []);
 
-  // Setup socket listeners for community coordination
+  // Socket listeners for community coordination
   useEffect(() => {
     if (!isOpen) return;
 
@@ -71,18 +70,41 @@ const AgoraVideoCall = ({
       setMessages(prev => [...prev, event.detail]);
     };
 
+    const handleUserJoinedCall = (event) => {
+      console.log('👤 User joined call:', event.detail);
+      // Update userNameMap with the new user's information
+      setUserNameMap(prev => ({
+        ...prev,
+        [event.detail.userId]: event.detail.userName
+      }));
+    };
+
+    const handleUserLeftCall = (event) => {
+      console.log('👤 User left call:', event.detail);
+      // Remove user from userNameMap
+      setUserNameMap(prev => {
+        const newMap = { ...prev };
+        delete newMap[event.detail.userId];
+        return newMap;
+      });
+    };
+
     window.addEventListener('community_call_started', handleCallStarted);
     window.addEventListener('community_call_ended', handleCallEnded);
     window.addEventListener('new_message', handleNewMessage);
+    window.addEventListener('user_joined_call', handleUserJoinedCall);
+    window.addEventListener('user_left_call', handleUserLeftCall);
 
     return () => {
       window.removeEventListener('community_call_started', handleCallStarted);
       window.removeEventListener('community_call_ended', handleCallEnded);
       window.removeEventListener('new_message', handleNewMessage);
+      window.removeEventListener('user_joined_call', handleUserJoinedCall);
+      window.removeEventListener('user_left_call', handleUserLeftCall);
     };
   }, [isOpen, isJoined]);
 
-  // Auto-remove notifications after 4 seconds
+  // Auto-remove notifications
   useEffect(() => {
     if (notifications.length > 0) {
       const timer = setTimeout(() => {
@@ -106,32 +128,37 @@ const AgoraVideoCall = ({
     const client = agoraClientRef.current;
     if (!client) return;
     
-    // When a remote user joins and publishes - FIXED: Proper user handling
+    // When a remote user joins and publishes - FIXED: Proper user handling with names
     client.on('user-published', async (user, mediaType) => {
       console.log(`👤 User ${user.uid} published ${mediaType}`);
       
       try {
         await client.subscribe(user, mediaType);
         
+        // Get user name from our map or use a default
+        const remoteUserName = userNameMap[user.uid] || `User ${user.uid}`;
+        
         if (mediaType === 'video') {
-          console.log(`🎥 Setting up remote video for user ${user.uid}`);
+          console.log(`🎥 Setting up remote video for user ${user.uid} - ${remoteUserName}`);
           
           // Create video container if it doesn't exist
           let remotePlayer = document.getElementById(`remote-video-${user.uid}`);
           if (!remotePlayer) {
-            const videoGrid = document.querySelector('.video-grid');
+            const videoGrid = document.getElementById('video-grid-container');
             if (videoGrid) {
               const videoWrapper = document.createElement('div');
-              videoWrapper.className = 'video-wrapper remote-video-wrapper';
+              videoWrapper.className = 'col-12 col-md-6 col-lg-4 p-2';
               videoWrapper.id = `video-wrapper-${user.uid}`;
               videoWrapper.innerHTML = `
-                <div class="video-header">
-                  <span class="user-name">${user.userName || `User ${user.uid}`}</span>
-                  <div class="status-indicators">
-                    <i class="fas fa-video" title="Video on"></i>
+                <div class="card bg-dark text-white h-100 position-relative shadow">
+                  <div class="card-header p-2 d-flex justify-content-between align-items-center bg-dark bg-opacity-75 position-absolute top-0 w-100 z-1 border-bottom border-secondary">
+                    <span class="user-name text-truncate me-2 fw-bold">${remoteUserName}</span>
+                    <div class="status-indicators d-flex gap-1">
+                      <i class="fas fa-video text-success" title="Video on"></i>
+                    </div>
                   </div>
+                  <div id="remote-video-${user.uid}" class="video-player w-100 h-100 bg-black rounded-bottom" style="min-height: 200px;"></div>
                 </div>
-                <div id="remote-video-${user.uid}" class="video-player"></div>
               `;
               videoGrid.appendChild(videoWrapper);
             }
@@ -149,7 +176,7 @@ const AgoraVideoCall = ({
             if (!exists) {
               return [...prev, { 
                 uid: user.uid, 
-                userName: user.userName || `User ${user.uid}`,
+                userName: remoteUserName,
                 hasVideo: true,
                 hasAudio: true 
               }];
@@ -159,7 +186,7 @@ const AgoraVideoCall = ({
             );
           });
 
-          addNotification(`User ${user.userName || user.uid} joined with video`);
+          addNotification(`${remoteUserName} joined with video`);
         }
         
         if (mediaType === 'audio') {
@@ -169,7 +196,7 @@ const AgoraVideoCall = ({
             if (!exists) {
               return [...prev, { 
                 uid: user.uid, 
-                userName: user.userName || `User ${user.uid}`,
+                userName: remoteUserName,
                 hasVideo: false,
                 hasAudio: true 
               }];
@@ -178,15 +205,17 @@ const AgoraVideoCall = ({
               u.uid === user.uid ? { ...u, hasAudio: true } : u
             );
           });
-          addNotification(`User ${user.userName || user.uid} joined with audio`);
+          addNotification(`${remoteUserName} joined with audio`);
         }
       } catch (error) {
         console.error('Error subscribing to user:', error);
       }
     });
 
-    // When a remote user stops publishing - FIXED: Proper cleanup
+    // When a remote user stops publishing
     client.on('user-unpublished', (user, mediaType) => {
+      const remoteUserName = userNameMap[user.uid] || `User ${user.uid}`;
+      
       console.log(`👤 User ${user.uid} unpublished ${mediaType}`);
       
       if (mediaType === 'video') {
@@ -194,10 +223,18 @@ const AgoraVideoCall = ({
           u.uid === user.uid ? { ...u, hasVideo: false } : u
         ));
         
-        // Remove video element but keep user in list
+        // Update video element to show placeholder
         const videoWrapper = document.getElementById(`video-wrapper-${user.uid}`);
         if (videoWrapper) {
-          videoWrapper.remove();
+          const videoPlayer = document.getElementById(`remote-video-${user.uid}`);
+          if (videoPlayer) {
+            videoPlayer.innerHTML = `
+              <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark text-muted">
+                <i class="fas fa-video-slash fa-2x mb-2"></i>
+                <small>Video Off</small>
+              </div>
+            `;
+          }
         }
       }
       if (mediaType === 'audio') {
@@ -207,10 +244,11 @@ const AgoraVideoCall = ({
       }
     });
 
-    // When a remote user leaves the channel - FIXED: Complete cleanup
+    // When a remote user leaves the channel
     client.on('user-left', (user) => {
+      const remoteUserName = userNameMap[user.uid] || `User ${user.uid}`;
       console.log(`👤 User ${user.uid} left the channel`);
-      addNotification(`User ${user.userName || user.uid} left the stream`);
+      addNotification(`${remoteUserName} left the stream`);
       
       // Remove user from state
       setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
@@ -243,10 +281,12 @@ const AgoraVideoCall = ({
     setIsLoading(true);
     
     try {
-      // Generate token from backend
+      // Generate token from backend - FIXED: Use consistent user ID
+      const userId = userData?.id || `user_${Date.now()}`;
+      
       const tokenResponse = await api.post('/agora/generate-token', {
         channelName: 'the-conclave-community',
-        uid: userData?.id || Date.now().toString(),
+        uid: userId,
         userName: currentUserName
       });
 
@@ -261,11 +301,11 @@ const AgoraVideoCall = ({
         throw new Error('Video services not available. Please refresh the page.');
       }
 
-      // Join the channel with user data - FIXED: Proper channel join
+      // Join the channel with user data
       await agoraClientRef.current.join(appId, channel, token, uid);
       console.log('✅ Successfully joined Agora channel:', channel);
 
-      // Create local tracks - FIXED: Proper track creation and playing
+      // Create local tracks - FIXED: Ensure local video plays properly
       let audioTrack, videoTrack;
       try {
         audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack();
@@ -277,25 +317,21 @@ const AgoraVideoCall = ({
 
       try {
         videoTrack = await window.AgoraRTC.createCameraVideoTrack({
-          encoderConfig: '720p_1' // Better quality for face visibility
+          encoderConfig: '720p_1'
         });
         console.log('📹 Video track created successfully');
         
-        // FIXED: Ensure local video element exists and play video immediately
-        const localPlayer = document.getElementById('local-video');
+        // Play local video immediately
+        const localPlayer = document.getElementById('local-video-player');
         if (localPlayer) {
-          videoTrack.play('local-video');
-          console.log('✅ Local video playing in local-video element');
-        } else {
-          console.error('❌ Local video element not found');
+          videoTrack.play('local-video-player');
+          console.log('✅ Local video playing');
         }
       } catch (videoError) {
         console.error('Camera error:', videoError);
-        // If video fails but audio works, continue with audio only
         if (!audioTrack) {
           throw new Error('Camera access denied. Please check permissions.');
         }
-        // Continue with audio only
         videoTrack = null;
       }
 
@@ -314,13 +350,22 @@ const AgoraVideoCall = ({
 
       setIsJoined(true);
       
-      // Notify via socket that user joined the community call
+      // Notify via socket that user joined the community call - FIXED: Send user info
       if (callId) {
-        socketService.joinCommunityCall(callId);
+        socketService.joinCommunityCall(callId, {
+          userId: uid,
+          userName: currentUserName,
+          isAdmin: isAdmin
+        });
       }
       
-      // Add notification instead of system message
-      addNotification(`${currentUserName} joined the stream`);
+      // Add current user to userNameMap
+      setUserNameMap(prev => ({
+        ...prev,
+        [uid]: currentUserName
+      }));
+
+      addNotification(`You joined the stream as ${currentUserName}`);
 
     } catch (error) {
       console.error('Error joining call:', error);
@@ -356,32 +401,28 @@ const AgoraVideoCall = ({
         socketService.leaveCommunityCall(callId);
       }
 
-      // Stop and close local tracks - FIXED: Proper cleanup
+      // Stop and close local tracks
       if (localTracksRef.current.audioTrack) {
         localTracksRef.current.audioTrack.stop();
         localTracksRef.current.audioTrack.close();
         localTracksRef.current.audioTrack = null;
-        console.log('🎤 Audio track closed');
       }
       if (localTracksRef.current.videoTrack) {
         localTracksRef.current.videoTrack.stop();
         localTracksRef.current.videoTrack.close();
         localTracksRef.current.videoTrack = null;
-        console.log('📹 Video track closed');
       }
       if (localTracksRef.current.screenTrack) {
         localTracksRef.current.screenTrack.stop();
         localTracksRef.current.screenTrack.close();
         localTracksRef.current.screenTrack = null;
-        console.log('🖥️ Screen track closed');
       }
 
       // Leave the channel
       await agoraClientRef.current.leave();
-      console.log('✅ Left Agora channel');
 
-      // FIXED: Clear all remote video elements
-      document.querySelectorAll('.remote-video-wrapper').forEach(wrapper => {
+      // Clear all remote video elements
+      document.querySelectorAll('[id^="video-wrapper-"]').forEach(wrapper => {
         wrapper.remove();
       });
 
@@ -395,8 +436,7 @@ const AgoraVideoCall = ({
         screenTrack: null 
       };
 
-      // Add notification instead of system message
-      addNotification(`${currentUserName} left the stream`);
+      addNotification(`You left the stream`);
 
     } catch (error) {
       console.error('Error leaving call:', error);
@@ -410,9 +450,9 @@ const AgoraVideoCall = ({
       setLocalAudioMuted(newMutedState);
       
       if (newMutedState) {
-        addNotification(`${currentUserName} muted microphone`);
+        addNotification('You muted microphone');
       } else {
-        addNotification(`${currentUserName} unmuted microphone`);
+        addNotification('You unmuted microphone');
       }
     }
   };
@@ -423,21 +463,25 @@ const AgoraVideoCall = ({
       await localTracksRef.current.videoTrack.setMuted(newMutedState);
       setLocalVideoMuted(newMutedState);
       
-      // FIXED: Show/hide local video based on mute state
-      const localPlayer = document.getElementById('local-video');
+      const localPlayer = document.getElementById('local-video-player');
       if (localPlayer) {
         if (newMutedState) {
-          localPlayer.innerHTML = '<div class="video-placeholder"><i class="fas fa-video-slash"></i><p>Video Off</p></div>';
+          localPlayer.innerHTML = `
+            <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark text-muted">
+              <i class="fas fa-video-slash fa-2x mb-2"></i>
+              <small>Video Off</small>
+            </div>
+          `;
         } else {
-          localPlayer.innerHTML = ''; // Clear placeholder
-          localTracksRef.current.videoTrack.play('local-video');
+          localPlayer.innerHTML = '';
+          localTracksRef.current.videoTrack.play('local-video-player');
         }
       }
       
       if (newMutedState) {
-        addNotification(`${currentUserName} turned off video`);
+        addNotification('You turned off video');
       } else {
-        addNotification(`${currentUserName} turned on video`);
+        addNotification('You turned on video');
       }
     }
   };
@@ -468,13 +512,13 @@ const AgoraVideoCall = ({
       await agoraClientRef.current.publish(screenTrack);
 
       // Play screen share in local video element
-      const localPlayer = document.getElementById('local-video');
+      const localPlayer = document.getElementById('local-video-player');
       if (localPlayer) {
-        screenTrack.play('local-video');
+        screenTrack.play('local-video-player');
       }
 
       setIsScreenSharing(true);
-      addNotification(`${currentUserName} started screen sharing`);
+      addNotification('You started screen sharing');
 
       // Handle when user stops screen share via browser UI
       screenTrack.on('track-ended', () => {
@@ -496,26 +540,26 @@ const AgoraVideoCall = ({
         localTracksRef.current.screenTrack = null;
       }
 
-      // Restore camera video - FIXED: Proper camera restoration
+      // Restore camera video
       if (!localTracksRef.current.videoTrack) {
         const videoTrack = await window.AgoraRTC.createCameraVideoTrack();
         localTracksRef.current.videoTrack = videoTrack;
         await agoraClientRef.current.publish(videoTrack);
         
-        const localPlayer = document.getElementById('local-video');
+        const localPlayer = document.getElementById('local-video-player');
         if (localPlayer) {
-          videoTrack.play('local-video');
+          videoTrack.play('local-video-player');
         }
       } else {
         await agoraClientRef.current.publish(localTracksRef.current.videoTrack);
-        const localPlayer = document.getElementById('local-video');
+        const localPlayer = document.getElementById('local-video-player');
         if (localPlayer && localTracksRef.current.videoTrack) {
-          localTracksRef.current.videoTrack.play('local-video');
+          localTracksRef.current.videoTrack.play('local-video-player');
         }
       }
 
       setIsScreenSharing(false);
-      addNotification(`${currentUserName} stopped screen sharing`);
+      addNotification('You stopped screen sharing');
 
     } catch (error) {
       console.error('Error stopping screen share:', error);
@@ -531,14 +575,19 @@ const AgoraVideoCall = ({
         timestamp: new Date(),
         isAdmin: isAdmin
       };
-      setMessages(prev => [...prev.slice(-99), message]); // Keep last 100 messages
+      
+      // Update local messages immediately
+      setMessages(prev => [...prev.slice(-99), message]);
       setNewMessage('');
 
-      // Send message via socket if in a community call
+      // Send message via socket - FIXED: Include all necessary data
       if (callId && isJoined) {
         socketService.sendCommunityMessage({
           text: newMessage.trim(),
-          callId: callId
+          callId: callId,
+          sender: currentUserName,
+          isAdmin: isAdmin,
+          timestamp: new Date().toISOString()
         });
       }
     }
@@ -559,233 +608,237 @@ const AgoraVideoCall = ({
   if (!isOpen) return null;
 
   return (
-    <div className="agora-video-call-modal">
-      <div className="agora-modal-content">
-        {/* Header */}
-        <div className="agora-header">
-          <div className="agora-header-content">
-            <h3>The Conclave Streams</h3>
+    <div className="modal fade show d-block" tabIndex="-1" style={{backgroundColor: 'rgba(0, 0, 0, 0.9)'}}>
+      <div className="modal-dialog modal-fullscreen m-0">
+        <div className="modal-content bg-dark text-light border-0 vh-100">
+          
+          {/* Header */}
+          <div className="modal-header border-bottom border-secondary p-3">
+            <h3 className="modal-title text-light m-0">The Conclave Streams</h3>
             {isJoined && (
-              <div className="connection-status">
-                <span className="status-indicator connected"></span>
-                <span>{remoteUsers.length + 1} online</span>
+              <div className="d-flex align-items-center me-3">
+                <span className="badge bg-success rounded-circle me-2" style={{width: '10px', height: '10px'}}></span>
+                <span className="text-success">{remoteUsers.length + 1} online</span>
               </div>
             )}
+            <button type="button" className="btn-close btn-close-white" onClick={handleClose}></button>
           </div>
-          <button className="agora-close-btn" onClick={handleClose}>
-            <i className="fas fa-times"></i>
-          </button>
-        </div>
 
-        {/* Notifications */}
-        {notifications.length > 0 && (
-          <div className="notifications-container">
-            {notifications.map(notification => (
-              <div key={notification.id} className="notification">
-                {notification.text}
-              </div>
-            ))}
-          </div>
-        )}
+          {/* Notifications */}
+          {notifications.length > 0 && (
+            <div className="position-absolute top-0 start-50 translate-middle-x mt-5 z-3">
+              {notifications.map(notification => (
+                <div key={notification.id} className="alert alert-info alert-dismissible fade show mb-2 shadow" role="alert">
+                  <small>{notification.text}</small>
+                </div>
+              ))}
+            </div>
+          )}
 
-        {/* Main Content */}
-        <div className="agora-main-content">
-          {/* Video Area */}
-          <div className="agora-video-container">
-            {!isJoined ? (
-              <div className="agora-join-prompt">
-                <div className="join-prompt-content">
-                  <i className="fas fa-video fa-3x mb-3"></i>
-                  <h4>Join The Conclave Stream</h4>
-                  <p>Connect with the community through live video and audio</p>
-                  <div className="permissions-note">
-                    <small>
-                      <i className="fas fa-info-circle me-1"></i>
+          {/* Main Content */}
+          <div className="modal-body p-0 d-flex flex-column h-100">
+            
+            {/* Video Area */}
+            <div className="flex-grow-1 p-3 overflow-auto">
+              {!isJoined ? (
+                <div className="d-flex align-items-center justify-content-center h-100">
+                  <div className="text-center p-5 bg-dark rounded border border-secondary">
+                    <i className="fas fa-video fa-3x mb-3 text-primary"></i>
+                    <h4 className="text-light mb-3">Join The Conclave Stream</h4>
+                    <p className="text-muted mb-4">Connect with the community through live video and audio</p>
+                    <div className="alert alert-warning mb-4">
+                      <i className="fas fa-info-circle me-2"></i>
                       You'll be asked to allow camera and microphone access
-                    </small>
-                  </div>
-                  <button 
-                    onClick={joinCall} 
-                    disabled={isLoading}
-                    className="join-stream-btn"
-                  >
-                    {isLoading ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin me-2"></i>
-                        Joining...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-play me-2"></i>
-                        Join Stream
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="video-grid">
-                {/* Local Video - FIXED: Always show local video */}
-                <div className="video-wrapper local-video-wrapper">
-                  <div className="video-header">
-                    <span className="user-name">{currentUserName} (You)</span>
-                    <div className="status-indicators">
-                      {localAudioMuted && <i className="fas fa-microphone-slash muted" title="Microphone muted"></i>}
-                      {localVideoMuted && <i className="fas fa-video-slash muted" title="Video off"></i>}
-                      {isScreenSharing && <i className="fas fa-desktop sharing" title="Screen sharing"></i>}
                     </div>
-                  </div>
-                  <div id="local-video" className="video-player">
-                    {localVideoMuted && !isScreenSharing && (
-                      <div className="video-placeholder">
-                        <i className="fas fa-video-slash"></i>
-                        <p>Video Off</p>
-                      </div>
-                    )}
-                    {isScreenSharing && (
-                      <div className="screen-share-indicator">
-                        <i className="fas fa-desktop me-2"></i>
-                        Screen Sharing
-                      </div>
-                    )}
+                    <button 
+                      onClick={joinCall} 
+                      disabled={isLoading}
+                      className="btn btn-primary btn-lg px-5"
+                    >
+                      {isLoading ? (
+                        <>
+                          <i className="fas fa-spinner fa-spin me-2"></i>
+                          Joining...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-play me-2"></i>
+                          Join Stream
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
-
-                {/* Remote Users Videos - FIXED: Dynamic video creation */}
-                {remoteUsers.map(user => (
-                  <div key={user.uid} className="video-wrapper remote-video-wrapper" id={`video-wrapper-${user.uid}`}>
-                    <div className="video-header">
-                      <span className="user-name">{user.userName}</span>
-                      <div className="status-indicators">
-                        {!user.hasVideo && <i className="fas fa-video-slash muted" title="Video off"></i>}
-                        {!user.hasAudio && <i className="fas fa-microphone-slash muted" title="Audio muted"></i>}
+              ) : (
+                <div className="row g-3" id="video-grid-container">
+                  {/* Local Video - Always First */}
+                  <div className="col-12 col-md-6 col-lg-4">
+                    <div className="card bg-dark text-white h-100 shadow position-relative">
+                      <div className="card-header p-2 d-flex justify-content-between align-items-center bg-dark bg-opacity-75 border-bottom border-secondary">
+                        <span className="fw-bold text-truncate">{currentUserName} (You)</span>
+                        <div className="d-flex gap-2">
+                          {localAudioMuted && <i className="fas fa-microphone-slash text-danger" title="Microphone muted"></i>}
+                          {localVideoMuted && <i className="fas fa-video-slash text-danger" title="Video off"></i>}
+                          {isScreenSharing && <i className="fas fa-desktop text-warning" title="Screen sharing"></i>}
+                        </div>
                       </div>
-                    </div>
-                    <div id={`remote-video-${user.uid}`} className="video-player">
-                      {!user.hasVideo && (
-                        <div className="video-placeholder">
-                          <i className="fas fa-user"></i>
-                          <p>{user.userName}</p>
+                      <div id="local-video-player" className="w-100 bg-black" style={{minHeight: '250px', aspectRatio: '16/9'}}>
+                        {localVideoMuted && !isScreenSharing && (
+                          <div className="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-muted">
+                            <i className="fas fa-video-slash fa-2x mb-2"></i>
+                            <small>Video Off</small>
+                          </div>
+                        )}
+                      </div>
+                      {isScreenSharing && (
+                        <div className="position-absolute bottom-0 start-0 w-100 bg-warning bg-opacity-90 text-dark text-center py-1">
+                          <i className="fas fa-desktop me-2"></i>
+                          Screen Sharing
                         </div>
                       )}
                     </div>
                   </div>
-                ))}
 
-                {/* Only show empty state for admin when no one has joined */}
-                {isAdmin && remoteUsers.length === 0 && (
-                  <div className="video-wrapper empty-video-wrapper">
-                    <div className="empty-video-placeholder">
-                      <i className="fas fa-user-plus fa-2x"></i>
-                      <p>Waiting for others to join...</p>
-                      <small>Share this stream with others to connect</small>
+                  {/* Remote Users */}
+                  {remoteUsers.map(user => (
+                    <div key={user.uid} className="col-12 col-md-6 col-lg-4">
+                      <div className="card bg-dark text-white h-100 shadow">
+                        <div className="card-header p-2 d-flex justify-content-between align-items-center bg-dark bg-opacity-75 border-bottom border-secondary">
+                          <span className="fw-bold text-truncate">{user.userName}</span>
+                          <div className="d-flex gap-2">
+                            {!user.hasVideo && <i className="fas fa-video-slash text-danger" title="Video off"></i>}
+                            {!user.hasAudio && <i className="fas fa-microphone-slash text-danger" title="Audio muted"></i>}
+                            {user.hasVideo && <i className="fas fa-video text-success" title="Video on"></i>}
+                          </div>
+                        </div>
+                        <div id={`remote-video-${user.uid}`} className="w-100 bg-black" style={{minHeight: '250px', aspectRatio: '16/9'}}>
+                          {!user.hasVideo && (
+                            <div className="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-muted">
+                              <i className="fas fa-user fa-2x mb-2"></i>
+                              <small>{user.userName}</small>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
+                  ))}
+
+                  {/* Empty State for Admin */}
+                  {isAdmin && remoteUsers.length === 0 && (
+                    <div className="col-12">
+                      <div className="text-center p-5 bg-dark rounded border border-secondary text-muted">
+                        <i className="fas fa-user-plus fa-3x mb-3"></i>
+                        <h5>Waiting for others to join...</h5>
+                        <p className="mb-0">Share this stream with others to connect</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Chat Sidebar */}
+            <div className="border-top border-secondary bg-dark">
+              <div className="p-3">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h6 className="mb-0 text-light">Community Chat</h6>
+                  <span className="badge bg-primary">{remoteUsers.length + 1} online</span>
+                </div>
+                
+                {/* Messages */}
+                <div className="mb-3" style={{maxHeight: '200px', overflowY: 'auto'}}>
+                  {messages.length === 0 ? (
+                    <div className="text-center text-muted py-4">
+                      <i className="fas fa-comments fa-2x mb-2"></i>
+                      <p className="mb-0">No messages yet</p>
+                      <small>Start the conversation!</small>
+                    </div>
+                  ) : (
+                    messages.map(message => (
+                      <div 
+                        key={message.id} 
+                        className={`mb-2 p-2 rounded ${message.sender === currentUserName ? 'bg-primary text-white ms-4' : 'bg-secondary text-light me-4'}`}
+                      >
+                        <div className="d-flex justify-content-between align-items-start mb-1">
+                          <small className="fw-bold">
+                            {message.sender === currentUserName ? 'You' : message.sender}
+                            {message.isAdmin && <span className="badge bg-danger ms-2">Admin</span>}
+                          </small>
+                          <small className="opacity-75">
+                            {new Date(message.timestamp).toLocaleTimeString()}
+                          </small>
+                        </div>
+                        <div className="message-text">{message.text}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Chat Input */}
+                {isJoined && (
+                  <div className="d-flex gap-2">
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Type a message..."
+                      className="form-control bg-dark text-light border-secondary"
+                      maxLength={500}
+                    />
+                    <button 
+                      onClick={sendMessage} 
+                      disabled={!newMessage.trim()}
+                      className="btn btn-primary"
+                    >
+                      <i className="fas fa-paper-plane"></i>
+                    </button>
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
 
-          {/* Chat Sidebar */}
-          <div className="agora-chat-sidebar">
-            <div className="chat-header">
-              <h5>Community Chat</h5>
-              <span className="online-count">{remoteUsers.length + 1} online</span>
-            </div>
-            
-            <div className="chat-messages-container">
-              <div className="chat-messages">
-                {messages.length === 0 ? (
-                  <div className="no-messages">
-                    <i className="fas fa-comments fa-2x"></i>
-                    <p>No messages yet</p>
-                    <small>Start the conversation!</small>
-                  </div>
-                ) : (
-                  messages.map(message => (
-                    <div 
-                      key={message.id} 
-                      className={`message ${message.isAdmin ? 'admin-message' : ''}`}
-                    >
-                      <div className="message-sender">
-                        {message.sender}
-                        {message.isAdmin && <span className="admin-badge">Admin</span>}
-                      </div>
-                      <div className="message-text">{message.text}</div>
-                      <div className="message-time">
-                        {new Date(message.timestamp).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {isJoined && (
-              <div className="chat-input-container">
-                <textarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type a message to the community..."
-                  className="chat-input"
-                  maxLength={500}
-                  rows="1"
-                />
+          {/* Controls */}
+          {isJoined && (
+            <div className="modal-footer border-top border-secondary p-3">
+              <div className="d-flex flex-wrap justify-content-center gap-2 w-100">
                 <button 
-                  onClick={sendMessage} 
-                  disabled={!newMessage.trim()}
-                  className="send-message-btn"
-                  title="Send message"
+                  onClick={toggleAudio}
+                  className={`btn ${localAudioMuted ? 'btn-danger' : 'btn-outline-light'}`}
                 >
-                  <i className="fas fa-paper-plane"></i>
+                  <i className={`fas ${localAudioMuted ? 'fa-microphone-slash' : 'fa-microphone'} me-1`}></i>
+                  <span className="d-none d-sm-inline">{localAudioMuted ? 'Unmute' : 'Mute'}</span>
+                </button>
+                
+                <button 
+                  onClick={toggleVideo}
+                  className={`btn ${localVideoMuted ? 'btn-danger' : 'btn-outline-light'}`}
+                  disabled={isScreenSharing}
+                >
+                  <i className={`fas ${localVideoMuted ? 'fa-video-slash' : 'fa-video'} me-1`}></i>
+                  <span className="d-none d-sm-inline">{localVideoMuted ? 'Start Video' : 'Stop Video'}</span>
+                </button>
+
+                <button 
+                  onClick={toggleScreenShare}
+                  className={`btn ${isScreenSharing ? 'btn-warning' : 'btn-outline-light'}`}
+                >
+                  <i className={`fas ${isScreenSharing ? 'fa-stop' : 'fa-desktop'} me-1`}></i>
+                  <span className="d-none d-sm-inline">{isScreenSharing ? 'Stop Share' : 'Share Screen'}</span>
+                </button>
+                
+                <button 
+                  onClick={leaveCall}
+                  className="btn btn-danger"
+                >
+                  <i className="fas fa-phone-slash me-1"></i>
+                  <span className="d-none d-sm-inline">Leave</span>
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-
-        {/* Controls - FIXED: Better mobile responsive controls */}
-        {isJoined && (
-          <div className="agora-controls">
-            <button 
-              onClick={toggleAudio}
-              className={`control-btn ${localAudioMuted ? 'muted' : ''}`}
-              title={localAudioMuted ? 'Unmute microphone' : 'Mute microphone'}
-            >
-              <i className={`fas ${localAudioMuted ? 'fa-microphone-slash' : 'fa-microphone'}`}></i>
-              <span className="control-text">{localAudioMuted ? 'Unmute' : 'Mute'}</span>
-            </button>
-            
-            <button 
-              onClick={toggleVideo}
-              className={`control-btn ${localVideoMuted ? 'muted' : ''}`}
-              title={localVideoMuted ? 'Start video' : 'Stop video'}
-              disabled={isScreenSharing}
-            >
-              <i className={`fas ${localVideoMuted ? 'fa-video-slash' : 'fa-video'}`}></i>
-              <span className="control-text">{localVideoMuted ? 'Start Video' : 'Stop Video'}</span>
-            </button>
-
-            <button 
-              onClick={toggleScreenShare}
-              className={`control-btn ${isScreenSharing ? 'sharing' : ''}`}
-              title={isScreenSharing ? 'Stop screen share' : 'Share screen'}
-            >
-              <i className={`fas ${isScreenSharing ? 'fa-stop' : 'fa-desktop'}`}></i>
-              <span className="control-text">{isScreenSharing ? 'Stop Share' : 'Share Screen'}</span>
-            </button>
-            
-            <button 
-              onClick={leaveCall}
-              className="control-btn leave-btn"
-              title="Leave stream"
-            >
-              <i className="fas fa-phone-slash"></i>
-              <span className="control-text">Leave Stream</span>
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

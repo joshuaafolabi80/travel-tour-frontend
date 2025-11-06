@@ -344,10 +344,30 @@
   animation: pulse 2s infinite;
 }
 
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
+/* Notifications */
+.notifications-container {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-width: 90%;
+}
+
+.notification {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  text-align: center;
+  animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 3.7s;
+  animation-fill-mode: forwards;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .permissions-note {
@@ -389,6 +409,84 @@
 
 .chat-input:disabled {
   opacity: 0.6;
+}
+
+/* Remove system message styles since we're not using them anymore */
+.system-message {
+  display: none;
+}
+
+/* Ensure chat messages are clean */
+.message {
+  background: #3d3d3d;
+  padding: 10px;
+  border-radius: 8px;
+  color: white;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.admin-message {
+  border-left: 3px solid #ffd700;
+}
+
+.message-sender {
+  font-weight: bold;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-badge {
+  background: #ffd700;
+  color: #000;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+.message-text {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message-time {
+  font-size: 0.7rem;
+  color: #aaa;
+  text-align: right;
+  margin-top: 4px;
+}
+
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 
 /* Responsive Design */

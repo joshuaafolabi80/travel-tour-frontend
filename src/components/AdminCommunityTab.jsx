@@ -1,229 +1,157 @@
 import React, { useState, useEffect } from 'react';
-import CommunityCallModal from './CommunityCallModal';
+import AgoraVideoCall from './AgoraVideoCall';
 import MessageThread from './MessageThread';
 import socketService from '../services/socketService';
-import webrtcService from '../services/webrtcService';
 
 const AdminCommunityTab = () => {
   const [isCallActive, setIsCallActive] = useState(false);
-  const [currentCallId, setCurrentCallId] = useState(null);
-  const [callParticipants, setCallParticipants] = useState([]);
+  const [hasActiveStream, setHasActiveStream] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasActiveCall, setHasActiveCall] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-  const [socketId, setSocketId] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [currentCallId, setCurrentCallId] = useState(null);
+  const [participants, setParticipants] = useState([]);
 
   useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    const storedUserData = JSON.parse(localStorage.getItem('userData') || '{}');
+    setUserData(storedUserData);
+    
+    // Connect to socket
     const socket = socketService.connect();
     
-    // Store socket ID for WebRTC
-    socket.on('connect', () => {
-      console.log('✅ Admin connected to socket server with ID:', socket.id);
-      setIsConnected(true);
-      setSocketId(socket.id);
+    // Setup socket event listeners
+    const handleUserJoinedCall = (event) => {
+      console.log('👤 User joined call:', event.detail);
+      addSystemMessage(`${event.detail.userName} joined the stream`);
       
-      // Join the app with admin data
-      socket.emit('user_join', {
-        userId: userData.id,
-        userName: userData.name || userData.username || 'Admin',
-        role: 'admin',
-        socketId: socket.id
-      });
-    });
-
-    // Listen for message history
-    socket.on('message_history', (messageHistory) => {
-      console.log('📜 Loading message history:', messageHistory.length, 'messages');
-      setMessages(prev => [...messageHistory, ...prev]);
-    });
-
-    // Listen for call participants updates
-    socket.on('call_participants_update', (data) => {
-      console.log('📊 Participants updated:', data.participants);
-      
-      // Add socketId to participants for WebRTC
-      const participantsWithSocket = data.participants.map(participant => ({
-        ...participant,
-        socketId: participant.socketId || participant.id
-      }));
-      
-      setCallParticipants(participantsWithSocket);
-      setCurrentCallId(data.callId);
-    });
-
-    // Listen for new messages
-    socket.on('new_message', (message) => {
-      console.log('💬 New message received:', message);
-      setMessages(prev => [...prev, message]);
-    });
-
-    // Listen for user joining call
-    socket.on('user_joined_call', (data) => {
-      console.log(`👤 ${data.userName} joined the call with socket ID: ${data.socketId}`);
-      
-      // Add new participant with socket ID for WebRTC
-      const newParticipant = {
-        id: data.userId,
-        userId: data.userId,
-        name: data.userName,
-        isMuted: false,
-        isAdmin: false,
-        isYou: false,
-        role: 'student',
-        socketId: data.socketId
-      };
-      
-      setCallParticipants(prev => {
-        const exists = prev.some(p => p.userId === data.userId);
+      setParticipants(prev => {
+        const exists = prev.find(p => p.userId === event.detail.userId);
         if (!exists) {
-          return [...prev, newParticipant];
+          return [...prev, {
+            userId: event.detail.userId,
+            userName: event.detail.userName,
+            socketId: event.detail.socketId,
+            role: event.detail.role
+          }];
         }
         return prev;
       });
-
-      // If call is active, initiate WebRTC connection with new participant
-      if (isCallActive && data.socketId) {
-        console.log(`🔗 Initiating WebRTC with new participant: ${data.userName}`);
-        webrtcService.createOffer(data.socketId, data.userName);
-      }
-    });
-
-    // Listen for user leaving call
-    socket.on('user_left_call', (data) => {
-      console.log(`👤 ${data.userName} left the call`);
-      
-      setCallParticipants(prev => 
-        prev.filter(p => p.name !== data.userName)
-      );
-      
-      // Close WebRTC connection
-      if (data.socketId) {
-        webrtcService.closeConnection(data.socketId);
-      }
-    });
-
-    // WebRTC signaling events
-    socket.on('webrtc_offer', (data) => {
-      console.log('📥 Received WebRTC offer from:', data.senderName);
-      webrtcService.handleOffer(data);
-    });
-
-    socket.on('webrtc_answer', (data) => {
-      console.log('📥 Received WebRTC answer from:', data.senderSocketId);
-      webrtcService.handleAnswer(data);
-    });
-
-    socket.on('webrtc_ice_candidate', (data) => {
-      console.log('🧊 Received ICE candidate from:', data.senderSocketId);
-      webrtcService.handleICECandidate(data);
-    });
-
-    // Cleanup on unmount
-    return () => {
-      socket.off('connect');
-      socket.off('message_history');
-      socket.off('call_participants_update');
-      socket.off('new_message');
-      socket.off('user_joined_call');
-      socket.off('user_left_call');
-      socket.off('webrtc_offer');
-      socket.off('webrtc_answer');
-      socket.off('webrtc_ice_candidate');
-      
-      // Cleanup WebRTC
-      if (isCallActive) {
-        webrtcService.stopLocalStream();
-      }
     };
-  }, [isCallActive]);
 
-  // Initialize call
-  const startCall = async () => {
-    setIsLoading(true);
-    try {
-      const socket = socketService.getSocket();
+    const handleUserLeftCall = (event) => {
+      console.log('👤 User left call:', event.detail);
+      addSystemMessage(`${event.detail.userName} left the stream`);
       
-      if (!socket) {
-        console.error('Socket not connected');
-        return;
-      }
+      setParticipants(prev => prev.filter(p => p.userId !== event.detail.userId));
+    };
 
-      console.log('🎤 Admin starting community call with WebRTC audio...');
-      
-      // Initialize WebRTC service first
-      webrtcService.setSocket(socket);
-      
-      // Start local audio stream
-      await webrtcService.startLocalStream();
-      
-      // Emit event to start call
-      socket.emit('admin_start_call', {
-        timestamp: new Date(),
-        withAudio: true
-      });
+    const handleNewMessage = (event) => {
+      console.log('💬 New message received:', event.detail);
+      setMessages(prev => [...prev, event.detail]);
+    };
 
-      // Set local state
-      setIsCallActive(true);
-      setHasActiveCall(true);
-      
-      // Add admin as first participant with socket ID
-      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-      setCallParticipants([{
-        id: userData.id,
-        userId: userData.id,
-        name: userData.name || userData.username || 'Admin',
-        isMuted: false,
-        isAdmin: true,
-        isYou: true,
-        role: 'admin',
-        socketId: socket.id
-      }]);
-      
-      console.log('✅ Community call started with WebRTC audio');
-      
-    } catch (error) {
-      console.error('Error starting call:', error);
-      alert('Failed to start call. Please check microphone permissions.');
-    } finally {
-      setIsLoading(false);
-    }
+    // Listen for socket events
+    window.addEventListener('user_joined_call', handleUserJoinedCall);
+    window.addEventListener('user_left_call', handleUserLeftCall);
+    window.addEventListener('new_message', handleNewMessage);
+
+    return () => {
+      window.removeEventListener('user_joined_call', handleUserJoinedCall);
+      window.removeEventListener('user_left_call', handleUserLeftCall);
+      window.removeEventListener('new_message', handleNewMessage);
+    };
+  }, []);
+
+  const startCall = () => {
+    console.log('🎬 Admin starting community call...');
+    
+    // Start the call via socket
+    socketService.startCommunityCall({
+      adminName: userData?.name || 'Admin',
+      message: 'Join the community stream!'
+    });
+    
+    setIsCallActive(true);
+    setHasActiveStream(true);
+    addSystemMessage('Admin started a community stream');
+    
+    // Add admin as first participant
+    setParticipants([{
+      userId: userData?.id || 'admin',
+      userName: userData?.name || 'Admin',
+      role: 'admin',
+      isYou: true
+    }]);
   };
 
-  // End call
   const endCall = () => {
-    const socket = socketService.getSocket();
-    if (socket && currentCallId) {
-      socket.emit('admin_end_call', { callId: currentCallId });
-    }
+    console.log('🛑 Admin ending community call...');
     
-    // Cleanup WebRTC
-    webrtcService.stopLocalStream();
-    callParticipants.forEach(participant => {
-      if (!participant.isYou) {
-        webrtcService.closeConnection(participant.socketId);
-      }
-    });
+    if (currentCallId) {
+      socketService.endCommunityCall(currentCallId);
+    }
     
     setIsCallActive(false);
+    setHasActiveStream(false);
     setCurrentCallId(null);
-    setCallParticipants([]);
-    setHasActiveCall(false);
-    
-    console.log('🔚 Call ended and WebRTC cleaned up');
+    setParticipants([]);
+    addSystemMessage('Admin ended the community stream');
   };
 
-  // Add message to thread
-  const addMessage = (message) => {
-    const socket = socketService.getSocket();
-    if (socket) {
-      socket.emit('send_message', {
-        text: message,
+  const addSystemMessage = (text) => {
+    const message = {
+      id: Date.now() + Math.random(),
+      sender: 'System',
+      text: text,
+      timestamp: new Date(),
+      isSystem: true
+    };
+    setMessages(prev => [...prev, message]);
+  };
+
+  const addMessage = (messageText) => {
+    const message = {
+      id: Date.now() + Math.random(),
+      sender: userData?.name || 'Admin',
+      text: messageText,
+      timestamp: new Date(),
+      isAdmin: true
+    };
+    setMessages(prev => [...prev, message]);
+    
+    // Send message via socket if in a call
+    if (currentCallId && isCallActive) {
+      socketService.sendCommunityMessage({
+        text: messageText,
         callId: currentCallId
       });
     }
   };
+
+  const handleCallStarted = (event) => {
+    console.log('📞 Call started event received:', event.detail);
+    setCurrentCallId(event.detail.callId);
+    setHasActiveStream(true);
+  };
+
+  const handleCallEnded = (event) => {
+    console.log('📞 Call ended event received');
+    setCurrentCallId(null);
+    setHasActiveStream(false);
+    if (isCallActive) {
+      setIsCallActive(false);
+    }
+  };
+
+  // Listen for call events
+  useEffect(() => {
+    window.addEventListener('community_call_started', handleCallStarted);
+    window.addEventListener('community_call_ended', handleCallEnded);
+
+    return () => {
+      window.removeEventListener('community_call_started', handleCallStarted);
+      window.removeEventListener('community_call_ended', handleCallEnded);
+    };
+  }, [isCallActive]);
 
   return (
     <div className="container-fluid py-3">
@@ -232,24 +160,37 @@ const AdminCommunityTab = () => {
           <div className="card border-0 shadow-sm">
             <div className="card-body text-center">
               <h2 className="card-title h4 mb-2">Community Hub - Admin</h2>
-              <p className="text-muted mb-4">Connect with all users in real-time with voice chat</p>
-              <div className="d-flex justify-content-center gap-3">
-                <small className={`badge ${isConnected ? 'bg-success' : 'bg-warning'}`}>
-                  {isConnected ? '🟢 Connected' : '🟡 Connecting...'}
-                </small>
-                {hasActiveCall && (
-                  <span className="badge bg-info">
-                    <i className="fas fa-broadcast-tower me-1"></i>
-                    Live Call Active
-                  </span>
+              <p className="text-muted mb-4">
+                Start live streams and connect with all users in real-time with video, audio, and chat
+              </p>
+              
+              <div className="d-flex justify-content-center align-items-center gap-3 mb-3">
+                {!isCallActive ? (
+                  <button 
+                    onClick={startCall}
+                    className="btn btn-primary btn-lg"
+                  >
+                    <i className="fas fa-video me-2"></i>
+                    Start Live Stream
+                  </button>
+                ) : (
+                  <div className="alert alert-success mb-0">
+                    <i className="fas fa-broadcast-tower me-2"></i>
+                    Live stream is active - {participants.length} participant(s) connected
+                  </div>
                 )}
-                <span className="badge bg-primary">
-                  {messages.length} Messages
-                </span>
-                {socketId && (
-                  <span className="badge bg-secondary">
-                    ID: {socketId.substring(0, 8)}...
-                  </span>
+              </div>
+
+              {/* Connection Status */}
+              <div className="d-flex justify-content-center gap-3">
+                <small className={`badge ${socketService.isSocketConnected() ? 'bg-success' : 'bg-warning'}`}>
+                  {socketService.isSocketConnected() ? '🟢 Connected' : '🟡 Connecting...'}
+                </small>
+                {hasActiveStream && (
+                  <small className="badge bg-info">
+                    <i className="fas fa-users me-1"></i>
+                    {participants.length} online
+                  </small>
                 )}
               </div>
             </div>
@@ -257,84 +198,139 @@ const AdminCommunityTab = () => {
         </div>
       </div>
 
-      {!isCallActive ? (
-        <div className="row mt-3">
-          {/* Call Initiation Card */}
-          <div className="col-12 col-lg-6 mb-3">
-            <div className="card bg-primary text-white h-100">
-              <div className="card-body text-center d-flex flex-column">
-                <div className="mb-3">
-                  <i className="fas fa-users fa-3x"></i>
-                </div>
-                <h3 className="h5">Start Community Call</h3>
-                <p className="flex-grow-1">
-                  Initiate a voice call that all users can join. 
-                  <strong> WebRTC audio is now enabled</strong> for real voice communication.
-                  Users will be able to hear you and speak back.
-                </p>
-                <button 
-                  onClick={startCall}
-                  disabled={isLoading}
-                  className="btn btn-light btn-lg mt-auto"
-                >
-                  {isLoading ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin me-2"></i>
-                      Starting Call...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-phone me-2"></i>
-                      Start Voice Call
-                    </>
-                  )}
-                </button>
-                <small className="text-light mt-2">
-                  <i className="fas fa-info-circle me-1"></i>
-                  Requires microphone access. Users can join with audio.
-                </small>
+      <div className="row mt-4">
+        {/* Community Chat */}
+        <div className="col-12 col-lg-6 mb-3">
+          <div className="card h-100">
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <h3 className="h5 mb-0">Community Chat</h3>
+              <div>
+                <span className="badge bg-primary me-2">{messages.length}</span>
+                {hasActiveStream && (
+                  <span className="badge bg-success">{participants.length} online</span>
+                )}
               </div>
             </div>
-          </div>
-
-          {/* Message Thread */}
-          <div className="col-12 col-lg-6">
-            <div className="card h-100">
-              <div className="card-header d-flex justify-content-between align-items-center">
-                <h3 className="h5 mb-0">Community Chat</h3>
-                <div className="d-flex gap-2">
-                  <span className="badge bg-primary">{messages.length}</span>
-                  <button 
-                    className="btn btn-sm btn-outline-secondary"
-                    onClick={() => setMessages([])}
-                    title="Clear messages"
-                  >
-                    <i className="fas fa-trash"></i>
-                  </button>
-                </div>
-              </div>
-              <div className="card-body d-flex flex-column p-0">
-                <MessageThread 
-                  messages={messages}
-                  onSendMessage={addMessage}
-                  currentUser="Admin"
-                  isAdmin={true}
-                />
-              </div>
+            <div className="card-body d-flex flex-column p-0">
+              <MessageThread 
+                messages={messages}
+                onSendMessage={addMessage}
+                currentUser={userData?.name || 'Admin'}
+                isAdmin={true}
+              />
             </div>
           </div>
         </div>
-      ) : (
-        <CommunityCallModal
-          isOpen={isCallActive}
-          onClose={endCall}
-          participants={callParticipants}
-          messages={messages}
-          onSendMessage={addMessage}
-          isAdmin={true}
-          currentUserName="Admin"
-        />
-      )}
+
+        {/* Stream Information & Participants */}
+        <div className="col-12 col-lg-6">
+          {/* Active Participants */}
+          {hasActiveStream && participants.length > 0 && (
+            <div className="card border-success mb-3">
+              <div className="card-header bg-success text-white">
+                <h4 className="h6 mb-0">
+                  <i className="fas fa-users me-2"></i>
+                  Active Participants ({participants.length})
+                </h4>
+              </div>
+              <div className="card-body">
+                <div className="participants-list">
+                  {participants.map(participant => (
+                    <div key={participant.userId} className="d-flex align-items-center justify-content-between py-2 border-bottom">
+                      <div className="d-flex align-items-center">
+                        <i className={`fas ${participant.role === 'admin' ? 'fa-crown text-warning' : 'fa-user'} me-2`}></i>
+                        <span>
+                          {participant.userName}
+                          {participant.isYou && <span className="text-info ms-1">(You)</span>}
+                        </span>
+                      </div>
+                      <span className={`badge ${participant.role === 'admin' ? 'bg-warning text-dark' : 'bg-secondary'}`}>
+                        {participant.role}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Stream Features */}
+          <div className="card">
+            <div className="card-header bg-primary text-white">
+              <h3 className="h5 mb-0">Stream Features</h3>
+            </div>
+            <div className="card-body">
+              <ul className="list-unstyled mb-0">
+                <li className="mb-3 p-2 border rounded">
+                  <i className="fas fa-video text-primary me-2"></i>
+                  <strong>Live Video Streaming</strong>
+                  <p className="small text-muted mb-0 mt-1">
+                    High-quality video calls with multiple participants
+                  </p>
+                </li>
+                <li className="mb-3 p-2 border rounded">
+                  <i className="fas fa-microphone text-primary me-2"></i>
+                  <strong>Crystal Clear Audio</strong>
+                  <p className="small text-muted mb-0 mt-1">
+                    Real-time audio with noise cancellation
+                  </p>
+                </li>
+                <li className="mb-3 p-2 border rounded">
+                  <i className="fas fa-comments text-primary me-2"></i>
+                  <strong>Integrated Text Chat</strong>
+                  <p className="small text-muted mb-0 mt-1">
+                    Chat with participants during the stream
+                  </p>
+                </li>
+                <li className="p-2 border rounded">
+                  <i className="fas fa-users text-primary me-2"></i>
+                  <strong>Community Building</strong>
+                  <p className="small text-muted mb-0 mt-1">
+                    Connect with all users simultaneously
+                  </p>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Stream Instructions */}
+          {isCallActive && (
+            <div className="card border-warning mt-3">
+              <div className="card-header bg-warning text-dark">
+                <h4 className="h6 mb-0">
+                  <i className="fas fa-info-circle me-2"></i>
+                  Stream Active
+                </h4>
+              </div>
+              <div className="card-body">
+                <p className="mb-2">
+                  <strong>Your stream is live!</strong> Users can now join using the community tab.
+                </p>
+                <div className="alert alert-info small">
+                  <i className="fas fa-lightbulb me-2"></i>
+                  Use the controls to mute/unmute audio and video during the stream
+                </div>
+                <button 
+                  onClick={endCall}
+                  className="btn btn-outline-danger btn-sm w-100"
+                >
+                  <i className="fas fa-stop me-2"></i>
+                  End Stream for Everyone
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Agora Video Call Modal */}
+      <AgoraVideoCall
+        isOpen={isCallActive}
+        onClose={endCall}
+        isAdmin={true}
+        currentUserName={userData?.name || 'Admin'}
+        userData={userData}
+      />
     </div>
   );
 };

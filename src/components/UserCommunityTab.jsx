@@ -1,289 +1,146 @@
 import React, { useState, useEffect } from 'react';
-import CommunityCallModal from './CommunityCallModal';
+import AgoraVideoCall from './AgoraVideoCall';
 import MessageThread from './MessageThread';
 import socketService from '../services/socketService';
-import webrtcService from '../services/webrtcService';
 
 const UserCommunityTab = () => {
   const [isCallActive, setIsCallActive] = useState(false);
-  const [currentCallId, setCurrentCallId] = useState(null);
-  const [hasCallNotification, setHasCallNotification] = useState(false);
-  const [callParticipants, setCallParticipants] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [userName, setUserName] = useState('');
+  const [hasActiveStream, setHasActiveStream] = useState(false);
   const [activeCallInfo, setActiveCallInfo] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [socketId, setSocketId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [userData, setUserData] = useState(null);
+  const [userName, setUserName] = useState('');
+  const [currentCallId, setCurrentCallId] = useState(null);
 
   useEffect(() => {
-    // Check if there's an active call stored
-    const storedCall = localStorage.getItem('activeCommunityCall');
-    if (storedCall) {
-      const activeCall = JSON.parse(storedCall);
-      const callAge = Date.now() - new Date(activeCall.receivedAt).getTime();
-      const maxCallAge = 24 * 60 * 60 * 1000; // 24 hours max
-      
-      if (callAge < maxCallAge) {
-        setHasCallNotification(true);
-        setActiveCallInfo(activeCall);
-        setCurrentCallId(activeCall.callId);
-        console.log('📞 Restored active call from storage:', activeCall);
-      } else {
-        // Clear expired call
-        localStorage.removeItem('activeCommunityCall');
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-    const name = userData.name || userData.username || 'User';
-    setUserName(name);
-
-    console.log('🔄 Initializing UserCommunityTab for:', name);
-
+    const storedUserData = JSON.parse(localStorage.getItem('userData') || '{}');
+    setUserData(storedUserData);
+    setUserName(storedUserData?.name || storedUserData?.username || 'User');
+    
+    // Connect to socket
     const socket = socketService.connect();
     
-    // Store socket ID for WebRTC
-    socket.on('connect', () => {
-      console.log('✅ Connected to socket server with ID:', socket.id);
-      setIsConnected(true);
-      setSocketId(socket.id);
-      
-      // Join the app with user data
-      socket.emit('user_join', {
-        userId: userData.id,
-        userName: name,
-        role: userData.role || 'student',
-        socketId: socket.id
-      });
-    });
+    // Setup socket event listeners
+    const handleCallStarted = (event) => {
+      console.log('📞 Call started event received:', event.detail);
+      setHasActiveStream(true);
+      setActiveCallInfo(event.detail);
+      setCurrentCallId(event.detail.callId);
+      addSystemMessage('Admin started a community stream - Join now!');
+    };
 
-    // Add this new socket listener for message history
-    socket.on('message_history', (messageHistory) => {
-      console.log('📜 Loading message history:', messageHistory.length, 'messages');
-      setMessages(prev => [...messageHistory, ...prev]);
-    });
-
-    // Update the call_started listener to handle persistent calls:
-    socket.on('call_started', (data) => {
-      console.log('📞 Call started by admin:', data);
-      setHasCallNotification(true);
-      setActiveCallInfo(data);
-      setCurrentCallId(data.callId);
-      setIsCallActive(false);
-      
-      // Store the active call info in localStorage for persistence
-      localStorage.setItem('activeCommunityCall', JSON.stringify({
-        callId: data.callId,
-        adminName: data.adminName,
-        startTime: data.startTime,
-        receivedAt: new Date(),
-        withAudio: data.withAudio || true
-      }));
-    });
-
-    // Update the call_ended listener to clear stored call:
-    socket.on('call_ended', (data) => {
-      console.log('📞 Call ended:', data);
-      setHasCallNotification(false);
-      setIsCallActive(false);
+    const handleCallEnded = (event) => {
+      console.log('📞 Call ended event received');
+      setHasActiveStream(false);
       setActiveCallInfo(null);
       setCurrentCallId(null);
-      setCallParticipants([]);
       
-      // Cleanup WebRTC
-      webrtcService.stopLocalStream();
-      
-      // Clear from localStorage
-      localStorage.removeItem('activeCommunityCall');
-    });
-
-    // Listen for participants updates
-    socket.on('call_participants_update', (data) => {
-      console.log('📊 Participants updated:', data.participants);
-      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-      
-      // Mark current user as "isYou" and add socket IDs
-      const participantsWithYou = data.participants.map(participant => ({
-        ...participant,
-        isYou: participant.userId === userData.id,
-        socketId: participant.socketId || participant.id
-      }));
-      
-      setCallParticipants(participantsWithYou);
-    });
-
-    // Listen for new messages
-    socket.on('new_message', (message) => {
-      console.log('💬 New message received:', message);
-      setMessages(prev => [...prev, message]);
-    });
-
-    // Listen for user joining call
-    socket.on('user_joined_call', (data) => {
-      console.log(`👤 ${data.userName} joined the call with socket ID: ${data.socketId}`);
-    });
-
-    // Listen for user leaving call
-    socket.on('user_left_call', (data) => {
-      console.log(`👤 ${data.userName} left the call`);
-    });
-
-    // WebRTC signaling events
-    socket.on('webrtc_offer', (data) => {
-      console.log('📥 Received WebRTC offer from admin:', data.senderName);
-      webrtcService.handleOffer(data);
-    });
-
-    socket.on('webrtc_answer', (data) => {
-      console.log('📥 Received WebRTC answer from:', data.senderSocketId);
-      webrtcService.handleAnswer(data);
-    });
-
-    socket.on('webrtc_ice_candidate', (data) => {
-      console.log('🧊 Received ICE candidate from:', data.senderSocketId);
-      webrtcService.handleICECandidate(data);
-    });
-
-    // Listen for errors
-    socket.on('error', (error) => {
-      console.error('❌ Socket error:', error);
-    });
-
-    // Cleanup on unmount
-    return () => {
-      console.log('🧹 Cleaning up UserCommunityTab socket listeners');
-      socket.off('connect');
-      socket.off('message_history');
-      socket.off('call_started');
-      socket.off('call_ended');
-      socket.off('call_participants_update');
-      socket.off('new_message');
-      socket.off('user_joined_call');
-      socket.off('user_left_call');
-      socket.off('webrtc_offer');
-      socket.off('webrtc_answer');
-      socket.off('webrtc_ice_candidate');
-      socket.off('error');
-      
-      // Cleanup WebRTC if call is active
       if (isCallActive) {
-        webrtcService.stopLocalStream();
+        setIsCallActive(false);
       }
+      
+      addSystemMessage('Admin ended the community stream');
+    };
+
+    const handleNewMessage = (event) => {
+      console.log('💬 New message received:', event.detail);
+      setMessages(prev => [...prev, event.detail]);
+    };
+
+    const handleUserJoinedCall = (event) => {
+      console.log('👤 User joined call:', event.detail);
+      addSystemMessage(`${event.detail.userName} joined the stream`);
+    };
+
+    const handleUserLeftCall = (event) => {
+      console.log('👤 User left call:', event.detail);
+      addSystemMessage(`${event.detail.userName} left the stream`);
+    };
+
+    // Listen for socket events
+    window.addEventListener('community_call_started', handleCallStarted);
+    window.addEventListener('community_call_ended', handleCallEnded);
+    window.addEventListener('new_message', handleNewMessage);
+    window.addEventListener('user_joined_call', handleUserJoinedCall);
+    window.addEventListener('user_left_call', handleUserLeftCall);
+
+    return () => {
+      window.removeEventListener('community_call_started', handleCallStarted);
+      window.removeEventListener('community_call_ended', handleCallEnded);
+      window.removeEventListener('new_message', handleNewMessage);
+      window.removeEventListener('user_joined_call', handleUserJoinedCall);
+      window.removeEventListener('user_left_call', handleUserLeftCall);
     };
   }, [isCallActive]);
 
-  const joinCall = async () => {
-    const socket = socketService.getSocket();
-    
-    if (!socket || !currentCallId) {
-      console.error('❌ No active call to join - socket:', !!socket, 'callId:', currentCallId);
+  const joinStream = () => {
+    if (!currentCallId) {
+      console.error('No active call ID available');
       return;
     }
 
-    console.log('🎤 Joining call with WebRTC audio:', currentCallId);
+    console.log('🎬 User joining community call:', currentCallId);
     
-    try {
-      // Initialize WebRTC service
-      webrtcService.setSocket(socket);
-      
-      // Start local audio stream
-      await webrtcService.startLocalStream();
-      
-      // Emit join call event
-      socket.emit('join_call', { 
-        callId: currentCallId,
-        withAudio: true
-      });
-      
-      setIsCallActive(true);
-      setHasCallNotification(false);
-      
-      // Add current user to local participants immediately for better UX
-      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-      const currentUser = {
-        id: userData.id,
-        userId: userData.id,
-        userName: userData.name || userData.username || 'User',
-        isMuted: false,
-        isAdmin: userData.role === 'admin',
-        isYou: true,
-        role: userData.role || 'student',
-        socketId: socket.id
-      };
-      
-      setCallParticipants(prev => {
-        const exists = prev.some(p => p.userId === currentUser.userId);
-        if (!exists) {
-          return [...prev, currentUser];
-        }
-        return prev;
-      });
-
-      console.log('✅ Joined call with WebRTC audio enabled');
-      
-    } catch (error) {
-      console.error('❌ Error joining call with audio:', error);
-      alert('Failed to join call with audio. Please check microphone permissions.');
-    }
+    // Join the call via socket
+    socketService.joinCommunityCall(currentCallId);
+    setIsCallActive(true);
+    addSystemMessage(`${userName} joined the stream`);
   };
 
-  const leaveCall = () => {
-    const socket = socketService.getSocket();
-    
-    if (socket && currentCallId) {
-      console.log('🚪 Leaving call:', currentCallId);
-      socket.emit('leave_call', { callId: currentCallId });
+  const leaveStream = () => {
+    if (currentCallId) {
+      console.log('🎬 User leaving community call:', currentCallId);
+      socketService.leaveCommunityCall(currentCallId);
     }
-    
-    // Cleanup WebRTC
-    webrtcService.stopLocalStream();
-    callParticipants.forEach(participant => {
-      if (!participant.isYou) {
-        webrtcService.closeConnection(participant.socketId);
-      }
-    });
     
     setIsCallActive(false);
-    setCurrentCallId(null);
-    setCallParticipants([]);
-    setActiveCallInfo(null);
-    setHasCallNotification(false);
-    
-    console.log('🔚 Left call and cleaned up WebRTC');
+    addSystemMessage(`${userName} left the stream`);
   };
 
-  const addMessage = (message) => {
-    const socket = socketService.getSocket();
-    if (socket) {
-      console.log('📤 Sending message:', message);
-      socket.emit('send_message', {
-        text: message,
+  const addSystemMessage = (text) => {
+    const message = {
+      id: Date.now() + Math.random(),
+      sender: 'System',
+      text: text,
+      timestamp: new Date(),
+      isSystem: true
+    };
+    setMessages(prev => [...prev, message]);
+  };
+
+  const addMessage = (messageText) => {
+    const message = {
+      id: Date.now() + Math.random(),
+      sender: userName,
+      text: messageText,
+      timestamp: new Date(),
+      isAdmin: false
+    };
+    setMessages(prev => [...prev, message]);
+    
+    // Send message via socket if in a call
+    if (currentCallId && isCallActive) {
+      socketService.sendCommunityMessage({
+        text: messageText,
         callId: currentCallId
       });
-    } else {
-      console.error('❌ Cannot send message - socket not connected');
     }
   };
 
-  const dismissNotification = () => {
-    setHasCallNotification(false);
-    setActiveCallInfo(null);
-    // Also remove from localStorage when manually dismissed
-    localStorage.removeItem('activeCommunityCall');
+  // Simulate admin starting a stream (for development only)
+  const simulateAdminStart = () => {
+    const mockCallInfo = {
+      callId: 'dev_call_' + Date.now(),
+      adminName: 'Demo Admin',
+      message: 'Development demo stream',
+      startTime: new Date()
+    };
+    
+    setHasActiveStream(true);
+    setActiveCallInfo(mockCallInfo);
+    setCurrentCallId(mockCallInfo.callId);
+    addSystemMessage('Admin started a community stream - Join now!');
   };
-
-  console.log('🔍 Current state:', {
-    isCallActive,
-    hasCallNotification,
-    currentCallId,
-    activeCallInfo,
-    callParticipants: callParticipants.length,
-    messages: messages.length,
-    isConnected,
-    socketId
-  });
 
   return (
     <div className="container-fluid py-3">
@@ -292,14 +149,19 @@ const UserCommunityTab = () => {
           <div className="card border-0 shadow-sm">
             <div className="card-body text-center">
               <h2 className="card-title h4 mb-2">Community Hub</h2>
-              <p className="text-muted mb-0">Connect with other learners and admins with voice chat</p>
+              <p className="text-muted mb-0">
+                Connect with other learners and admins through live streams and chat
+              </p>
+              
+              {/* Connection Status */}
               <div className="mt-2">
-                <small className={`badge ${isConnected ? 'bg-success' : 'bg-warning'}`}>
-                  {isConnected ? '🟢 Connected' : '🟡 Connecting...'}
+                <small className={`badge ${socketService.isSocketConnected() ? 'bg-success' : 'bg-warning'}`}>
+                  {socketService.isSocketConnected() ? '🟢 Connected' : '🟡 Connecting...'}
                 </small>
-                {socketId && (
-                  <small className="badge bg-secondary ms-2">
-                    ID: {socketId.substring(0, 8)}...
+                {hasActiveStream && (
+                  <small className="badge bg-info ms-2">
+                    <i className="fas fa-broadcast-tower me-1"></i>
+                    Live Stream Available
                   </small>
                 )}
               </div>
@@ -308,41 +170,18 @@ const UserCommunityTab = () => {
         </div>
       </div>
 
-      {/* Debug Info - Remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="row mt-2">
-          <div className="col-12">
-            <div className="card bg-light">
-              <div className="card-body py-2">
-                <small className="text-muted">
-                  <strong>Debug:</strong> Call: {currentCallId ? '✅' : '❌'} | 
-                  Notification: {hasCallNotification ? '🔔' : '🔕'} | 
-                  Active: {isCallActive ? '🎙️' : '💤'} | 
-                  Participants: {callParticipants.length} |
-                  WebRTC: {webrtcService.localStream ? '✅' : '❌'}
-                </small>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Call Notification */}
-      {hasCallNotification && !isCallActive && activeCallInfo && (
+      {/* Stream Notification */}
+      {hasActiveStream && !isCallActive && activeCallInfo && (
         <div className="row mt-3">
           <div className="col-12">
             <div className="alert alert-warning alert-dismissible fade show" role="alert">
               <div className="d-flex align-items-center justify-content-between">
                 <div className="d-flex align-items-center">
-                  <i className="fas fa-phone-volume fa-2x me-3 text-warning"></i>
+                  <i className="fas fa-video fa-2x me-3 text-warning"></i>
                   <div>
-                    <strong className="h5 mb-1">{activeCallInfo.adminName} is starting a community call!</strong>
+                    <strong className="h5 mb-1">Live Stream Available!</strong>
                     <p className="mb-1">
-                      {activeCallInfo.message} 
-                      <span className="text-success ms-2">
-                        <i className="fas fa-volume-up me-1"></i>
-                        Voice chat enabled
-                      </span>
+                      {activeCallInfo.adminName} is hosting a live community stream.
                     </p>
                     <small className="text-muted">
                       Started: {new Date(activeCallInfo.startTime).toLocaleTimeString()}
@@ -351,16 +190,16 @@ const UserCommunityTab = () => {
                 </div>
                 <div className="d-flex gap-2">
                   <button 
-                    onClick={joinCall} 
+                    onClick={joinStream} 
                     className="btn btn-success btn-lg px-4"
                   >
-                    <i className="fas fa-phone me-2"></i>
-                    Join with Audio
+                    <i className="fas fa-play me-2"></i>
+                    Join Stream
                   </button>
                   <button 
                     type="button" 
                     className="btn-close" 
-                    onClick={dismissNotification}
+                    onClick={() => setHasActiveStream(false)}
                     aria-label="Close"
                   ></button>
                 </div>
@@ -370,31 +209,18 @@ const UserCommunityTab = () => {
         </div>
       )}
 
-      {/* Active Call Info */}
-      {isCallActive && currentCallId && (
+      {/* Demo Admin Stream Button (Remove in production) */}
+      {import.meta.env.DEV && !hasActiveStream && (
         <div className="row mt-3">
           <div className="col-12">
-            <div className="alert alert-info">
-              <div className="d-flex align-items-center justify-content-between">
-                <div className="d-flex align-items-center">
-                  <i className="fas fa-phone fa-2x me-3 text-info"></i>
-                  <div>
-                    <strong className="h5 mb-1">You're in the community call</strong>
-                    <p className="mb-1">
-                      Connected with {callParticipants.length} participant(s)
-                      <span className="text-success ms-2">
-                        <i className="fas fa-volume-up me-1"></i>
-                        Voice chat active
-                      </span>
-                    </p>
-                  </div>
-                </div>
+            <div className="card border-info">
+              <div className="card-body text-center">
+                <p className="text-muted mb-2">Development Demo</p>
                 <button 
-                  onClick={leaveCall} 
-                  className="btn btn-outline-danger"
+                  onClick={simulateAdminStart}
+                  className="btn btn-outline-info btn-sm"
                 >
-                  <i className="fas fa-phone-slash me-2"></i>
-                  Leave Call
+                  Simulate Admin Starting Stream
                 </button>
               </div>
             </div>
@@ -424,37 +250,43 @@ const UserCommunityTab = () => {
             </div>
           </div>
 
-          {/* Community Info & Active Calls */}
+          {/* Community Info */}
           <div className="col-12 col-lg-4">
-            {/* Active Calls Info */}
-            {hasCallNotification && activeCallInfo && !isCallActive && (
+            {/* Active Stream Info */}
+            {hasActiveStream && !isCallActive && activeCallInfo && (
               <div className="card border-warning mb-3">
                 <div className="card-header bg-warning text-dark">
                   <h4 className="h6 mb-0">
                     <i className="fas fa-bell me-2"></i>
-                    Active Voice Call Available
+                    Live Stream Available
                   </h4>
                 </div>
                 <div className="card-body">
                   <p className="mb-2">
-                    <strong>{activeCallInfo.adminName}</strong> is hosting a voice call.
+                    <strong>{activeCallInfo.adminName}</strong> is hosting a live stream.
                   </p>
                   <div className="mb-2">
                     <small className="text-success">
-                      <i className="fas fa-volume-up me-1"></i>
-                      Real-time audio enabled
+                      <i className="fas fa-video me-1"></i>
+                      Video and audio enabled
+                    </small>
+                  </div>
+                  <div className="mb-3">
+                    <small className="text-muted">
+                      <i className="fas fa-clock me-1"></i>
+                      Started: {new Date(activeCallInfo.startTime).toLocaleTimeString()}
                     </small>
                   </div>
                   <button 
-                    onClick={joinCall} 
-                    className="btn btn-success w-100"
+                    onClick={joinStream} 
+                    className="btn btn-success w-100 mb-2"
                   >
-                    <i className="fas fa-phone me-2"></i>
-                    Join with Audio
+                    <i className="fas fa-play me-2"></i>
+                    Join Stream
                   </button>
                   <button 
-                    onClick={dismissNotification}
-                    className="btn btn-outline-secondary w-100 mt-2"
+                    onClick={() => setHasActiveStream(false)}
+                    className="btn btn-outline-secondary w-100 btn-sm"
                   >
                     Dismiss
                   </button>
@@ -473,14 +305,14 @@ const UserCommunityTab = () => {
                     <i className="fas fa-comments text-primary me-2"></i>
                     <strong>Real-time Text Chat</strong>
                     <p className="small text-muted mb-0 mt-1">
-                      Chat with other learners and admins in real-time
+                      Chat with other learners and admins
                     </p>
                   </li>
                   <li className="mb-3 p-2 border rounded">
-                    <i className="fas fa-phone text-primary me-2"></i>
-                    <strong>Voice Calls</strong>
+                    <i className="fas fa-video text-primary me-2"></i>
+                    <strong>Live Video Streams</strong>
                     <p className="small text-muted mb-0 mt-1">
-                      Join community voice calls with real audio
+                      Join community streams with video and audio
                     </p>
                   </li>
                   <li className="mb-3 p-2 border rounded">
@@ -501,14 +333,14 @@ const UserCommunityTab = () => {
               </div>
             </div>
 
-            {/* No Active Calls Message */}
-            {!hasCallNotification && !isCallActive && (
+            {/* No Active Stream Message */}
+            {!hasActiveStream && !isCallActive && (
               <div className="card border-secondary mt-3">
                 <div className="card-body text-center py-4">
-                  <i className="fas fa-phone-slash fa-2x text-muted mb-3"></i>
-                  <h5 className="text-muted">No Active Calls</h5>
+                  <i className="fas fa-video-slash fa-2x text-muted mb-3"></i>
+                  <h5 className="text-muted">No Active Streams</h5>
                   <p className="small text-muted mb-0">
-                    When an admin starts a voice call, you'll see a notification here to join with audio.
+                    When an admin starts a live stream, you'll see a notification here to join.
                   </p>
                 </div>
               </div>
@@ -516,14 +348,12 @@ const UserCommunityTab = () => {
           </div>
         </div>
       ) : (
-        <CommunityCallModal
+        <AgoraVideoCall
           isOpen={isCallActive}
-          onClose={leaveCall}
-          participants={callParticipants}
-          messages={messages}
-          onSendMessage={addMessage}
+          onClose={leaveStream}
           isAdmin={false}
           currentUserName={userName}
+          userData={userData}
         />
       )}
     </div>

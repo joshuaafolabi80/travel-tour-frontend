@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import { getSocketURL } from './api'; // Import from your updated api.js
 
 class SocketService {
   constructor() {
@@ -13,16 +14,8 @@ class SocketService {
       return this.socket;
     }
 
-    // Dynamic socket URL
-    const getSocketUrl = () => {
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:5000';
-      } else {
-        return 'https://travel-tour-academy-backend.onrender.com';
-      }
-    };
-
-    const socketUrl = getSocketUrl();
+    // Use the socket URL from api.js (which uses Netlify environment variables)
+    const socketUrl = getSocketURL();
     console.log(`🔌 Connecting to socket server: ${socketUrl}`);
 
     this.socket = io(socketUrl, {
@@ -67,6 +60,17 @@ class SocketService {
     this.socket.on('reconnect', (attemptNumber) => {
       console.log(`🔄 Reconnected after ${attemptNumber} attempts`);
       this.isConnected = true;
+      
+      // Re-send user join on reconnect
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      if (userData.id) {
+        this.socket.emit('user_join', {
+          userId: userData.id,
+          userName: userData.name || userData.username || 'User',
+          role: userData.role || 'student'
+        });
+        console.log(`👤 Re-sent user_join after reconnect`);
+      }
     });
 
     this.socket.on('reconnect_attempt', (attemptNumber) => {
@@ -83,6 +87,28 @@ class SocketService {
 
     this.socket.on('error', (error) => {
       console.error('Socket error:', error);
+    });
+
+    // Community call events (for Agora integration)
+    this.socket.on('call_started', (data) => {
+      console.log('📞 Call started by admin:', data);
+      // Dispatch event for components to listen to
+      window.dispatchEvent(new CustomEvent('community_call_started', { detail: data }));
+    });
+
+    this.socket.on('call_ended', (data) => {
+      console.log('📞 Call ended:', data);
+      window.dispatchEvent(new CustomEvent('community_call_ended', { detail: data }));
+    });
+
+    this.socket.on('user_joined_call', (data) => {
+      console.log(`👤 ${data.userName} joined the call`);
+      window.dispatchEvent(new CustomEvent('user_joined_call', { detail: data }));
+    });
+
+    this.socket.on('user_left_call', (data) => {
+      console.log(`👤 ${data.userName} left the call`);
+      window.dispatchEvent(new CustomEvent('user_left_call', { detail: data }));
     });
 
     return this.socket;
@@ -108,7 +134,50 @@ class SocketService {
     return this.isConnected && this.socket?.connected;
   }
 
-  // WebRTC signaling methods
+  // Community call methods
+  startCommunityCall(callData = {}) {
+    if (this.isSocketConnected()) {
+      console.log('🎬 Starting community call...');
+      this.socket.emit('admin_start_call', {
+        ...callData,
+        timestamp: new Date(),
+        withAudio: true,
+        withVideo: true
+      });
+    }
+  }
+
+  joinCommunityCall(callId) {
+    if (this.isSocketConnected()) {
+      console.log(`🎬 Joining community call: ${callId}`);
+      this.socket.emit('join_call', { 
+        callId: callId,
+        withAudio: true 
+      });
+    }
+  }
+
+  leaveCommunityCall(callId) {
+    if (this.isSocketConnected()) {
+      console.log(`🎬 Leaving community call: ${callId}`);
+      this.socket.emit('leave_call', { callId: callId });
+    }
+  }
+
+  endCommunityCall(callId) {
+    if (this.isSocketConnected()) {
+      console.log(`🎬 Ending community call: ${callId}`);
+      this.socket.emit('admin_end_call', { callId: callId });
+    }
+  }
+
+  sendCommunityMessage(messageData) {
+    if (this.isSocketConnected()) {
+      this.socket.emit('send_message', messageData);
+    }
+  }
+
+  // WebRTC signaling methods (keep these for compatibility)
   sendWebRTCOffer(targetSocketId, offer, senderName) {
     if (this.isSocketConnected()) {
       this.socket.emit('webrtc_offer', {

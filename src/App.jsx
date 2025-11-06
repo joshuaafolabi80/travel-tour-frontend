@@ -1,4 +1,4 @@
-// src/App.jsx - COMPLETE INTEGRATED VERSION WITH VIDEO COURSES
+//travel-tour-frontend/src/App.jsx - COMPLETE INTEGRATED VERSION WITH VIDEO COURSES
 import React, { useState, useEffect } from 'react';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { jwtDecode } from 'jwt-decode';

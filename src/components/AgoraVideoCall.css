@@ -1,3 +1,4 @@
+/* travel-tour-frontend/src/components/AgoraVideoCall.css */
 .agora-video-call-modal {
   position: fixed;
   top: 0;
@@ -9,11 +10,15 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 10px;
+  box-sizing: border-box;
 }
 
 .agora-modal-content {
-  width: 95%;
-  height: 95%;
+  width: 100%;
+  height: 100%;
+  max-width: 1400px;
+  max-height: 95vh;
   background: #1a1a1a;
   border-radius: 12px;
   display: flex;
@@ -28,6 +33,7 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #444;
+  flex-shrink: 0;
 }
 
 .agora-header h3 {
@@ -47,12 +53,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .agora-main-content {
   display: flex;
   flex: 1;
   overflow: hidden;
+  flex-direction: row;
 }
 
 .agora-video-container {
@@ -62,16 +70,19 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  min-height: 300px;
 }
 
 .agora-join-prompt {
   text-align: center;
   color: white;
-  padding: 40px;
+  padding: 40px 20px;
+  width: 100%;
 }
 
 .join-prompt-content {
   max-width: 400px;
+  margin: 0 auto;
 }
 
 .join-stream-btn {
@@ -84,6 +95,8 @@
   cursor: pointer;
   margin-top: 20px;
   transition: background 0.3s;
+  width: 100%;
+  max-width: 200px;
 }
 
 .join-stream-btn:hover:not(:disabled) {
@@ -97,13 +110,14 @@
 
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 10px;
   padding: 10px;
   width: 100%;
   height: 100%;
   align-items: center;
   justify-items: center;
+  overflow-y: auto;
 }
 
 .video-wrapper {
@@ -114,6 +128,7 @@
   width: 100%;
   max-width: 400px;
   aspect-ratio: 16/9;
+  min-height: 200px;
 }
 
 .video-header {
@@ -128,11 +143,16 @@
   justify-content: space-between;
   align-items: center;
   z-index: 10;
+  font-size: 0.8rem;
 }
 
 .user-name {
   font-size: 0.9rem;
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%;
 }
 
 .status-indicators .muted {
@@ -143,6 +163,9 @@
   width: 100%;
   height: 100%;
   background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .empty-video-placeholder {
@@ -154,11 +177,31 @@
   justify-content: center;
   color: #666;
   background: #1a1a1a;
+  text-align: center;
+  padding: 20px;
 }
 
 .empty-video-placeholder i {
   font-size: 2rem;
   margin-bottom: 10px;
+}
+
+.video-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #2d2d2d;
+  color: #fff;
+  text-align: center;
+}
+
+.video-placeholder i {
+  margin-bottom: 10px;
+  opacity: 0.7;
+  font-size: 2rem;
 }
 
 .agora-chat-sidebar {
@@ -167,6 +210,7 @@
   display: flex;
   flex-direction: column;
   border-left: 1px solid #444;
+  flex-shrink: 0;
 }
 
 .chat-header {
@@ -176,17 +220,26 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .chat-header h5 {
   margin: 0;
+  font-size: 1.1rem;
 }
 
 .online-count {
   background: #28a745;
-  padding: 2px 8px;
+  padding: 4px 8px;
   border-radius: 12px;
   font-size: 0.8rem;
+}
+
+.chat-messages-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-messages {
@@ -203,6 +256,7 @@
   padding: 10px;
   border-radius: 8px;
   color: white;
+  word-wrap: break-word;
 }
 
 .system-message {
@@ -236,6 +290,7 @@
 .message-text {
   font-size: 0.9rem;
   line-height: 1.4;
+  word-break: break-word;
 }
 
 .message-time {
@@ -250,6 +305,7 @@
   border-top: 1px solid #444;
   display: flex;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .chat-input {
@@ -260,6 +316,8 @@
   background: #3d3d3d;
   color: white;
   outline: none;
+  resize: none;
+  font-family: inherit;
 }
 
 .chat-input::placeholder {
@@ -277,6 +335,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .agora-controls {
@@ -284,21 +343,25 @@
   padding: 15px 20px;
   display: flex;
   justify-content: center;
-  gap: 15px;
+  gap: 10px;
   border-top: 1px solid #444;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .control-btn {
   background: #3d3d3d;
   color: white;
   border: none;
-  padding: 10px 20px;
+  padding: 10px 15px;
   border-radius: 20px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
   transition: background 0.3s;
+  font-size: 0.9rem;
+  min-width: auto;
 }
 
 .control-btn:hover {
@@ -317,11 +380,17 @@
   background: #ff3742;
 }
 
+.control-text {
+  white-space: nowrap;
+}
+
 /* Add to existing AgoraVideoCall.css */
 .agora-header-content {
   display: flex;
   align-items: center;
   gap: 15px;
+  flex: 1;
+  min-width: 0;
 }
 
 .connection-status {
@@ -330,6 +399,7 @@
   gap: 8px;
   color: #28a745;
   font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .status-indicator {
@@ -355,6 +425,7 @@
   flex-direction: column;
   gap: 5px;
   max-width: 90%;
+  width: auto;
 }
 
 .notification {
@@ -368,27 +439,16 @@
   animation-fill-mode: forwards;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .permissions-note {
   margin: 10px 0;
   color: #6c757d;
-}
-
-.video-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: #2d2d2d;
-  color: #fff;
-}
-
-.video-placeholder i {
-  margin-bottom: 10px;
-  opacity: 0.7;
+  text-align: center;
 }
 
 .no-messages {
@@ -416,52 +476,17 @@
   display: none;
 }
 
-/* Ensure chat messages are clean */
-.message {
-  background: #3d3d3d;
-  padding: 10px;
-  border-radius: 8px;
+.screen-share-indicator {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.7);
   color: white;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  z-index: 10;
 }
-
-.admin-message {
-  border-left: 3px solid #ffd700;
-}
-
-.message-sender {
-  font-weight: bold;
-  font-size: 0.9rem;
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.admin-badge {
-  background: #ffd700;
-  color: #000;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: bold;
-}
-
-.message-text {
-  font-size: 0.9rem;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.message-time {
-  font-size: 0.7rem;
-  color: #aaa;
-  text-align: right;
-  margin-top: 4px;
-}
-
 
 @keyframes slideIn {
   from {
@@ -489,12 +514,13 @@
   100% { opacity: 1; }
 }
 
-/* Responsive Design */
+/* Enhanced Mobile Responsiveness */
 @media (max-width: 768px) {
   .agora-modal-content {
     width: 100%;
     height: 100%;
     border-radius: 0;
+    max-height: 100vh;
   }
   
   .agora-main-content {
@@ -504,9 +530,122 @@
   .agora-chat-sidebar {
     width: 100%;
     height: 300px;
+    border-left: none;
+    border-top: 1px solid #444;
   }
   
   .video-grid {
     grid-template-columns: 1fr;
+    padding: 5px;
+    gap: 5px;
+  }
+  
+  .video-wrapper {
+    max-width: 100%;
+    min-height: 180px;
+  }
+  
+  .agora-header {
+    padding: 10px 15px;
+  }
+  
+  .agora-header h3 {
+    font-size: 1.2rem;
+  }
+  
+  .agora-controls {
+    padding: 10px 15px;
+    gap: 8px;
+  }
+  
+  .control-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    flex: 1;
+    min-width: 70px;
+    justify-content: center;
+  }
+  
+  .control-text {
+    display: none; /* Hide text on mobile, show only icons */
+  }
+  
+  .chat-header {
+    padding: 10px 15px;
+  }
+  
+  .chat-messages {
+    padding: 10px;
+  }
+  
+  .chat-input-container {
+    padding: 10px;
+  }
+  
+  .connection-status {
+    font-size: 0.8rem;
+  }
+  
+  .user-name {
+    font-size: 0.8rem;
+    max-width: 60%;
+  }
+}
+
+@media (max-width: 480px) {
+  .agora-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .connection-status {
+    font-size: 0.7rem;
+  }
+  
+  .video-wrapper {
+    min-height: 150px;
+  }
+  
+  .control-btn {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+  }
+  
+  .notifications-container {
+    top: 60px;
+    max-width: 95%;
+  }
+  
+  .notification {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    max-width: 250px;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 360px) {
+  .agora-header {
+    padding: 8px 10px;
+  }
+  
+  .agora-header h3 {
+    font-size: 1rem;
+  }
+  
+  .agora-close-btn {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .control-btn {
+    padding: 5px;
+    min-width: 60px;
+  }
+  
+  .video-header {
+    padding: 6px 8px;
+    font-size: 0.7rem;
   }
 }

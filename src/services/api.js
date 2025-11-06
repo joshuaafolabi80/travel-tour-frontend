@@ -36,7 +36,7 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 // Socket URL helper (for socketService.js)
-const getSocketURL = () => {
+export const getSocketURL = () => {
   // 1. First priority: Netlify environment variable
   if (import.meta.env.VITE_SOCKET_URL) {
     console.log('🔌 Using VITE_SOCKET_URL from environment:', import.meta.env.VITE_SOCKET_URL);
@@ -55,7 +55,7 @@ const getSocketURL = () => {
 };
 
 // Environment helper functions
-const getEnvironment = () => ({
+export const getEnvironment = () => ({
   isProduction,
   isDevelopment,
   mode: environment,
@@ -64,22 +64,22 @@ const getEnvironment = () => ({
 });
 
 // Check if we're running on Netlify
-const isNetlify = () => {
+export const isNetlify = () => {
   return window.location.hostname.includes('netlify.app');
 };
 
 // Check if we're in development mode
-const isDevMode = () => {
+export const isDevMode = () => {
   return isDevelopment;
 };
 
 // Check if we're in production mode
-const isProdMode = () => {
+export const isProdMode = () => {
   return isProduction;
 };
 
 // Get current environment name
-const getEnvName = () => {
+export const getEnvName = () => {
   if (isProduction) return 'production';
   if (isDevelopment) return 'development';
   return environment;
@@ -192,7 +192,7 @@ api.interceptors.response.use(
   }
 );
 
-// Export everything - SINGLE EXPORT BLOCK (no duplicate exports)
+// Export everything
 export default api;
 export { 
   getApiBaseUrl, 

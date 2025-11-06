@@ -1,3 +1,4 @@
+// travel-tour-frontend/src/components/UserCommunityTab.jsx
 import React, { useState, useEffect } from 'react';
 import AgoraVideoCall from './AgoraVideoCall';
 import MessageThread from './MessageThread';
@@ -170,13 +171,13 @@ const UserCommunityTab = () => {
         </div>
       </div>
 
-      {/* Stream Notification */}
+      {/* Stream Notification - FIXED: Bootstrap responsive layout */}
       {hasActiveStream && !isCallActive && activeCallInfo && (
         <div className="row mt-3">
           <div className="col-12">
             <div className="alert alert-warning alert-dismissible fade show" role="alert">
-              <div className="d-flex align-items-center justify-content-between">
-                <div className="d-flex align-items-center">
+              <div className="d-flex align-items-center justify-content-between flex-column flex-md-row">
+                <div className="d-flex align-items-center mb-2 mb-md-0">
                   <i className="fas fa-video fa-2x me-3 text-warning"></i>
                   <div>
                     <strong className="h5 mb-1">Live Stream Available!</strong>
@@ -188,7 +189,7 @@ const UserCommunityTab = () => {
                     </small>
                   </div>
                 </div>
-                <div className="d-flex gap-2">
+                <div className="d-flex gap-2 mt-2 mt-md-0">
                   <button 
                     onClick={joinStream} 
                     className="btn btn-success btn-lg px-4"
@@ -230,7 +231,7 @@ const UserCommunityTab = () => {
 
       {!isCallActive ? (
         <div className="row mt-3">
-          {/* Message Thread */}
+          {/* Message Thread - FIXED: Bootstrap responsive columns */}
           <div className="col-12 col-lg-8 mb-3">
             <div className="card h-100">
               <div className="card-header d-flex justify-content-between align-items-center">
@@ -250,7 +251,7 @@ const UserCommunityTab = () => {
             </div>
           </div>
 
-          {/* Community Info */}
+          {/* Community Info - FIXED: Bootstrap responsive columns */}
           <div className="col-12 col-lg-4">
             {/* Active Stream Info */}
             {hasActiveStream && !isCallActive && activeCallInfo && (

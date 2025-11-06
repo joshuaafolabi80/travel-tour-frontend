@@ -1,3 +1,4 @@
+// travel-tour-frontend/src/components/AdminCommunityTab.jsx
 import React, { useState, useEffect } from 'react';
 import AgoraVideoCall from './AgoraVideoCall';
 import MessageThread from './MessageThread';
@@ -164,7 +165,7 @@ const AdminCommunityTab = () => {
                 Start live streams and connect with all users in real-time with video, audio, and chat
               </p>
               
-              <div className="d-flex justify-content-center align-items-center gap-3 mb-3">
+              <div className="d-flex justify-content-center align-items-center gap-3 mb-3 flex-wrap">
                 {!isCallActive ? (
                   <button 
                     onClick={startCall}
@@ -182,7 +183,7 @@ const AdminCommunityTab = () => {
               </div>
 
               {/* Connection Status */}
-              <div className="d-flex justify-content-center gap-3">
+              <div className="d-flex justify-content-center gap-3 flex-wrap">
                 <small className={`badge ${socketService.isSocketConnected() ? 'bg-success' : 'bg-warning'}`}>
                   {socketService.isSocketConnected() ? '🟢 Connected' : '🟡 Connecting...'}
                 </small>
@@ -199,7 +200,7 @@ const AdminCommunityTab = () => {
       </div>
 
       <div className="row mt-4">
-        {/* Community Chat */}
+        {/* Community Chat - FIXED: Bootstrap responsive columns */}
         <div className="col-12 col-lg-6 mb-3">
           <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
@@ -222,7 +223,7 @@ const AdminCommunityTab = () => {
           </div>
         </div>
 
-        {/* Stream Information & Participants */}
+        {/* Stream Information & Participants - FIXED: Bootstrap responsive columns */}
         <div className="col-12 col-lg-6">
           {/* Active Participants */}
           {hasActiveStream && participants.length > 0 && (

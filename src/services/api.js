@@ -35,8 +35,8 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
-// Socket URL helper (for socketService.js)
-export const getSocketURL = () => {
+// Socket URL helper (for socketService.js) - FIXED: Removed duplicate export
+const getSocketURL = () => {
   // 1. First priority: Netlify environment variable
   if (import.meta.env.VITE_SOCKET_URL) {
     console.log('🔌 Using VITE_SOCKET_URL from environment:', import.meta.env.VITE_SOCKET_URL);
@@ -55,7 +55,7 @@ export const getSocketURL = () => {
 };
 
 // Environment helper functions
-export const getEnvironment = () => ({
+const getEnvironment = () => ({
   isProduction,
   isDevelopment,
   mode: environment,
@@ -64,22 +64,22 @@ export const getEnvironment = () => ({
 });
 
 // Check if we're running on Netlify
-export const isNetlify = () => {
+const isNetlify = () => {
   return window.location.hostname.includes('netlify.app');
 };
 
 // Check if we're in development mode
-export const isDevMode = () => {
+const isDevMode = () => {
   return isDevelopment;
 };
 
 // Check if we're in production mode
-export const isProdMode = () => {
+const isProdMode = () => {
   return isProduction;
 };
 
 // Get current environment name
-export const getEnvName = () => {
+const getEnvName = () => {
   if (isProduction) return 'production';
   if (isDevelopment) return 'development';
   return environment;
@@ -192,7 +192,7 @@ api.interceptors.response.use(
   }
 );
 
-// Export everything
+// Export everything - FIXED: Removed duplicate export of getSocketURL
 export default api;
 export { 
   getApiBaseUrl, 

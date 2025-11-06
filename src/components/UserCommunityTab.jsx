@@ -1,4 +1,3 @@
-// travel-tour-frontend/src/components/UserCommunityTab.jsx
 import React, { useState, useEffect } from 'react';
 import AgoraVideoCall from './AgoraVideoCall';
 import MessageThread from './MessageThread';
@@ -18,10 +17,8 @@ const UserCommunityTab = () => {
     setUserData(storedUserData);
     setUserName(storedUserData?.name || storedUserData?.username || 'User');
     
-    // Connect to socket
     const socket = socketService.connect();
     
-    // Setup socket event listeners
     const handleCallStarted = (event) => {
       console.log('📞 Call started event received:', event.detail);
       setHasActiveStream(true);
@@ -58,7 +55,6 @@ const UserCommunityTab = () => {
       addSystemMessage(`${event.detail.userName} left the stream`);
     };
 
-    // Listen for socket events
     window.addEventListener('community_call_started', handleCallStarted);
     window.addEventListener('community_call_ended', handleCallEnded);
     window.addEventListener('new_message', handleNewMessage);
@@ -82,7 +78,6 @@ const UserCommunityTab = () => {
 
     console.log('🎬 User joining community call:', currentCallId);
     
-    // Join the call via socket
     socketService.joinCommunityCall(currentCallId);
     setIsCallActive(true);
     addSystemMessage(`${userName} joined the stream`);
@@ -119,7 +114,6 @@ const UserCommunityTab = () => {
     };
     setMessages(prev => [...prev, message]);
     
-    // Send message via socket if in a call
     if (currentCallId && isCallActive) {
       socketService.sendCommunityMessage({
         text: messageText,
@@ -171,7 +165,7 @@ const UserCommunityTab = () => {
         </div>
       </div>
 
-      {/* Stream Notification - FIXED: Bootstrap responsive layout */}
+      {/* Stream Notification - Fixed issue #2: Hide "Join stream" when admin ends call */}
       {hasActiveStream && !isCallActive && activeCallInfo && (
         <div className="row mt-3">
           <div className="col-12">
@@ -231,7 +225,7 @@ const UserCommunityTab = () => {
 
       {!isCallActive ? (
         <div className="row mt-3">
-          {/* Message Thread - FIXED: Bootstrap responsive columns */}
+          {/* Message Thread - Improved mobile responsiveness */}
           <div className="col-12 col-lg-8 mb-3">
             <div className="card h-100">
               <div className="card-header d-flex justify-content-between align-items-center">
@@ -251,7 +245,7 @@ const UserCommunityTab = () => {
             </div>
           </div>
 
-          {/* Community Info - FIXED: Bootstrap responsive columns */}
+          {/* Community Info */}
           <div className="col-12 col-lg-4">
             {/* Active Stream Info */}
             {hasActiveStream && !isCallActive && activeCallInfo && (

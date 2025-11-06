@@ -1,4 +1,3 @@
-// travel-tour-frontend/src/components/AdminCommunityTab.jsx
 import React, { useState, useEffect } from 'react';
 import AgoraVideoCall from './AgoraVideoCall';
 import MessageThread from './MessageThread';
@@ -11,15 +10,14 @@ const AdminCommunityTab = () => {
   const [userData, setUserData] = useState(null);
   const [currentCallId, setCurrentCallId] = useState(null);
   const [participants, setParticipants] = useState([]);
+  const [isCreatingStream, setIsCreatingStream] = useState(false);
 
   useEffect(() => {
     const storedUserData = JSON.parse(localStorage.getItem('userData') || '{}');
     setUserData(storedUserData);
     
-    // Connect to socket
     const socket = socketService.connect();
     
-    // Setup socket event listeners
     const handleUserJoinedCall = (event) => {
       console.log('👤 User joined call:', event.detail);
       addSystemMessage(`${event.detail.userName} joined the stream`);
@@ -50,7 +48,6 @@ const AdminCommunityTab = () => {
       setMessages(prev => [...prev, event.detail]);
     };
 
-    // Listen for socket events
     window.addEventListener('user_joined_call', handleUserJoinedCall);
     window.addEventListener('user_left_call', handleUserLeftCall);
     window.addEventListener('new_message', handleNewMessage);
@@ -62,26 +59,37 @@ const AdminCommunityTab = () => {
     };
   }, []);
 
-  const startCall = () => {
+  const startCall = async () => {
     console.log('🎬 Admin starting community call...');
+    setIsCreatingStream(true);
     
-    // Start the call via socket
-    socketService.startCommunityCall({
-      adminName: userData?.name || 'Admin',
-      message: 'Join the community stream!'
-    });
-    
-    setIsCallActive(true);
-    setHasActiveStream(true);
-    addSystemMessage('Admin started a community stream');
-    
-    // Add admin as first participant
-    setParticipants([{
-      userId: userData?.id || 'admin',
-      userName: userData?.name || 'Admin',
-      role: 'admin',
-      isYou: true
-    }]);
+    try {
+      // Simulate stream creation process
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Start the call via socket
+      socketService.startCommunityCall({
+        adminName: userData?.name || 'Admin',
+        message: 'Join the community stream!'
+      });
+      
+      setIsCallActive(true);
+      setHasActiveStream(true);
+      addSystemMessage('Admin started a community stream');
+      
+      // Add admin as first participant
+      setParticipants([{
+        userId: userData?.id || 'admin',
+        userName: userData?.name || 'Admin',
+        role: 'admin',
+        isYou: true
+      }]);
+      
+    } catch (error) {
+      console.error('Error starting stream:', error);
+    } finally {
+      setIsCreatingStream(false);
+    }
   };
 
   const endCall = () => {
@@ -119,7 +127,6 @@ const AdminCommunityTab = () => {
     };
     setMessages(prev => [...prev, message]);
     
-    // Send message via socket if in a call
     if (currentCallId && isCallActive) {
       socketService.sendCommunityMessage({
         text: messageText,
@@ -143,7 +150,6 @@ const AdminCommunityTab = () => {
     }
   };
 
-  // Listen for call events
   useEffect(() => {
     window.addEventListener('community_call_started', handleCallStarted);
     window.addEventListener('community_call_ended', handleCallEnded);
@@ -169,10 +175,20 @@ const AdminCommunityTab = () => {
                 {!isCallActive ? (
                   <button 
                     onClick={startCall}
+                    disabled={isCreatingStream}
                     className="btn btn-primary btn-lg"
                   >
-                    <i className="fas fa-video me-2"></i>
-                    Start Live Stream
+                    {isCreatingStream ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin me-2"></i>
+                        Creating Stream...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-video me-2"></i>
+                        Start Live Stream
+                      </>
+                    )}
                   </button>
                 ) : (
                   <div className="alert alert-success mb-0">
@@ -200,7 +216,7 @@ const AdminCommunityTab = () => {
       </div>
 
       <div className="row mt-4">
-        {/* Community Chat - FIXED: Bootstrap responsive columns */}
+        {/* Community Chat - Improved mobile responsiveness */}
         <div className="col-12 col-lg-6 mb-3">
           <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
@@ -223,7 +239,7 @@ const AdminCommunityTab = () => {
           </div>
         </div>
 
-        {/* Stream Information & Participants - FIXED: Bootstrap responsive columns */}
+        {/* Stream Information & Participants */}
         <div className="col-12 col-lg-6">
           {/* Active Participants */}
           {hasActiveStream && participants.length > 0 && (

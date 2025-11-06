@@ -750,6 +750,152 @@
   color: #000;
 }
 
+/* Additional improvements for notifications */
+.notification-container {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1060;
+  max-width: 300px;
+}
+
+.notification-item {
+  backdrop-filter: blur(10px);
+  background: rgba(23, 162, 184, 0.95);
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Ensure modal backdrop doesn't interfere with notifications */
+.modal-backdrop {
+  z-index: 1050;
+}
+
+.modal {
+  z-index: 1060;
+}
+
+/* src/App.css */
+
+/* Notification animations */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.slide-out-left {
+  animation: slideOutLeft 0.3s ease-out forwards;
+}
+
+/* Mobile-specific improvements for video call */
+@media (max-width: 768px) {
+  /* Chat container improvements */
+  .chat-messages-container {
+    max-height: 150px !important;
+    min-height: 120px !important;
+  }
+  
+  /* Video call modal improvements */
+  .modal-dialog.modal-fullscreen {
+    margin: 0 !important;
+  }
+  
+  .modal-body {
+    padding: 0.5rem !important;
+  }
+  
+  /* Better button sizing on mobile */
+  .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Improved chat input on mobile */
+  .chat-input-container {
+    padding: 0.5rem !important;
+  }
+  
+  .chat-input-container .form-control {
+    font-size: 0.875rem;
+  }
+}
+
+/* Enhanced video grid for mobile */
+@media (max-width: 576px) {
+  #video-grid-container .col-12 {
+    padding: 0.25rem !important;
+  }
+  
+  .video-player {
+    min-height: 180px !important;
+  }
+}
+
+/* Stream creation loading state */
+.creating-stream {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Permission request styling */
+.permission-request {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+}
+
+.permission-request:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+  color: white;
+}
+
+/* Agora video call specific styles */
+.video-player {
+  background: #000;
+  border-radius: 8px;
+}
+
+.video-player video {
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+/* Community chat enhancements */
+.community-chat-container {
+  background: #1a1a1a;
+  border: 1px solid #333;
+}
+
+.chat-message {
+  transition: all 0.2s ease;
+}
+
+.chat-message:hover {
+  transform: translateX(2px);
+}
+
 @keyframes pulse {
   0% {
     transform: scale(1);

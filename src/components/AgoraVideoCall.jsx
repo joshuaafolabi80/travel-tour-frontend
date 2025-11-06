@@ -1,4 +1,3 @@
-// travel-tour-frontend/src/components/AgoraVideoCall.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import socketService from '../services/socketService';
@@ -20,7 +19,8 @@ const AgoraVideoCall = ({
   const [newMessage, setNewMessage] = useState('');
   const [callId, setCallId] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  const [userNameMap, setUserNameMap] = useState({}); // Map UIDs to names
+  const [userNameMap, setUserNameMap] = useState({});
+  const [permissionsGranted, setPermissionsGranted] = useState(false);
   
   const localStreamRef = useRef(null);
   const agoraClientRef = useRef(null);
@@ -63,6 +63,8 @@ const AgoraVideoCall = ({
         leaveCall();
       }
       setCallId(null);
+      // Clear "Join stream" availability when admin ends call
+      setHasActiveStream(false);
     };
 
     const handleNewMessage = (event) => {
@@ -72,7 +74,6 @@ const AgoraVideoCall = ({
 
     const handleUserJoinedCall = (event) => {
       console.log('👤 User joined call:', event.detail);
-      // Update userNameMap with the new user's information
       setUserNameMap(prev => ({
         ...prev,
         [event.detail.userId]: event.detail.userName
@@ -81,7 +82,6 @@ const AgoraVideoCall = ({
 
     const handleUserLeftCall = (event) => {
       console.log('👤 User left call:', event.detail);
-      // Remove user from userNameMap
       setUserNameMap(prev => {
         const newMap = { ...prev };
         delete newMap[event.detail.userId];
@@ -104,7 +104,7 @@ const AgoraVideoCall = ({
     };
   }, [isOpen, isJoined]);
 
-  // Auto-remove notifications
+  // Auto-remove notifications with animation
   useEffect(() => {
     if (notifications.length > 0) {
       const timer = setTimeout(() => {
@@ -128,20 +128,17 @@ const AgoraVideoCall = ({
     const client = agoraClientRef.current;
     if (!client) return;
     
-    // When a remote user joins and publishes - FIXED: Proper user handling with names
     client.on('user-published', async (user, mediaType) => {
       console.log(`👤 User ${user.uid} published ${mediaType}`);
       
       try {
         await client.subscribe(user, mediaType);
         
-        // Get user name from our map or use a default
         const remoteUserName = userNameMap[user.uid] || `User ${user.uid}`;
         
         if (mediaType === 'video') {
           console.log(`🎥 Setting up remote video for user ${user.uid} - ${remoteUserName}`);
           
-          // Create video container if it doesn't exist
           let remotePlayer = document.getElementById(`remote-video-${user.uid}`);
           if (!remotePlayer) {
             const videoGrid = document.getElementById('video-grid-container');
@@ -164,7 +161,6 @@ const AgoraVideoCall = ({
             }
           }
           
-          // Play the remote video track
           remotePlayer = document.getElementById(`remote-video-${user.uid}`);
           if (remotePlayer) {
             user.videoTrack.play(`remote-video-${user.uid}`);
@@ -212,7 +208,6 @@ const AgoraVideoCall = ({
       }
     });
 
-    // When a remote user stops publishing
     client.on('user-unpublished', (user, mediaType) => {
       const remoteUserName = userNameMap[user.uid] || `User ${user.uid}`;
       
@@ -223,7 +218,6 @@ const AgoraVideoCall = ({
           u.uid === user.uid ? { ...u, hasVideo: false } : u
         ));
         
-        // Update video element to show placeholder
         const videoWrapper = document.getElementById(`video-wrapper-${user.uid}`);
         if (videoWrapper) {
           const videoPlayer = document.getElementById(`remote-video-${user.uid}`);
@@ -244,23 +238,19 @@ const AgoraVideoCall = ({
       }
     });
 
-    // When a remote user leaves the channel
     client.on('user-left', (user) => {
       const remoteUserName = userNameMap[user.uid] || `User ${user.uid}`;
       console.log(`👤 User ${user.uid} left the channel`);
       addNotification(`${remoteUserName} left the stream`);
       
-      // Remove user from state
       setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
       
-      // Remove video element
       const videoWrapper = document.getElementById(`video-wrapper-${user.uid}`);
       if (videoWrapper) {
         videoWrapper.remove();
       }
     });
 
-    // Handle connection state changes
     client.on('connection-state-change', (curState, prevState) => {
       console.log(`🔄 Connection state changed: ${prevState} -> ${curState}`);
       
@@ -272,16 +262,63 @@ const AgoraVideoCall = ({
     });
   };
 
+  // Request permissions before joining call
+  const requestPermissions = async () => {
+    try {
+      console.log('🔐 Requesting camera and microphone permissions...');
+      
+      // Request camera permission
+      const videoStream = await navigator.mediaDevices.getUserMedia({ 
+        video: true,
+        audio: false 
+      });
+      videoStream.getTracks().forEach(track => track.stop());
+      
+      // Request microphone permission  
+      const audioStream = await navigator.mediaDevices.getUserMedia({ 
+        video: false,
+        audio: true 
+      });
+      audioStream.getTracks().forEach(track => track.stop());
+      
+      console.log('✅ Camera and microphone permissions granted');
+      setPermissionsGranted(true);
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Permission denied:', error);
+      let errorMessage = 'Permission denied. ';
+      
+      if (error.name === 'NotAllowedError') {
+        errorMessage += 'Please allow camera and microphone access in your browser settings to join the stream.';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage += 'Camera or microphone not found. Please check your device.';
+      } else {
+        errorMessage += 'Unable to access camera and microphone.';
+      }
+      
+      alert(errorMessage);
+      return false;
+    }
+  };
+
   const joinCall = async () => {
     if (!currentUserName) {
       alert('Please set your display name first');
       return;
     }
 
+    // Request permissions first
+    if (!permissionsGranted) {
+      const granted = await requestPermissions();
+      if (!granted) {
+        return;
+      }
+    }
+
     setIsLoading(true);
     
     try {
-      // Generate token from backend - FIXED: Use consistent user ID
       const userId = userData?.id || `user_${Date.now()}`;
       
       const tokenResponse = await api.post('/agora/generate-token', {
@@ -296,16 +333,13 @@ const AgoraVideoCall = ({
 
       const { token, appId, channel, uid, userName } = tokenResponse.data;
 
-      // Validate Agora SDK is loaded
       if (!window.AgoraRTC) {
         throw new Error('Video services not available. Please refresh the page.');
       }
 
-      // Join the channel with user data
       await agoraClientRef.current.join(appId, channel, token, uid);
       console.log('✅ Successfully joined Agora channel:', channel);
 
-      // Create local tracks - FIXED: Ensure local video plays properly
       let audioTrack, videoTrack;
       try {
         audioTrack = await window.AgoraRTC.createMicrophoneAudioTrack();
@@ -321,7 +355,6 @@ const AgoraVideoCall = ({
         });
         console.log('📹 Video track created successfully');
         
-        // Play local video immediately
         const localPlayer = document.getElementById('local-video-player');
         if (localPlayer) {
           videoTrack.play('local-video-player');
@@ -338,7 +371,6 @@ const AgoraVideoCall = ({
       localTracksRef.current.audioTrack = audioTrack;
       localTracksRef.current.videoTrack = videoTrack;
 
-      // Publish available tracks
       const tracksToPublish = [];
       if (audioTrack) tracksToPublish.push(audioTrack);
       if (videoTrack) tracksToPublish.push(videoTrack);
@@ -350,7 +382,6 @@ const AgoraVideoCall = ({
 
       setIsJoined(true);
       
-      // Notify via socket that user joined the community call - FIXED: Send user info
       if (callId) {
         socketService.joinCommunityCall(callId, {
           userId: uid,
@@ -359,7 +390,6 @@ const AgoraVideoCall = ({
         });
       }
       
-      // Add current user to userNameMap
       setUserNameMap(prev => ({
         ...prev,
         [uid]: currentUserName
@@ -391,17 +421,14 @@ const AgoraVideoCall = ({
     try {
       console.log('🚪 Leaving call...');
       
-      // Stop screen share if active
       if (isScreenSharing) {
         await stopScreenShare();
       }
 
-      // Notify via socket that user left the community call
       if (callId && isJoined) {
         socketService.leaveCommunityCall(callId);
       }
 
-      // Stop and close local tracks
       if (localTracksRef.current.audioTrack) {
         localTracksRef.current.audioTrack.stop();
         localTracksRef.current.audioTrack.close();
@@ -418,18 +445,16 @@ const AgoraVideoCall = ({
         localTracksRef.current.screenTrack = null;
       }
 
-      // Leave the channel
       await agoraClientRef.current.leave();
 
-      // Clear all remote video elements
       document.querySelectorAll('[id^="video-wrapper-"]').forEach(wrapper => {
         wrapper.remove();
       });
 
-      // Reset state
       setIsJoined(false);
       setRemoteUsers([]);
       setIsScreenSharing(false);
+      setPermissionsGranted(false);
       localTracksRef.current = { 
         audioTrack: null, 
         videoTrack: null,
@@ -500,7 +525,6 @@ const AgoraVideoCall = ({
         encoderConfig: '1080p_1',
       });
 
-      // Stop current video track if exists
       if (localTracksRef.current.videoTrack) {
         await agoraClientRef.current.unpublish(localTracksRef.current.videoTrack);
         localTracksRef.current.videoTrack.stop();
@@ -511,7 +535,6 @@ const AgoraVideoCall = ({
       localTracksRef.current.screenTrack = screenTrack;
       await agoraClientRef.current.publish(screenTrack);
 
-      // Play screen share in local video element
       const localPlayer = document.getElementById('local-video-player');
       if (localPlayer) {
         screenTrack.play('local-video-player');
@@ -520,7 +543,6 @@ const AgoraVideoCall = ({
       setIsScreenSharing(true);
       addNotification('You started screen sharing');
 
-      // Handle when user stops screen share via browser UI
       screenTrack.on('track-ended', () => {
         stopScreenShare();
       });
@@ -540,7 +562,6 @@ const AgoraVideoCall = ({
         localTracksRef.current.screenTrack = null;
       }
 
-      // Restore camera video
       if (!localTracksRef.current.videoTrack) {
         const videoTrack = await window.AgoraRTC.createCameraVideoTrack();
         localTracksRef.current.videoTrack = videoTrack;
@@ -576,11 +597,9 @@ const AgoraVideoCall = ({
         isAdmin: isAdmin
       };
       
-      // Update local messages immediately
       setMessages(prev => [...prev.slice(-99), message]);
       setNewMessage('');
 
-      // Send message via socket - FIXED: Include all necessary data
       if (callId && isJoined) {
         socketService.sendCommunityMessage({
           text: newMessage.trim(),
@@ -605,6 +624,14 @@ const AgoraVideoCall = ({
     onClose();
   };
 
+  // Fix for issue #1: Stop video button crash
+  const handleStopVideo = () => {
+    if (isJoined) {
+      leaveCall();
+    }
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -621,14 +648,27 @@ const AgoraVideoCall = ({
                 <span className="text-success">{remoteUsers.length + 1} online</span>
               </div>
             )}
-            <button type="button" className="btn-close btn-close-white" onClick={handleClose}></button>
+            <button 
+              type="button" 
+              className="btn-close btn-close-white" 
+              onClick={handleClose}
+              aria-label="Close"
+            ></button>
           </div>
 
-          {/* Notifications */}
+          {/* Notifications - Fixed issue #6: Animated notifications in bottom-left */}
           {notifications.length > 0 && (
-            <div className="position-absolute top-0 start-50 translate-middle-x mt-5 z-3">
-              {notifications.map(notification => (
-                <div key={notification.id} className="alert alert-info alert-dismissible fade show mb-2 shadow" role="alert">
+            <div className="position-fixed bottom-0 start-0 m-3 z-3">
+              {notifications.map((notification, index) => (
+                <div 
+                  key={notification.id} 
+                  className="alert alert-info alert-dismissible fade show mb-2 shadow slide-in-left"
+                  role="alert"
+                  style={{
+                    animation: `slideInLeft 0.3s ease-out, slideOutLeft 0.3s ease-out 3.7s forwards`,
+                    maxWidth: '300px'
+                  }}
+                >
                   <small>{notification.text}</small>
                 </div>
               ))}
@@ -644,8 +684,15 @@ const AgoraVideoCall = ({
                 <div className="d-flex align-items-center justify-content-center h-100">
                   <div className="text-center p-5 bg-dark rounded border border-secondary">
                     <i className="fas fa-video fa-3x mb-3 text-primary"></i>
-                    <h4 className="text-light mb-3">Join The Conclave Stream</h4>
-                    <p className="text-muted mb-4">Connect with the community through live video and audio</p>
+                    <h4 className="text-light mb-3">
+                      {isAdmin ? 'Start The Conclave Stream' : 'Join The Conclave Stream'}
+                    </h4>
+                    <p className="text-muted mb-4">
+                      {isAdmin 
+                        ? 'Start a live stream for the community with video and audio' 
+                        : 'Connect with the community through live video and audio'
+                      }
+                    </p>
                     <div className="alert alert-warning mb-4">
                       <i className="fas fa-info-circle me-2"></i>
                       You'll be asked to allow camera and microphone access
@@ -658,12 +705,12 @@ const AgoraVideoCall = ({
                       {isLoading ? (
                         <>
                           <i className="fas fa-spinner fa-spin me-2"></i>
-                          Joining...
+                          {isAdmin ? 'Creating Stream...' : 'Joining...'}
                         </>
                       ) : (
                         <>
                           <i className="fas fa-play me-2"></i>
-                          Join Stream
+                          {isAdmin ? 'Start Stream' : 'Join Stream'}
                         </>
                       )}
                     </button>
@@ -737,7 +784,7 @@ const AgoraVideoCall = ({
               )}
             </div>
 
-            {/* Chat Sidebar */}
+            {/* Chat Sidebar - Fixed issue #3: Mobile view improvements */}
             <div className="border-top border-secondary bg-dark">
               <div className="p-3">
                 <div className="d-flex justify-content-between align-items-center mb-3">
@@ -746,7 +793,14 @@ const AgoraVideoCall = ({
                 </div>
                 
                 {/* Messages */}
-                <div className="mb-3" style={{maxHeight: '200px', overflowY: 'auto'}}>
+                <div 
+                  className="mb-3 chat-messages-container" 
+                  style={{
+                    maxHeight: '200px', 
+                    overflowY: 'auto',
+                    minHeight: '150px'
+                  }}
+                >
                   {messages.length === 0 ? (
                     <div className="text-center text-muted py-4">
                       <i className="fas fa-comments fa-2x mb-2"></i>
@@ -757,7 +811,11 @@ const AgoraVideoCall = ({
                     messages.map(message => (
                       <div 
                         key={message.id} 
-                        className={`mb-2 p-2 rounded ${message.sender === currentUserName ? 'bg-primary text-white ms-4' : 'bg-secondary text-light me-4'}`}
+                        className={`mb-2 p-2 rounded ${
+                          message.sender === currentUserName 
+                            ? 'bg-primary text-white ms-4' 
+                            : 'bg-secondary text-light me-4'
+                        }`}
                       >
                         <div className="d-flex justify-content-between align-items-start mb-1">
                           <small className="fw-bold">
@@ -799,7 +857,7 @@ const AgoraVideoCall = ({
             </div>
           </div>
 
-          {/* Controls */}
+          {/* Controls - Fixed issue #5: Leave call functions same as close button */}
           {isJoined && (
             <div className="modal-footer border-top border-secondary p-3">
               <div className="d-flex flex-wrap justify-content-center gap-2 w-100">
@@ -828,18 +886,68 @@ const AgoraVideoCall = ({
                   <span className="d-none d-sm-inline">{isScreenSharing ? 'Stop Share' : 'Share Screen'}</span>
                 </button>
                 
+                {/* Fixed issue #1 & #5: Stop video and Leave call both function the same */}
                 <button 
-                  onClick={leaveCall}
+                  onClick={handleStopVideo}
+                  className="btn btn-outline-warning"
+                >
+                  <i className="fas fa-stop me-1"></i>
+                  <span className="d-none d-sm-inline">Stop Video</span>
+                </button>
+                
+                <button 
+                  onClick={handleClose}
                   className="btn btn-danger"
                 >
                   <i className="fas fa-phone-slash me-1"></i>
-                  <span className="d-none d-sm-inline">Leave</span>
+                  <span className="d-none d-sm-inline">Leave Call</span>
                 </button>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* CSS for notification animations */}
+      <style jsx>{`
+        @keyframes slideInLeft {
+          from {
+            transform: translateX(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes slideOutLeft {
+          from {
+            transform: translateX(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateX(-100%);
+            opacity: 0;
+          }
+        }
+        
+        .slide-in-left {
+          animation: slideInLeft 0.3s ease-out;
+        }
+        
+        /* Mobile-specific styles for chat */
+        @media (max-width: 768px) {
+          .chat-messages-container {
+            max-height: 150px !important;
+            min-height: 120px !important;
+          }
+          
+          .modal-body {
+            padding: 0.5rem !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

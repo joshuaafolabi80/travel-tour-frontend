@@ -834,14 +834,14 @@ const AgoraVideoCall = ({
 
                 {/* Chat Input */}
                 {isJoined && (
-                  <div className="d-flex gap-2">
+                  <div className="d-flex gap-2 chat-input-container">
                     <input
                       type="text"
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="Type a message..."
-                      className="form-control bg-dark text-light border-secondary"
+                      className="form-control bg-light text-dark border-secondary"
                       maxLength={500}
                     />
                     <button 

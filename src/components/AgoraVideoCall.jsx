@@ -68,8 +68,23 @@ const AgoraVideoCall = ({
     };
 
     const handleNewMessage = (event) => {
-      console.log('💬 New message received:', event.detail);
-      setMessages(prev => [...prev, event.detail]);
+      console.log('💬 NEW MESSAGE RECEIVED IN VIDEO CALL:', event.detail);
+      
+      // 🆕 FIXED: Ensure message has proper structure before adding
+      if (event.detail && event.detail.text && event.detail.sender) {
+        const formattedMessage = {
+          id: event.detail.id || `msg_${Date.now()}_${Math.random()}`,
+          sender: event.detail.sender,
+          text: event.detail.text,
+          timestamp: event.detail.timestamp ? new Date(event.detail.timestamp) : new Date(),
+          isAdmin: event.detail.isAdmin || false
+        };
+        
+        console.log(`💬 ADDING MESSAGE TO CHAT: ${formattedMessage.sender}: ${formattedMessage.text}`);
+        setMessages(prev => [...prev.slice(-99), formattedMessage]);
+      } else {
+        console.warn('⚠️ Received malformed message:', event.detail);
+      }
     };
 
     const handleUserJoinedCall = (event) => {
@@ -78,6 +93,18 @@ const AgoraVideoCall = ({
         ...prev,
         [event.detail.userId]: event.detail.userName
       }));
+      
+      // 🆕 ADDED: System message when user joins
+      if (event.detail.userName && event.detail.userName !== currentUserName) {
+        const systemMessage = {
+          id: `system_${Date.now()}`,
+          sender: 'System',
+          text: `${event.detail.userName} joined the stream`,
+          timestamp: new Date(),
+          isSystem: true
+        };
+        setMessages(prev => [...prev.slice(-99), systemMessage]);
+      }
     };
 
     const handleUserLeftCall = (event) => {
@@ -87,6 +114,18 @@ const AgoraVideoCall = ({
         delete newMap[event.detail.userId];
         return newMap;
       });
+      
+      // 🆕 ADDED: System message when user leaves
+      if (event.detail.userName && event.detail.userName !== currentUserName) {
+        const systemMessage = {
+          id: `system_${Date.now()}`,
+          sender: 'System',
+          text: `${event.detail.userName} left the stream`,
+          timestamp: new Date(),
+          isSystem: true
+        };
+        setMessages(prev => [...prev.slice(-99), systemMessage]);
+      }
     };
 
     window.addEventListener('community_call_started', handleCallStarted);
@@ -102,7 +141,7 @@ const AgoraVideoCall = ({
       window.removeEventListener('user_joined_call', handleUserJoinedCall);
       window.removeEventListener('user_left_call', handleUserLeftCall);
     };
-  }, [isOpen, isJoined]);
+  }, [isOpen, isJoined, currentUserName]); // 🆕 ADDED currentUserName dependency
 
   // Auto-remove notifications with animation
   useEffect(() => {
@@ -597,17 +636,23 @@ const AgoraVideoCall = ({
         isAdmin: isAdmin
       };
       
+      // 🆕 FIXED: Add to local state immediately for instant feedback
       setMessages(prev => [...prev.slice(-99), message]);
       setNewMessage('');
 
+      // 🆕 FIXED: Proper socket message formatting with all required fields
       if (callId && isJoined) {
+        console.log(`💬 SENDING CHAT MESSAGE: ${currentUserName}: ${newMessage.trim()}`);
+        
         socketService.sendCommunityMessage({
           text: newMessage.trim(),
           callId: callId,
-          sender: currentUserName,
-          isAdmin: isAdmin,
+          sender: currentUserName, // 🆕 ENSURES SENDER NAME IS INCLUDED
+          isAdmin: isAdmin, // 🆕 ENSURES ADMIN STATUS IS INCLUDED
           timestamp: new Date().toISOString()
         });
+      } else {
+        console.warn('⚠️ Cannot send message: No active call or not joined');
       }
     }
   };
@@ -819,11 +864,15 @@ const AgoraVideoCall = ({
                       >
                         <div className="d-flex justify-content-between align-items-start mb-1">
                           <small className="fw-bold">
+                            {/* 🆕 FIXED: Proper sender display with admin badge */}
                             {message.sender === currentUserName ? 'You' : message.sender}
                             {message.isAdmin && <span className="badge bg-danger ms-2">Admin</span>}
                           </small>
                           <small className="opacity-75">
-                            {new Date(message.timestamp).toLocaleTimeString()}
+                            {message.timestamp 
+                              ? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                              : 'Just now'
+                            }
                           </small>
                         </div>
                         <div className="message-text">{message.text}</div>

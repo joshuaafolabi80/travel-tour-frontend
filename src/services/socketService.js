@@ -163,14 +163,24 @@ class SocketService {
 
   sendCommunityMessage(messageData) {
     if (this.isSocketConnected()) {
-      console.log('💬 Sending message:', messageData);
-      this.socket.emit('send_message', {
+      console.log('💬 SENDING COMMUNITY MESSAGE:', {
         text: messageData.text,
         callId: messageData.callId,
         sender: messageData.sender,
         isAdmin: messageData.isAdmin,
         timestamp: messageData.timestamp
       });
+      
+      // 🆕 FIXED: Ensure all required fields are sent to backend
+      this.socket.emit('send_message', {
+        text: messageData.text,
+        callId: messageData.callId,
+        sender: messageData.sender, // 🆕 CRITICAL: Include sender name
+        isAdmin: messageData.isAdmin, // 🆕 CRITICAL: Include admin status
+        timestamp: messageData.timestamp || new Date().toISOString()
+      });
+    } else {
+      console.error('❌ Cannot send message: Socket not connected');
     }
   }
 

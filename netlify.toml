@@ -12,6 +12,7 @@
   to = "/index.html"
   status = 200
 
+# Security Headers (Applies to all files)
 [[headers]]
   for = "/*"
   [headers.values]
@@ -20,13 +21,22 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# ADD THIS SECTION FOR AGORA COMPATIBILITY
+# CORS/Agora Headers (Applies to all files)
 [[headers]]
   for = "/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+# *** PERMANENT FIX: CACHE-BUSTING HEADER ***
+# This specifically targets the index.html file (the main page) 
+# to ensure browsers NEVER cache the old version, thus preventing 
+# the Service Worker or other stale asset issues from recurring.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "max-age=0, must-revalidate, no-cache, no-store"
 
 # Environment variables for Netlify
 [context.production.environment]

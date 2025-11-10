@@ -31,8 +31,9 @@ export default defineConfig({
   define: {
     'process.env': {}
   },
-  // Netlify specific configuration
-  base: '/', // Important for Netlify routing
+  // FIX: Changed base from '/' to '' to use relative paths. 
+  // This resolves the MIME type errors and white screen on Netlify.
+  base: '', 
   preview: {
     port: 4173,
     host: true

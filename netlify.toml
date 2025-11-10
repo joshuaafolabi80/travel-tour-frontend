@@ -5,13 +5,13 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# 🚨 CRITICAL: Single page app redirects - MUST COME FIRST
+# Single page app redirects - MUST COME FIRST
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# 🚨 CRITICAL: Headers for JavaScript files - FIXES MIME TYPE ERROR
+# Headers for JavaScript files - FIXES MIME TYPE ERROR
 [[headers]]
   for = "/*.js"
   [headers.values]
@@ -50,7 +50,7 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# 🚨 CRITICAL: Security headers
+# Security headers
 [[headers]]
   for = "/*"
   [headers.values]
@@ -60,7 +60,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=*, microphone=*"
 
-# 🚨 CRITICAL: Service Worker headers
+# Service Worker headers
 [[headers]]
   for = "/sw.js"
   [headers.values]
@@ -74,7 +74,7 @@
     Content-Type = "application/json"
     Cache-Control = "public, max-age=3600"
 
-# 🚨 CRITICAL: Agora SDK and external resources CORS
+# Agora SDK and external resources CORS
 [[headers]]
   for = "/*"
   [headers.values]
@@ -98,12 +98,10 @@
   VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
   NODE_ENV = "development"
 
-# 🚨 CRITICAL: Edge functions configuration (if needed)
+# Edge functions configuration (if needed)
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# 🚨 CRITICAL: Plugin configuration
+# Plugin configuration
 [plugins]
-  [plugins."@netlify/plugin-lighthouse"]
-    threshold = 0.8

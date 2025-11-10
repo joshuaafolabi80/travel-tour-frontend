@@ -5,11 +5,52 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# 🚨 CRITICAL: Single page app redirects - MUST COME FIRST
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
+# 🚨 CRITICAL: Headers for JavaScript files - FIXES MIME TYPE ERROR
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "/*.mjs"
+  [headers.values]
+    Content-Type = "application/javascript"
+
+[[headers]]
+  for = "/*.jsx"
+  [headers.values]
+    Content-Type = "application/javascript"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Content-Type = "text/css"
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Content-Type = "text/html"
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# 🚨 CRITICAL: Security headers
 [[headers]]
   for = "/*"
   [headers.values]
@@ -17,24 +58,52 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=*, microphone=*"
 
-# ADD THIS SECTION FOR AGORA COMPATIBILITY
+# 🚨 CRITICAL: Service Worker headers
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+    Service-Worker-Allowed = "/"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Content-Type = "application/json"
+    Cache-Control = "public, max-age=3600"
+
+# 🚨 CRITICAL: Agora SDK and external resources CORS
 [[headers]]
   for = "/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, Authorization"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With"
 
-# Environment variables for Netlify
+# Environment variables for different contexts
 [context.production.environment]
   VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
   VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
+  NODE_ENV = "production"
 
 [context.deploy-preview.environment]
   VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
   VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
+  NODE_ENV = "development"
 
 [context.branch-deploy.environment]
   VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
   VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
+  NODE_ENV = "development"
+
+# 🚨 CRITICAL: Edge functions configuration (if needed)
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# 🚨 CRITICAL: Plugin configuration
+[plugins]
+  [plugins."@netlify/plugin-lighthouse"]
+    threshold = 0.8

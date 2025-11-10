@@ -8,7 +8,6 @@ export default defineConfig({
     open: true,
     host: '0.0.0.0',
     port: 5173,
-    // Added for better HMR and network access
     cors: true,
     hmr: {
       overlay: true
@@ -23,27 +22,30 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           utils: ['axios', 'jwt-decode']
         }
-      },
-      // Externalize Agora to prevent bundling issues
-      external: ['agora-rtc-sdk']
+      }
+      // 🚨 REMOVED: external: ['agora-rtc-sdk'] - This was causing the MIME type error
     }
   },
   define: {
-    'process.env': {}
+    'process.env': {},
+    // 🆕 ADDED: Global polyfill for Agora
+    global: 'globalThis'
   },
   // Netlify specific configuration
-  base: '/', // Important for Netlify routing
+  base: '/',
   preview: {
     port: 4173,
     host: true
   },
-  // CRITICAL: Ensure external scripts are handled properly
   optimizeDeps: {
-    exclude: ['agora-rtc-sdk'], // Agora is loaded via CDN, don't try to bundle it
-    include: ['react', 'react-dom', 'axios', 'jwt-decode'] // Explicitly include core deps
+    // 🚨 REMOVED: exclude: ['agora-rtc-sdk'] - This was preventing proper handling
+    include: ['react', 'react-dom', 'axios', 'jwt-decode']
   },
-  // Additional configuration for better Agora compatibility
-  esbuild: {
-    logOverride: { 'this-is-undefined-in-esm': 'silent' }
+  // 🆕 ADDED: Resolve configuration for Agora
+  resolve: {
+    alias: {
+      // Ensure Agora and other libs work properly
+      'agora-rtc-sdk': false // Prevent bundling issues
+    }
   }
 });

@@ -23,29 +23,36 @@ export default defineConfig({
           utils: ['axios', 'jwt-decode']
         }
       }
-      // 🚨 REMOVED: external: ['agora-rtc-sdk'] - This was causing the MIME type error
     }
   },
   define: {
     'process.env': {},
-    // 🆕 ADDED: Global polyfill for Agora
-    global: 'globalThis'
+    global: 'globalThis',
+    // 🆕 ADD: Polyfill for global objects
+    'global.Request': 'undefined'
   },
-  // Netlify specific configuration
   base: '/',
   preview: {
     port: 4173,
     host: true
   },
   optimizeDeps: {
-    // 🚨 REMOVED: exclude: ['agora-rtc-sdk'] - This was preventing proper handling
-    include: ['react', 'react-dom', 'axios', 'jwt-decode']
+    include: ['react', 'react-dom', 'axios', 'jwt-decode'],
+    // 🆕 ADD: Exclude problematic dependencies
+    exclude: ['agora-rtc-sdk']
   },
-  // 🆕 ADDED: Resolve configuration for Agora
+  // 🆕 ADD: Resolve configuration
   resolve: {
     alias: {
-      // Ensure Agora and other libs work properly
-      'agora-rtc-sdk': false // Prevent bundling issues
+      // Prevent bundling issues
+      './runtimeConfig': './runtimeConfig.browser'
+    }
+  },
+  // 🆕 ADD: Esbuild configuration
+  esbuild: {
+    target: 'es2020',
+    supported: {
+      'top-level-await': true
     }
   }
 });

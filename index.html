@@ -32,37 +32,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- 🆕 CRITICAL FIX: Agora RTC SDK with proper loading -->
-  <script>
-    // Agora SDK loading with proper error handling
-    (function() {
-      var script = document.createElement('script');
-      script.src = 'https://download.agora.io/sdk/release/AgoraRTC_N.js';
-      script.async = true;
-      script.onload = function() {
-        console.log('✅ Agora RTC SDK loaded successfully');
-        window.AgoraRTC = window.AgoraRTC;
-        // Hide loading indicator if exists
-        var loadingEl = document.getElementById('agora-loading');
-        if (loadingEl) loadingEl.style.display = 'none';
-      };
-      script.onerror = function() {
-        console.error('❌ Failed to load Agora RTC SDK');
-        var loadingEl = document.getElementById('agora-loading');
-        if (loadingEl) {
-          loadingEl.innerHTML = `
-            <div class="text-center">
-              <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
-              <p class="mb-2">Video services loading failed</p>
-              <button onclick="window.location.reload()" class="btn btn-sm btn-primary">Retry</button>
-            </div>
-          `;
-        }
-      };
-      document.head.appendChild(script);
-    })();
-  </script>
-  
   <style>
     body {
       font-family: 'Poppins', sans-serif;
@@ -82,6 +51,11 @@
       border-radius: 10px;
       z-index: 9999;
     }
+    
+    /* Hide loading when app loads */
+    .app-loaded #agora-loading {
+      display: none;
+    }
   </style>
 </head>
 
@@ -92,7 +66,7 @@
       <div class="spinner-border text-light mb-2" role="status">
         <span class="visually-hidden">Loading...</span>
       </div>
-      <p class="mb-0">Loading video services...</p>
+      <p class="mb-0">Loading The Conclave Academy...</p>
     </div>
   </div>
 
@@ -102,11 +76,25 @@
   <!-- Bootstrap JS Bundle with Popper -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   
-  <!-- 🆕 CRITICAL FIX: Global error handling -->
+  <!-- 🆕 CRITICAL: Global polyfills and error handling -->
   <script>
+    // Global polyfills for modern JavaScript features
+    if (typeof globalThis === 'undefined') {
+      window.globalThis = window;
+    }
+    
+    // Polyfill for Request if needed
+    if (typeof Request === 'undefined') {
+      window.Request = function() {
+        throw new Error('Request constructor not available');
+      };
+    }
+    
     // Global error handler
     window.addEventListener('error', function(e) {
       console.error('Global error:', e.error);
+      // Hide loading indicator on error
+      document.getElementById('agora-loading').style.display = 'none';
     });
 
     // Unhandled promise rejection handler
@@ -114,13 +102,29 @@
       console.error('Unhandled promise rejection:', e.reason);
     });
 
+    // Agora SDK loading with proper error handling
+    (function() {
+      var script = document.createElement('script');
+      script.src = 'https://download.agora.io/sdk/release/AgoraRTC_N.js';
+      script.async = true;
+      script.onload = function() {
+        console.log('✅ Agora RTC SDK loaded successfully');
+        window.AgoraRTC = window.AgoraRTC;
+      };
+      script.onerror = function() {
+        console.error('❌ Failed to load Agora RTC SDK');
+        // Continue anyway - app should work without Agora initially
+      };
+      document.head.appendChild(script);
+    })();
+
     // Hide loading after a timeout (fallback)
     setTimeout(function() {
       var loadingEl = document.getElementById('agora-loading');
-      if (loadingEl && loadingEl.style.display !== 'none') {
+      if (loadingEl) {
         loadingEl.style.display = 'none';
       }
-    }, 5000);
+    }, 3000);
   </script>
   
   <!-- Main React application script -->

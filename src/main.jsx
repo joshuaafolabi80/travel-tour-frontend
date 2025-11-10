@@ -3,63 +3,48 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 
-// 🆕 ADD: Error Boundary Component
+// 🚨 CRITICAL: Simple error boundary
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { hasError: false };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+    return { hasError: true };
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Error Boundary caught an error:', error, errorInfo);
-    this.setState({
-      errorInfo: errorInfo
-    });
+    console.error('App Error:', error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="container-fluid vh-100 d-flex align-items-center justify-content-center bg-light">
-          <div className="text-center p-4">
-            <div className="mb-4">
-              <i className="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-              <h2 className="mb-3">Application Error</h2>
-            </div>
-            <p className="text-muted mb-4">
-              We're having trouble loading the application. This might be due to a temporary issue.
-            </p>
-            <button 
-              className="btn btn-primary btn-lg"
-              onClick={() => window.location.reload()}
-            >
-              <i className="fas fa-redo me-2"></i>
-              Refresh Page
-            </button>
-            <div className="mt-4">
-              <button 
-                className="btn btn-outline-secondary btn-sm"
-                onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
-              >
-                Try Again
-              </button>
-            </div>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details className="mt-4 text-start">
-                <summary className="btn btn-sm btn-outline-danger">Development Error Details</summary>
-                <div className="mt-2 p-3 bg-dark text-light rounded small">
-                  <strong>Error:</strong> {this.state.error.toString()}
-                  <br />
-                  <strong>Component Stack:</strong>
-                  <pre className="mt-2 mb-0">{this.state.errorInfo?.componentStack}</pre>
-                </div>
-              </details>
-            )}
-          </div>
+        <div style={{ 
+          height: '100vh', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          flexDirection: 'column',
+          padding: '20px',
+          textAlign: 'center'
+        }}>
+          <h2>Something went wrong</h2>
+          <p style={{ margin: '15px 0' }}>Please refresh the page to continue</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Refresh Page
+          </button>
         </div>
       );
     }
@@ -68,61 +53,42 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// 🆕 ADD: Simple app initialization without complex Agora checks
-const initializeApp = () => {
-  try {
-    // Hide loading indicator
-    const loadingEl = document.getElementById('agora-loading');
-    if (loadingEl) {
-      loadingEl.style.display = 'none';
+// 🚨 CRITICAL: Simple app initialization
+console.log('🚀 Starting React app...');
+
+try {
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  
+  root.render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
+
+  // Hide loading screen
+  setTimeout(() => {
+    const loading = document.getElementById('loading');
+    if (loading) {
+      loading.style.display = 'none';
     }
+  }, 1000);
 
-    // Add loaded class to body
-    document.body.classList.add('app-loaded');
+  console.log('✅ React app started successfully');
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    
-    root.render(
-      <React.StrictMode>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      </React.StrictMode>
-    );
-
-    console.log('✅ React app initialized successfully');
-
-  } catch (error) {
-    console.error('❌ Failed to initialize React app:', error);
-    
-    // Show error message
-    const rootElement = document.getElementById('root');
-    if (rootElement) {
-      rootElement.innerHTML = `
-        <div class="container-fluid vh-100 d-flex align-items-center justify-content-center bg-light">
-          <div class="text-center">
-            <h3 class="text-danger">Failed to Load Application</h3>
-            <p class="text-muted">Please refresh the page or check your console for errors.</p>
-            <button class="btn btn-primary" onclick="window.location.reload()">Refresh Page</button>
-          </div>
-        </div>
-      `;
-    }
+} catch (error) {
+  console.error('❌ Failed to start React app:', error);
+  
+  // Show error message
+  const loading = document.getElementById('loading');
+  if (loading) {
+    loading.innerHTML = `
+      <div style="text-align: center; padding: 20px;">
+        <h3 style="color: #dc3545; margin-bottom: 15px;">Failed to Load</h3>
+        <p style="margin-bottom: 20px;">Please check your console and refresh</p>
+        <button onclick="window.location.reload()" class="btn btn-danger">Refresh</button>
+      </div>
+    `;
   }
-};
-
-// 🆕 ADD: Wait for DOM to be ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeApp);
-} else {
-  initializeApp();
 }
-
-// 🆕 ADD: Fallback - ensure app loads even if there are minor errors
-setTimeout(() => {
-  const rootElement = document.getElementById('root');
-  if (rootElement && !rootElement.hasChildNodes()) {
-    console.log('🔄 Fallback: Initializing app after timeout');
-    initializeApp();
-  }
-}, 1000);

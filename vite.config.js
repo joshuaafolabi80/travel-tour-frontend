@@ -1,58 +1,42 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
-    open: true,
-    host: '0.0.0.0',
     port: 5173,
-    cors: true,
-    hmr: {
-      overlay: true
-    }
+    host: true
   },
   build: {
     outDir: 'dist',
     sourcemap: false,
+    // 🚨 CRITICAL: Disable code splitting to avoid the utils chunk error
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          utils: ['axios', 'jwt-decode']
-        }
+        manualChunks: undefined
       }
     }
   },
   define: {
+    // 🚨 CRITICAL: Define global objects to prevent undefined errors
     'process.env': {},
-    global: 'globalThis',
-    // 🆕 ADD: Polyfill for global objects
-    'global.Request': 'undefined'
+    global: 'window',
+    'global.Request': 'window.Request || class Request {}'
   },
   base: '/',
-  preview: {
-    port: 4173,
-    host: true
-  },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'axios', 'jwt-decode'],
-    // 🆕 ADD: Exclude problematic dependencies
-    exclude: ['agora-rtc-sdk']
+    // 🚨 CRITICAL: Force include all dependencies to prevent chunking issues
+    include: [
+      'react', 
+      'react-dom', 
+      'axios', 
+      'jwt-decode',
+      'bootstrap',
+      'socket.io-client'
+    ]
   },
-  // 🆕 ADD: Resolve configuration
-  resolve: {
-    alias: {
-      // Prevent bundling issues
-      './runtimeConfig': './runtimeConfig.browser'
-    }
-  },
-  // 🆕 ADD: Esbuild configuration
+  // 🚨 CRITICAL: Disable certain optimizations that cause issues
   esbuild: {
-    target: 'es2020',
-    supported: {
-      'top-level-await': true
-    }
+    target: 'es2020'
   }
 });

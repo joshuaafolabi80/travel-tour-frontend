@@ -2,70 +2,7 @@
   command = "npm run build"
   publish = "dist"
 
-[build.environment]
-  NODE_VERSION = "18"
-
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-[[headers]]
-  for = "/*.js"
-  [headers.values]
-    Content-Type = "application/javascript"
-
-[[headers]]
-  for = "/*.mjs"
-  [headers.values]
-    Content-Type = "application/javascript"
-
-[[headers]]
-  for = "/*.jsx"
-  [headers.values]
-    Content-Type = "application/javascript"
-
-[[headers]]
-  for = "/*.css"
-  [headers.values]
-    Content-Type = "text/css"
-
-[[headers]]
-  for = "/*.html"
-  [headers.values]
-    Content-Type = "text/html"
-
-[[headers]]
-  for = "/assets/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/sw.js"
-  [headers.values]
-    Content-Type = "application/javascript"
-    Service-Worker-Allowed = "/"
-
-[[headers]]
-  for = "/manifest.json"
-  [headers.values]
-    Content-Type = "application/json"
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-XSS-Protection = "1; mode=block"
-    X-Content-Type-Options = "nosniff"
-
-[context.production.environment]
-  VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
-  VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
-
-[context.deploy-preview.environment]
-  VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
-  VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
-
-[context.branch-deploy.environment]
-  VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
-  VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"

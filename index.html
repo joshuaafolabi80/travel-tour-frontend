@@ -1,16 +1,159 @@
+<!--travel-tour-frontend/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>The Conclave Academy</title>
-    <link rel="icon" type="image/jpeg" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Aviation, Travels & Tours - Your premier destination for travel and tourism education" />
+  <meta name="keywords" content="aviation, travel, tours, tourism, education, learning" />
+  <meta name="author" content="The Conclave Academy" />
+  
+  <title>The Conclave Academy - Aviation, Travels & Tours</title>
+  
+  <!-- Favicon and App Icons - UPDATED WITH CLOUDINARY LOGO -->
+  <link rel="icon" type="image/jpeg" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
+  <link rel="shortcut icon" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
+  <link rel="apple-touch-icon" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
+  <link rel="apple-touch-icon" sizes="192x192" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
+  <link rel="apple-touch-icon" sizes="512x512" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
+  
+  <!-- Theme Color for Mobile Browsers -->
+  <meta name="theme-color" content="#007bff">
+  <meta name="msapplication-TileColor" content="#007bff">
+  <meta name="msapplication-config" content="/browserconfig.xml">
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Agora RTC SDK - CRITICAL FOR VIDEO STREAMS -->
+  <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+  
+  <!-- Additional styles if needed -->
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+    }
+    
+    /* Loading state for Agora SDK */
+    .agora-loading {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      flex-direction: column;
+    }
+    
+    .agora-loading.show {
+      display: flex;
+    }
+    
+    .agora-loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
+
 <body>
-    <div id="root"></div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module" src="/src/main.jsx"></script>
+  <!-- Agora SDK Loading Indicator -->
+  <div id="agora-loading" class="agora-loading">
+    <div class="agora-loading-spinner"></div>
+    <p>Loading Video Services...</p>
+  </div>
+
+  <!-- React root element -->
+  <div id="root"></div>
+  
+  <!-- Bootstrap JS Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- Agora SDK Initialization Script -->
+  <script>
+    // Agora SDK loading handler
+    window.addEventListener('load', function() {
+      const loadingElement = document.getElementById('agora-loading');
+      
+      // Check if Agora SDK loaded successfully
+      if (typeof AgoraRTC !== 'undefined') {
+        console.log('✅ Agora RTC SDK loaded successfully');
+        window.AgoraRTC = AgoraRTC;
+        loadingElement.classList.remove('show');
+      } else {
+        console.error('❌ Agora RTC SDK failed to load');
+        loadingElement.innerHTML = `
+          <div class="text-center">
+            <div class="agora-loading-spinner" style="border-color: #ff4757; border-top-color: #ff3742;"></div>
+            <p>Failed to load video services</p>
+            <button onclick="window.location.reload()" class="btn btn-primary mt-2">Retry</button>
+          </div>
+        `;
+      }
+    });
+
+    // Show loading when page starts
+    document.addEventListener('DOMContentLoaded', function() {
+      const loadingElement = document.getElementById('agora-loading');
+      loadingElement.classList.add('show');
+    });
+
+    // Global error handler for Agora
+    window.addEventListener('error', function(e) {
+      if (e.message && e.message.includes('AgoraRTC')) {
+        console.error('Agora RTC Error:', e.error);
+        const loadingElement = document.getElementById('agora-loading');
+        loadingElement.innerHTML = `
+          <div class="text-center">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <p>Video services temporarily unavailable</p>
+            <button onclick="window.location.reload()" class="btn btn-primary mt-2">Retry</button>
+          </div>
+        `;
+      }
+    });
+
+    // Register Service Worker for PWA (optional but recommended)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+          .then(function(registration) {
+            console.log('SW registered: ', registration);
+          })
+          .catch(function(registrationError) {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
+    }
+  </script>
+  
+  <!-- Main React application script -->
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

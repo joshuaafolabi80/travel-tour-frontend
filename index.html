@@ -1,95 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Conclave Academy</title>
-  
-  <!-- Favicon -->
-  <link rel="icon" type="image/jpeg" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
-  
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  
-  <!-- 🚨 CRITICAL: Inline styles to prevent any loading issues -->
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Arial', sans-serif; background: #f8f9fa; }
-    #loading { 
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-      background: white; display: flex; justify-content: center; 
-      align-items: center; z-index: 9999; flex-direction: column;
-    }
-    .spinner { 
-      width: 40px; height: 40px; border: 4px solid #f3f3f3; 
-      border-top: 4px solid #007bff; border-radius: 50%; 
-      animation: spin 1s linear infinite; margin-bottom: 15px;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Conclave Academy</title>
+    <link rel="icon" type="image/jpeg" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-
 <body>
-  <!-- 🚨 CRITICAL: Simple loading screen -->
-  <div id="loading">
-    <div class="spinner"></div>
-    <p>Loading The Conclave Academy...</p>
-  </div>
-
-  <div id="root"></div>
-
-  <!-- 🚨 CRITICAL: Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-  <!-- 🚨 CRITICAL: Global polyfills BEFORE any scripts -->
-  <script>
-    // POLYFILLS TO PREVENT THE REQUEST ERROR
-    if (typeof global === 'undefined') window.global = window;
-    if (typeof globalThis === 'undefined') window.globalThis = window;
-    
-    // Ensure Request is defined
-    if (typeof Request === 'undefined') {
-      window.Request = function Request() {
-        throw new Error('Request constructor not available in this environment');
-      };
-    }
-
-    // Global error handler to catch and display errors
-    window.addEventListener('error', function(e) {
-      console.error('Global Error:', e.error);
-      const loading = document.getElementById('loading');
-      if (loading) {
-        loading.innerHTML = `
-          <div style="text-align: center; padding: 20px;">
-            <i class="fas fa-exclamation-triangle text-warning" style="font-size: 3rem; margin-bottom: 15px;"></i>
-            <h3 style="margin-bottom: 15px;">Loading Error</h3>
-            <p style="margin-bottom: 20px; color: #666;">Please refresh the page</p>
-            <button onclick="window.location.reload()" class="btn btn-primary">Refresh Page</button>
-          </div>
-        `;
-      }
-    });
-
-    // Load Agora SDK
-    const agoraScript = document.createElement('script');
-    agoraScript.src = 'https://download.agora.io/sdk/release/AgoraRTC_N.js';
-    agoraScript.onload = function() {
-      console.log('✅ Agora SDK loaded');
-      window.AgoraRTC = window.AgoraRTC;
-    };
-    agoraScript.onerror = function() {
-      console.warn('⚠️ Agora SDK failed to load, continuing without it');
-    };
-    document.head.appendChild(agoraScript);
-  </script>
-
-  <!-- 🚨 CRITICAL: Main app script -->
-  <script type="module" src="/src/main.jsx"></script>
+    <div id="root"></div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

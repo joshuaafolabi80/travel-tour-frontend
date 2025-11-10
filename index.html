@@ -1,4 +1,3 @@
-<!--travel-tour-frontend/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,37 +9,29 @@
   
   <title>The Conclave Academy - Aviation, Travels & Tours</title>
   
-  <!-- Favicon and App Icons - UPDATED WITH CLOUDINARY LOGO -->
-  <link rel="icon" type="image/jpeg" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
+    <link rel="icon" type="image/jpeg" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
   <link rel="shortcut icon" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
   <link rel="apple-touch-icon" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
   <link rel="apple-touch-icon" sizes="192x192" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
   <link rel="apple-touch-icon" sizes="512x512" href="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg">
   
-  <!-- PWA Manifest -->
-  <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
+    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
   
-  <!-- Theme Color for Mobile Browsers -->
-  <meta name="theme-color" content="#007bff">
+    <meta name="theme-color" content="#007bff">
   <meta name="msapplication-TileColor" content="#007bff">
   <meta name="msapplication-config" content="/browserconfig.xml">
   
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   
-  <!-- Font Awesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Agora RTC SDK - CRITICAL FOR VIDEO STREAMS -->
-  <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
   
-  <!-- Additional styles if needed -->
-  <style>
+    <style>
     body {
       font-family: 'Poppins', sans-serif;
     }
@@ -83,20 +74,16 @@
 </head>
 
 <body>
-  <!-- Agora SDK Loading Indicator -->
-  <div id="agora-loading" class="agora-loading">
+    <div id="agora-loading" class="agora-loading">
     <div class="agora-loading-spinner"></div>
     <p>Loading Video Services...</p>
   </div>
 
-  <!-- React root element -->
-  <div id="root"></div>
+    <div id="root"></div>
   
-  <!-- Bootstrap JS Bundle with Popper -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   
-  <!-- Agora SDK Initialization Script -->
-  <script>
+    <script>
     // Agora SDK loading handler
     window.addEventListener('load', function() {
       const loadingElement = document.getElementById('agora-loading');
@@ -139,21 +126,10 @@
       }
     });
 
-    // Register Service Worker for PWA (optional but recommended)
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js')
-          .then(function(registration) {
-            console.log('SW registered: ', registration);
-          })
-          .catch(function(registrationError) {
-            console.log('SW registration failed: ', registrationError);
-          });
-      });
-    }
+    // Service Worker registration removed to stop the persistent blank screen issue.
+    // If you want PWA features back, you must debug and fix the sw.js file logic.
   </script>
   
-  <!-- Main React application script -->
-  <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

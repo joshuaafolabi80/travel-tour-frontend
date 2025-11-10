@@ -3,7 +3,9 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "18"
+  # FIX: Updated Node version from "18" to "20.19.0" 
+  # to satisfy the requirement for Vite v7 (20.19+ or 22.12+).
+  NODE_VERSION = "20.19.0"
 
 [[redirects]]
   from = "/*"

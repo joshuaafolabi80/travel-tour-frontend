@@ -475,7 +475,7 @@ const AgoraVideoCall = ({
 
   const leaveCall = async () => {
     try {
-      console.log('🚪 Leaving call...');
+      console.log('🚪 CLIENT: Leaving call...');
       
       if (isScreenSharing) {
         await stopScreenShare();
@@ -643,52 +643,87 @@ const AgoraVideoCall = ({
     }
   };
 
-  const sendMessage = () => {
-    if (newMessage.trim()) {
-      const message = {
-        id: Date.now() + Math.random(),
-        sender: currentUserName,
-        text: newMessage.trim(),
-        timestamp: new Date(),
-        isAdmin: isAdmin
-      };
-      
-      // Add to local state immediately for instant feedback
-      setMessages(prev => [...prev.slice(-99), message]);
-      setNewMessage('');
+  // CRITICAL FIX: Completely rewritten sendMessage function
+  const sendMessage = (e) => {
+    // Prevent any form submission behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    if (!newMessage.trim()) {
+      console.log('⚠️ CLIENT: Empty message, not sending');
+      return;
+    }
 
-      // Send via socket with proper formatting
-      if (callId && isJoined) {
-        console.log(`💬 CLIENT: SENDING CHAT MESSAGE: ${currentUserName}: ${newMessage.trim()}`);
-        
-        socketService.sendCommunityMessage({
-          text: newMessage.trim(),
-          callId: callId,
-          sender: currentUserName,
-          isAdmin: isAdmin,
-          timestamp: new Date().toISOString()
-        });
-      } else {
-        console.warn('⚠️ CLIENT: Cannot send message: No active call or not joined');
-        console.log(`⚠️ CLIENT: callId: ${callId}, isJoined: ${isJoined}`);
-      }
+    console.log(`💬 CLIENT: SENDING CHAT MESSAGE: ${currentUserName}: ${newMessage.trim()}`);
+    
+    // Create local message immediately for instant feedback
+    const localMessage = {
+      id: `local_${Date.now()}_${Math.random()}`,
+      sender: currentUserName,
+      text: newMessage.trim(),
+      timestamp: new Date(),
+      isAdmin: isAdmin,
+      isLocal: true // Mark as local for potential filtering
+    };
+    
+    // Add to local state immediately for instant feedback
+    console.log(`💬 CLIENT: ADDING MESSAGE LOCALLY: ${currentUserName}: ${newMessage.trim()}`);
+    setMessages(prev => [...prev.slice(-99), localMessage]);
+    
+    // Clear input immediately
+    const messageText = newMessage.trim();
+    setNewMessage('');
+
+    // Send via socket with proper formatting
+    if (callId && isJoined) {
+      console.log(`💬 CLIENT: SENDING TO SOCKET: ${currentUserName}: ${messageText}`);
+      
+      socketService.sendCommunityMessage({
+        text: messageText,
+        callId: callId,
+        sender: currentUserName,
+        isAdmin: isAdmin,
+        timestamp: new Date().toISOString()
+      });
+      
+      console.log(`✅ CLIENT: Message sent successfully via socket`);
+    } else {
+      console.warn('⚠️ CLIENT: Cannot send message: No active call or not joined');
+      console.log(`⚠️ CLIENT: callId: ${callId}, isJoined: ${isJoined}`);
     }
   };
 
+  // CRITICAL FIX: Enhanced key press handler
   const handleKeyPress = (e) => {
+    console.log('⌨️ CLIENT: Key pressed:', e.key);
+    
     if (e.key === 'Enter' && !e.shiftKey) {
+      // CRITICAL: Prevent default form submission behavior
       e.preventDefault();
-      sendMessage();
+      e.stopPropagation();
+      
+      console.log('⌨️ CLIENT: Enter key detected, sending message');
+      sendMessage(e);
     }
+  };
+
+  // CRITICAL FIX: Enhanced input change handler
+  const handleInputChange = (e) => {
+    // Only update state, no other logic
+    setNewMessage(e.target.value);
   };
 
   const handleClose = () => {
+    console.log('❌ CLIENT: Close button clicked');
     leaveCall();
     onClose();
   };
 
   // Fix for issue #1: Stop video button crash
   const handleStopVideo = () => {
+    console.log('⏹️ CLIENT: Stop video button clicked');
     if (isJoined) {
       leaveCall();
     }
@@ -899,13 +934,13 @@ const AgoraVideoCall = ({
                   )}
                 </div>
 
-                {/* Chat Input */}
+                {/* Chat Input - CRITICAL FIX: Prevent form submission */}
                 {isJoined && (
                   <div className="d-flex gap-2 chat-input-container">
                     <input
                       type="text"
                       value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
+                      onChange={handleInputChange}
                       onKeyPress={handleKeyPress}
                       placeholder="Type a message..."
                       className="form-control bg-light text-dark border-secondary"
@@ -915,6 +950,7 @@ const AgoraVideoCall = ({
                       onClick={sendMessage} 
                       disabled={!newMessage.trim()}
                       className="btn btn-primary"
+                      type="button" // CRITICAL: Prevents form submission
                     >
                       <i className="fas fa-paper-plane"></i>
                     </button>
@@ -931,6 +967,7 @@ const AgoraVideoCall = ({
                 <button 
                   onClick={toggleAudio}
                   className={`btn ${localAudioMuted ? 'btn-danger' : 'btn-outline-light'}`}
+                  type="button"
                 >
                   <i className={`fas ${localAudioMuted ? 'fa-microphone-slash' : 'fa-microphone'} me-1`}></i>
                   <span className="d-none d-sm-inline">{localAudioMuted ? 'Unmute' : 'Mute'}</span>
@@ -940,6 +977,7 @@ const AgoraVideoCall = ({
                   onClick={toggleVideo}
                   className={`btn ${localVideoMuted ? 'btn-danger' : 'btn-outline-light'}`}
                   disabled={isScreenSharing}
+                  type="button"
                 >
                   <i className={`fas ${localVideoMuted ? 'fa-video-slash' : 'fa-video'} me-1`}></i>
                   <span className="d-none d-sm-inline">{localVideoMuted ? 'Start Video' : 'Stop Video'}</span>
@@ -948,6 +986,7 @@ const AgoraVideoCall = ({
                 <button 
                   onClick={toggleScreenShare}
                   className={`btn ${isScreenSharing ? 'btn-warning' : 'btn-outline-light'}`}
+                  type="button"
                 >
                   <i className={`fas ${isScreenSharing ? 'fa-stop' : 'fa-desktop'} me-1`}></i>
                   <span className="d-none d-sm-inline">{isScreenSharing ? 'Stop Share' : 'Share Screen'}</span>
@@ -957,6 +996,7 @@ const AgoraVideoCall = ({
                 <button 
                   onClick={handleStopVideo}
                   className="btn btn-outline-warning"
+                  type="button"
                 >
                   <i className="fas fa-stop me-1"></i>
                   <span className="d-none d-sm-inline">Stop Video</span>
@@ -965,6 +1005,7 @@ const AgoraVideoCall = ({
                 <button 
                   onClick={handleClose}
                   className="btn btn-danger"
+                  type="button"
                 >
                   <i className="fas fa-phone-slash me-1"></i>
                   <span className="d-none d-sm-inline">Leave Call</span>

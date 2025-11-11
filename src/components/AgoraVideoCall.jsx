@@ -54,7 +54,9 @@ const AgoraVideoCall = ({
 
     const handleCallStarted = (event) => {
       console.log('📞 CLIENT: Call started event received:', event.detail);
+      // CRITICAL FIX: Use the EXACT callId from the admin
       setCallId(event.detail.callId);
+      console.log(`🎯 CLIENT: Set callId to: ${event.detail.callId}`);
     };
 
     const handleCallEnded = (event) => {
@@ -151,6 +153,11 @@ const AgoraVideoCall = ({
       return () => clearTimeout(timer);
     }
   }, [notifications]);
+
+  // CRITICAL FIX: Debug callId changes
+  useEffect(() => {
+    console.log(`🎯 CLIENT: callId changed to: ${callId}`);
+  }, [callId]);
 
   const addNotification = (text) => {
     const notification = {
@@ -419,9 +426,9 @@ const AgoraVideoCall = ({
 
       setIsJoined(true);
       
-      // CRITICAL: Join the socket call with proper data - FIXED LOGIC
+      // CRITICAL FIX: Wait for callId from admin before joining socket room
       if (callId) {
-        console.log(`🔗 CLIENT: Joining socket call: ${callId}`);
+        console.log(`🔗 CLIENT: Joining socket call with callId: ${callId}`);
         console.log(`🔗 CLIENT: User data:`, {
           userId: uid,
           userName: currentUserName,
@@ -434,16 +441,27 @@ const AgoraVideoCall = ({
           isAdmin: isAdmin
         });
       } else {
-        console.warn('⚠️ CLIENT: No callId available for socket join');
-        // If no callId from event, use a default one
-        const defaultCallId = 'community_call_default';
-        console.log(`🔗 CLIENT: Using default callId: ${defaultCallId}`);
-        setCallId(defaultCallId);
-        socketService.joinCommunityCall(defaultCallId, {
-          userId: uid,
-          userName: currentUserName,
-          isAdmin: isAdmin
-        });
+        console.log('⏳ CLIENT: Waiting for callId from admin...');
+        // Wait 2 seconds for callId to be set from the call_started event
+        setTimeout(() => {
+          if (callId) {
+            console.log(`🔗 CLIENT: Now joining socket call: ${callId}`);
+            socketService.joinCommunityCall(callId, {
+              userId: uid,
+              userName: currentUserName,
+              isAdmin: isAdmin
+            });
+          } else {
+            console.warn('⚠️ CLIENT: Still no callId after waiting, using default');
+            const defaultCallId = 'community_call_default';
+            console.log(`🔗 CLIENT: Using default callId: ${defaultCallId}`);
+            socketService.joinCommunityCall(defaultCallId, {
+              userId: uid,
+              userName: currentUserName,
+              isAdmin: isAdmin
+            });
+          }
+        }, 2000);
       }
       
       setUserNameMap(prev => ({
@@ -643,9 +661,8 @@ const AgoraVideoCall = ({
     }
   };
 
-  // CRITICAL FIX: Completely rewritten sendMessage function
+  // CRITICAL FIX: Enhanced sendMessage with callId validation
   const sendMessage = (e) => {
-    // Prevent any form submission behavior
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -664,8 +681,7 @@ const AgoraVideoCall = ({
       sender: currentUserName,
       text: newMessage.trim(),
       timestamp: new Date(),
-      isAdmin: isAdmin,
-      isLocal: true // Mark as local for potential filtering
+      isAdmin: isAdmin
     };
     
     // Add to local state immediately for instant feedback
@@ -676,31 +692,35 @@ const AgoraVideoCall = ({
     const messageText = newMessage.trim();
     setNewMessage('');
 
-    // Send via socket with proper formatting
-    if (callId && isJoined) {
-      console.log(`💬 CLIENT: SENDING TO SOCKET: ${currentUserName}: ${messageText}`);
+    // CRITICAL FIX: Validate callId before sending
+    if (!callId) {
+      console.error('❌ CLIENT: Cannot send message: No callId available');
+      addNotification('Error: Not connected to call properly');
+      return;
+    }
+
+    if (isJoined) {
+      console.log(`💬 CLIENT: SENDING TO SOCKET with callId: ${callId}`);
       
       socketService.sendCommunityMessage({
         text: messageText,
-        callId: callId,
+        callId: callId, // Use the SAME callId as admin
         sender: currentUserName,
         isAdmin: isAdmin,
         timestamp: new Date().toISOString()
       });
       
-      console.log(`✅ CLIENT: Message sent successfully via socket`);
+      console.log(`✅ CLIENT: Message sent successfully via socket with callId: ${callId}`);
     } else {
-      console.warn('⚠️ CLIENT: Cannot send message: No active call or not joined');
+      console.warn('⚠️ CLIENT: Cannot send message: Not joined to call');
       console.log(`⚠️ CLIENT: callId: ${callId}, isJoined: ${isJoined}`);
     }
   };
 
-  // CRITICAL FIX: Enhanced key press handler
   const handleKeyPress = (e) => {
     console.log('⌨️ CLIENT: Key pressed:', e.key);
     
     if (e.key === 'Enter' && !e.shiftKey) {
-      // CRITICAL: Prevent default form submission behavior
       e.preventDefault();
       e.stopPropagation();
       
@@ -709,9 +729,7 @@ const AgoraVideoCall = ({
     }
   };
 
-  // CRITICAL FIX: Enhanced input change handler
   const handleInputChange = (e) => {
-    // Only update state, no other logic
     setNewMessage(e.target.value);
   };
 
@@ -721,7 +739,6 @@ const AgoraVideoCall = ({
     onClose();
   };
 
-  // Fix for issue #1: Stop video button crash
   const handleStopVideo = () => {
     console.log('⏹️ CLIENT: Stop video button clicked');
     if (isJoined) {
@@ -744,6 +761,7 @@ const AgoraVideoCall = ({
               <div className="d-flex align-items-center me-3">
                 <span className="badge bg-success rounded-circle me-2" style={{width: '10px', height: '10px'}}></span>
                 <span className="text-success">{remoteUsers.length + 1} online</span>
+                <span className="badge bg-info ms-2">Call: {callId ? callId.substring(0, 10) + '...' : 'Loading...'}</span>
               </div>
             )}
             <button 
@@ -791,6 +809,12 @@ const AgoraVideoCall = ({
                         : 'Connect with the community through live video and audio'
                       }
                     </p>
+                    {!isAdmin && callId && (
+                      <div className="alert alert-info mb-4">
+                        <i className="fas fa-info-circle me-2"></i>
+                        Connected to call: {callId}
+                      </div>
+                    )}
                     <div className="alert alert-warning mb-4">
                       <i className="fas fa-info-circle me-2"></i>
                       You'll be asked to allow camera and microphone access
@@ -887,7 +911,12 @@ const AgoraVideoCall = ({
               <div className="p-3">
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <h6 className="mb-0 text-light">Community Chat</h6>
-                  <span className="badge bg-primary">{remoteUsers.length + 1} online</span>
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="badge bg-primary">{remoteUsers.length + 1} online</span>
+                    {callId && (
+                      <small className="text-muted">Call: {callId.substring(0, 8)}...</small>
+                    )}
+                  </div>
                 </div>
                 
                 {/* Messages */}
@@ -913,13 +942,13 @@ const AgoraVideoCall = ({
                           message.sender === currentUserName 
                             ? 'bg-primary text-white ms-4' 
                             : 'bg-secondary text-light me-4'
-                        }`}
+                        } ${message.id?.includes('local_') ? 'border border-warning' : ''}`}
                       >
                         <div className="d-flex justify-content-between align-items-start mb-1">
                           <small className="fw-bold">
-                            {/* FIXED: Proper sender display with admin badge */}
                             {message.sender === currentUserName ? 'You' : message.sender}
                             {message.isAdmin && <span className="badge bg-danger ms-2">Admin</span>}
+                            {message.id?.includes('local_') && <span className="badge bg-warning ms-2">Sending...</span>}
                           </small>
                           <small className="opacity-75">
                             {message.timestamp 
@@ -934,7 +963,7 @@ const AgoraVideoCall = ({
                   )}
                 </div>
 
-                {/* Chat Input - CRITICAL FIX: Prevent form submission */}
+                {/* Chat Input */}
                 {isJoined && (
                   <div className="d-flex gap-2 chat-input-container">
                     <input
@@ -945,15 +974,22 @@ const AgoraVideoCall = ({
                       placeholder="Type a message..."
                       className="form-control bg-light text-dark border-secondary"
                       maxLength={500}
+                      disabled={!callId}
                     />
                     <button 
                       onClick={sendMessage} 
-                      disabled={!newMessage.trim()}
+                      disabled={!newMessage.trim() || !callId}
                       className="btn btn-primary"
-                      type="button" // CRITICAL: Prevents form submission
+                      type="button"
+                      title={!callId ? "Waiting for call connection..." : "Send message"}
                     >
                       <i className="fas fa-paper-plane"></i>
                     </button>
+                  </div>
+                )}
+                {!callId && isJoined && (
+                  <div className="alert alert-warning mt-2 py-1">
+                    <small><i className="fas fa-exclamation-triangle me-1"></i> Connecting to call...</small>
                   </div>
                 )}
               </div>
@@ -992,7 +1028,6 @@ const AgoraVideoCall = ({
                   <span className="d-none d-sm-inline">{isScreenSharing ? 'Stop Share' : 'Share Screen'}</span>
                 </button>
                 
-                {/* Fixed issue #1 & #5: Stop video and Leave call both function the same */}
                 <button 
                   onClick={handleStopVideo}
                   className="btn btn-outline-warning"

@@ -68,8 +68,7 @@ const AgoraVideoCall = ({
     const handleNewMessage = (event) => {
       console.log('💬 NEW MESSAGE RECEIVED IN VIDEO CALL:', event.detail);
       
-      // FIXED: Only add message if it's from another user or system
-      // This prevents duplicate messages when we send our own
+      // FIXED: Only add message if it's from another user
       if (event.detail && event.detail.text && event.detail.sender) {
         // Check if this is our own message that we already added locally
         const isOwnMessage = event.detail.sender === currentUserName;

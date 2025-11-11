@@ -48,7 +48,7 @@ const AgoraVideoCall = ({
     };
   }, []);
 
-  // Socket listeners for community coordination
+  // Socket listeners for community coordination - FIXED MESSAGE HANDLER
   useEffect(() => {
     if (!isOpen) return;
 
@@ -68,25 +68,18 @@ const AgoraVideoCall = ({
     const handleNewMessage = (event) => {
       console.log('💬 NEW MESSAGE RECEIVED IN VIDEO CALL:', event.detail);
       
-      // FIXED: Only add message if it's from another user
+      // CRITICAL FIX: Always add messages from server, regardless of sender
       if (event.detail && event.detail.text && event.detail.sender) {
-        // Check if this is our own message that we already added locally
-        const isOwnMessage = event.detail.sender === currentUserName;
+        const formattedMessage = {
+          id: event.detail.id || `msg_${Date.now()}_${Math.random()}`,
+          sender: event.detail.sender,
+          text: event.detail.text,
+          timestamp: event.detail.timestamp ? new Date(event.detail.timestamp) : new Date(),
+          isAdmin: event.detail.isAdmin || false
+        };
         
-        if (!isOwnMessage) {
-          const formattedMessage = {
-            id: event.detail.id || `msg_${Date.now()}_${Math.random()}`,
-            sender: event.detail.sender,
-            text: event.detail.text,
-            timestamp: event.detail.timestamp ? new Date(event.detail.timestamp) : new Date(),
-            isAdmin: event.detail.isAdmin || false
-          };
-          
-          console.log(`💬 ADDING MESSAGE FROM OTHERS: ${formattedMessage.sender}: ${formattedMessage.text}`);
-          setMessages(prev => [...prev.slice(-99), formattedMessage]);
-        } else {
-          console.log('💬 Ignoring own message from socket broadcast');
-        }
+        console.log(`💬 ADDING MESSAGE TO CHAT: ${formattedMessage.sender}: ${formattedMessage.text}`);
+        setMessages(prev => [...prev.slice(-99), formattedMessage]);
       } else {
         console.warn('⚠️ Received malformed message:', event.detail);
       }
@@ -426,12 +419,16 @@ const AgoraVideoCall = ({
 
       setIsJoined(true);
       
+      // CRITICAL: Join the socket call with proper data
       if (callId) {
+        console.log(`🔗 Joining socket call: ${callId}`);
         socketService.joinCommunityCall(callId, {
           userId: uid,
           userName: currentUserName,
           isAdmin: isAdmin
         });
+      } else {
+        console.warn('⚠️ No callId available for socket join');
       }
       
       setUserNameMap(prev => ({
@@ -641,19 +638,19 @@ const AgoraVideoCall = ({
         isAdmin: isAdmin
       };
       
-      // FIXED: Add to local state immediately for instant feedback
+      // Add to local state immediately for instant feedback
       setMessages(prev => [...prev.slice(-99), message]);
       setNewMessage('');
 
-      // FIXED: Proper socket message formatting with all required fields
+      // Send via socket with proper formatting
       if (callId && isJoined) {
         console.log(`💬 SENDING CHAT MESSAGE: ${currentUserName}: ${newMessage.trim()}`);
         
         socketService.sendCommunityMessage({
           text: newMessage.trim(),
           callId: callId,
-          sender: currentUserName, // ENSURES SENDER NAME IS INCLUDED
-          isAdmin: isAdmin, // ENSURES ADMIN STATUS IS INCLUDED
+          sender: currentUserName,
+          isAdmin: isAdmin,
           timestamp: new Date().toISOString()
         });
       } else {

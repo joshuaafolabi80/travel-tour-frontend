@@ -1,6 +1,5 @@
-// travel-tour-frontend/src/services/socketService.js
 import { io } from 'socket.io-client';
-import { getSocketURL } from './api'; // Assumes getSocketURL exists
+import { getSocketURL } from './api';
 
 class SocketService {
   constructor() {
@@ -72,7 +71,7 @@ class SocketService {
       }
     });
 
-    // Community call events - FIXED: Include user data
+    // Community call events
     this.socket.on('call_started', (data) => {
       console.log('📞 Call started by admin:', data);
       window.dispatchEvent(new CustomEvent('community_call_started', { detail: data }));
@@ -94,7 +93,7 @@ class SocketService {
     });
 
     this.socket.on('new_message', (data) => {
-      console.log('💬 New message received:', data);
+      console.log('💬 New message received from server:', data);
       window.dispatchEvent(new CustomEvent('new_message', { detail: data }));
     });
 
@@ -121,7 +120,7 @@ class SocketService {
     return this.isConnected && this.socket?.connected;
   }
 
-  // Community call methods - FIXED: Include user data
+  // Community call methods
   startCommunityCall(callData = {}) {
     if (this.isSocketConnected()) {
       console.log('🎬 Starting community call...');
@@ -137,13 +136,20 @@ class SocketService {
   joinCommunityCall(callId, userData = {}) {
     if (this.isSocketConnected()) {
       console.log(`🎬 Joining community call: ${callId} as ${userData.userName}`);
-      this.socket.emit('join_call', { 
+      
+      // CRITICAL: Ensure all required data is sent
+      const joinData = {
         callId: callId,
         userId: userData.userId,
         userName: userData.userName,
-        isAdmin: userData.isAdmin,
-        withAudio: true 
-      });
+        isAdmin: userData.isAdmin || false,
+        withAudio: true
+      };
+      
+      console.log('📤 Sending join_call with data:', joinData);
+      this.socket.emit('join_call', joinData);
+    } else {
+      console.error('❌ Cannot join call: Socket not connected');
     }
   }
 
@@ -171,12 +177,12 @@ class SocketService {
         timestamp: messageData.timestamp
       });
       
-      // 🆕 FIXED: Ensure all required fields are sent to backend
+      // Ensure all required fields are sent to backend
       this.socket.emit('send_message', {
         text: messageData.text,
         callId: messageData.callId,
-        sender: messageData.sender, // 🆕 CRITICAL: Include sender name
-        isAdmin: messageData.isAdmin, // 🆕 CRITICAL: Include admin status
+        sender: messageData.sender,
+        isAdmin: messageData.isAdmin,
         timestamp: messageData.timestamp || new Date().toISOString()
       });
     } else {

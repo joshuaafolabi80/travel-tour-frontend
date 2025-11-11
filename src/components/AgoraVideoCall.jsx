@@ -63,25 +63,31 @@ const AgoraVideoCall = ({
         leaveCall();
       }
       setCallId(null);
-      // Clear "Join stream" availability when admin ends call
-      setHasActiveStream(false);
     };
 
     const handleNewMessage = (event) => {
       console.log('💬 NEW MESSAGE RECEIVED IN VIDEO CALL:', event.detail);
       
-      // 🆕 FIXED: Ensure message has proper structure before adding
+      // FIXED: Only add message if it's from another user or system
+      // This prevents duplicate messages when we send our own
       if (event.detail && event.detail.text && event.detail.sender) {
-        const formattedMessage = {
-          id: event.detail.id || `msg_${Date.now()}_${Math.random()}`,
-          sender: event.detail.sender,
-          text: event.detail.text,
-          timestamp: event.detail.timestamp ? new Date(event.detail.timestamp) : new Date(),
-          isAdmin: event.detail.isAdmin || false
-        };
+        // Check if this is our own message that we already added locally
+        const isOwnMessage = event.detail.sender === currentUserName;
         
-        console.log(`💬 ADDING MESSAGE TO CHAT: ${formattedMessage.sender}: ${formattedMessage.text}`);
-        setMessages(prev => [...prev.slice(-99), formattedMessage]);
+        if (!isOwnMessage) {
+          const formattedMessage = {
+            id: event.detail.id || `msg_${Date.now()}_${Math.random()}`,
+            sender: event.detail.sender,
+            text: event.detail.text,
+            timestamp: event.detail.timestamp ? new Date(event.detail.timestamp) : new Date(),
+            isAdmin: event.detail.isAdmin || false
+          };
+          
+          console.log(`💬 ADDING MESSAGE FROM OTHERS: ${formattedMessage.sender}: ${formattedMessage.text}`);
+          setMessages(prev => [...prev.slice(-99), formattedMessage]);
+        } else {
+          console.log('💬 Ignoring own message from socket broadcast');
+        }
       } else {
         console.warn('⚠️ Received malformed message:', event.detail);
       }
@@ -94,7 +100,7 @@ const AgoraVideoCall = ({
         [event.detail.userId]: event.detail.userName
       }));
       
-      // 🆕 ADDED: System message when user joins
+      // System message when user joins
       if (event.detail.userName && event.detail.userName !== currentUserName) {
         const systemMessage = {
           id: `system_${Date.now()}`,
@@ -115,7 +121,7 @@ const AgoraVideoCall = ({
         return newMap;
       });
       
-      // 🆕 ADDED: System message when user leaves
+      // System message when user leaves
       if (event.detail.userName && event.detail.userName !== currentUserName) {
         const systemMessage = {
           id: `system_${Date.now()}`,
@@ -141,7 +147,7 @@ const AgoraVideoCall = ({
       window.removeEventListener('user_joined_call', handleUserJoinedCall);
       window.removeEventListener('user_left_call', handleUserLeftCall);
     };
-  }, [isOpen, isJoined, currentUserName]); // 🆕 ADDED currentUserName dependency
+  }, [isOpen, isJoined, currentUserName]);
 
   // Auto-remove notifications with animation
   useEffect(() => {
@@ -636,19 +642,19 @@ const AgoraVideoCall = ({
         isAdmin: isAdmin
       };
       
-      // 🆕 FIXED: Add to local state immediately for instant feedback
+      // FIXED: Add to local state immediately for instant feedback
       setMessages(prev => [...prev.slice(-99), message]);
       setNewMessage('');
 
-      // 🆕 FIXED: Proper socket message formatting with all required fields
+      // FIXED: Proper socket message formatting with all required fields
       if (callId && isJoined) {
         console.log(`💬 SENDING CHAT MESSAGE: ${currentUserName}: ${newMessage.trim()}`);
         
         socketService.sendCommunityMessage({
           text: newMessage.trim(),
           callId: callId,
-          sender: currentUserName, // 🆕 ENSURES SENDER NAME IS INCLUDED
-          isAdmin: isAdmin, // 🆕 ENSURES ADMIN STATUS IS INCLUDED
+          sender: currentUserName, // ENSURES SENDER NAME IS INCLUDED
+          isAdmin: isAdmin, // ENSURES ADMIN STATUS IS INCLUDED
           timestamp: new Date().toISOString()
         });
       } else {
@@ -864,7 +870,7 @@ const AgoraVideoCall = ({
                       >
                         <div className="d-flex justify-content-between align-items-start mb-1">
                           <small className="fw-bold">
-                            {/* 🆕 FIXED: Proper sender display with admin badge */}
+                            {/* FIXED: Proper sender display with admin badge */}
                             {message.sender === currentUserName ? 'You' : message.sender}
                             {message.isAdmin && <span className="badge bg-danger ms-2">Admin</span>}
                           </small>

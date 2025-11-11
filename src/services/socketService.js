@@ -1,6 +1,6 @@
 // travel-tour-frontend/src/services/socketService.js
 import { io } from 'socket.io-client';
-import { getSocketURL } from './api';
+import { getSocketURL } from './api'; // Assumes getSocketURL exists
 
 class SocketService {
   constructor() {

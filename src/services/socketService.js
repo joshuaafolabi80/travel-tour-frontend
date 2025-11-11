@@ -135,7 +135,7 @@ class SocketService {
 
   joinCommunityCall(callId, userData = {}) {
     if (this.isSocketConnected()) {
-      console.log(`🎬 Joining community call: ${callId} as ${userData.userName}`);
+      console.log(`🎬 CLIENT: Joining community call: ${callId} as ${userData.userName}`);
       
       // CRITICAL: Ensure all required data is sent
       const joinData = {
@@ -146,36 +146,30 @@ class SocketService {
         withAudio: true
       };
       
-      console.log('📤 Sending join_call with data:', joinData);
+      console.log('📤 CLIENT: Sending join_call with data:', joinData);
       this.socket.emit('join_call', joinData);
     } else {
-      console.error('❌ Cannot join call: Socket not connected');
+      console.error('❌ CLIENT: Cannot join call: Socket not connected');
     }
   }
 
   leaveCommunityCall(callId) {
     if (this.isSocketConnected()) {
-      console.log(`🎬 Leaving community call: ${callId}`);
+      console.log(`🎬 CLIENT: Leaving community call: ${callId}`);
       this.socket.emit('leave_call', { callId: callId });
     }
   }
 
   endCommunityCall(callId) {
     if (this.isSocketConnected()) {
-      console.log(`🎬 Ending community call: ${callId}`);
+      console.log(`🎬 CLIENT: Ending community call: ${callId}`);
       this.socket.emit('admin_end_call', { callId: callId });
     }
   }
 
   sendCommunityMessage(messageData) {
     if (this.isSocketConnected()) {
-      console.log('💬 SENDING COMMUNITY MESSAGE:', {
-        text: messageData.text,
-        callId: messageData.callId,
-        sender: messageData.sender,
-        isAdmin: messageData.isAdmin,
-        timestamp: messageData.timestamp
-      });
+      console.log('💬 CLIENT: SENDING COMMUNITY MESSAGE:', messageData);
       
       // Ensure all required fields are sent to backend
       this.socket.emit('send_message', {
@@ -186,7 +180,7 @@ class SocketService {
         timestamp: messageData.timestamp || new Date().toISOString()
       });
     } else {
-      console.error('❌ Cannot send message: Socket not connected');
+      console.error('❌ CLIENT: Cannot send message: Socket not connected');
     }
   }
 

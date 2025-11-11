@@ -48,17 +48,17 @@ const AgoraVideoCall = ({
     };
   }, []);
 
-  // Socket listeners for community coordination - FIXED MESSAGE HANDLER
+  // Socket listeners for community coordination
   useEffect(() => {
     if (!isOpen) return;
 
     const handleCallStarted = (event) => {
-      console.log('📞 Call started event received:', event.detail);
+      console.log('📞 CLIENT: Call started event received:', event.detail);
       setCallId(event.detail.callId);
     };
 
     const handleCallEnded = (event) => {
-      console.log('📞 Call ended event received');
+      console.log('📞 CLIENT: Call ended event received');
       if (isJoined) {
         leaveCall();
       }
@@ -66,9 +66,9 @@ const AgoraVideoCall = ({
     };
 
     const handleNewMessage = (event) => {
-      console.log('💬 NEW MESSAGE RECEIVED IN VIDEO CALL:', event.detail);
+      console.log('💬 CLIENT: NEW MESSAGE RECEIVED IN VIDEO CALL:', event.detail);
       
-      // CRITICAL FIX: Always add messages from server, regardless of sender
+      // CRITICAL FIX: Always add messages from server
       if (event.detail && event.detail.text && event.detail.sender) {
         const formattedMessage = {
           id: event.detail.id || `msg_${Date.now()}_${Math.random()}`,
@@ -78,15 +78,15 @@ const AgoraVideoCall = ({
           isAdmin: event.detail.isAdmin || false
         };
         
-        console.log(`💬 ADDING MESSAGE TO CHAT: ${formattedMessage.sender}: ${formattedMessage.text}`);
+        console.log(`💬 CLIENT: ADDING MESSAGE TO CHAT: ${formattedMessage.sender}: ${formattedMessage.text}`);
         setMessages(prev => [...prev.slice(-99), formattedMessage]);
       } else {
-        console.warn('⚠️ Received malformed message:', event.detail);
+        console.warn('⚠️ CLIENT: Received malformed message:', event.detail);
       }
     };
 
     const handleUserJoinedCall = (event) => {
-      console.log('👤 User joined call:', event.detail);
+      console.log('👤 CLIENT: User joined call:', event.detail);
       setUserNameMap(prev => ({
         ...prev,
         [event.detail.userId]: event.detail.userName
@@ -106,7 +106,7 @@ const AgoraVideoCall = ({
     };
 
     const handleUserLeftCall = (event) => {
-      console.log('👤 User left call:', event.detail);
+      console.log('👤 CLIENT: User left call:', event.detail);
       setUserNameMap(prev => {
         const newMap = { ...prev };
         delete newMap[event.detail.userId];
@@ -419,16 +419,31 @@ const AgoraVideoCall = ({
 
       setIsJoined(true);
       
-      // CRITICAL: Join the socket call with proper data
+      // CRITICAL: Join the socket call with proper data - FIXED LOGIC
       if (callId) {
-        console.log(`🔗 Joining socket call: ${callId}`);
+        console.log(`🔗 CLIENT: Joining socket call: ${callId}`);
+        console.log(`🔗 CLIENT: User data:`, {
+          userId: uid,
+          userName: currentUserName,
+          isAdmin: isAdmin
+        });
+        
         socketService.joinCommunityCall(callId, {
           userId: uid,
           userName: currentUserName,
           isAdmin: isAdmin
         });
       } else {
-        console.warn('⚠️ No callId available for socket join');
+        console.warn('⚠️ CLIENT: No callId available for socket join');
+        // If no callId from event, use a default one
+        const defaultCallId = 'community_call_default';
+        console.log(`🔗 CLIENT: Using default callId: ${defaultCallId}`);
+        setCallId(defaultCallId);
+        socketService.joinCommunityCall(defaultCallId, {
+          userId: uid,
+          userName: currentUserName,
+          isAdmin: isAdmin
+        });
       }
       
       setUserNameMap(prev => ({
@@ -644,7 +659,7 @@ const AgoraVideoCall = ({
 
       // Send via socket with proper formatting
       if (callId && isJoined) {
-        console.log(`💬 SENDING CHAT MESSAGE: ${currentUserName}: ${newMessage.trim()}`);
+        console.log(`💬 CLIENT: SENDING CHAT MESSAGE: ${currentUserName}: ${newMessage.trim()}`);
         
         socketService.sendCommunityMessage({
           text: newMessage.trim(),
@@ -654,7 +669,8 @@ const AgoraVideoCall = ({
           timestamp: new Date().toISOString()
         });
       } else {
-        console.warn('⚠️ Cannot send message: No active call or not joined');
+        console.warn('⚠️ CLIENT: Cannot send message: No active call or not joined');
+        console.log(`⚠️ CLIENT: callId: ${callId}, isJoined: ${isJoined}`);
       }
     }
   };

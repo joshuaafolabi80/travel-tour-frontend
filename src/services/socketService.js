@@ -167,17 +167,17 @@ class SocketService {
     }
   }
 
+  // 🔥 CRITICAL FIX: Send community message - simplified
   sendCommunityMessage(messageData) {
     if (this.isSocketConnected()) {
       console.log('💬 CLIENT: SENDING COMMUNITY MESSAGE:', messageData);
       
-      // Ensure all required fields are sent to backend
+      // CRITICAL FIX: Send minimal data - server will use socket registry for user info
       this.socket.emit('send_message', {
         text: messageData.text,
         callId: messageData.callId,
-        sender: messageData.sender,
-        isAdmin: messageData.isAdmin,
         timestamp: messageData.timestamp || new Date().toISOString()
+        // Don't send sender/isAdmin - server uses socket registry data
       });
     } else {
       console.error('❌ CLIENT: Cannot send message: Socket not connected');

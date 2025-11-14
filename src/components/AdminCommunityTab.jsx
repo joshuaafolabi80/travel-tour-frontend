@@ -13,6 +13,7 @@ const AdminCommunityTab = () => {
   const [notification, setNotification] = useState({ type: '', message: '' });
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMyMeeting, setIsMyMeeting] = useState(false);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('userData') || '{}');
@@ -32,6 +33,11 @@ const AdminCommunityTab = () => {
       
       if (response.success && response.meeting) {
         setActiveMeeting(response.meeting);
+        
+        // Check if this is the current admin's meeting
+        const isAdminMeeting = response.meeting.adminId === userData?.id;
+        setIsMyMeeting(isAdminMeeting);
+        
         // Load resources for this meeting
         const resourcesResponse = await MeetApiService.getMeetingResources(response.meeting.id);
         if (resourcesResponse.success) {
@@ -40,6 +46,7 @@ const AdminCommunityTab = () => {
       } else {
         setActiveMeeting(null);
         setResources([]);
+        setIsMyMeeting(false);
       }
     } catch (error) {
       console.error('Error loading active meeting:', error);
@@ -67,6 +74,7 @@ const AdminCommunityTab = () => {
 
       if (response.success) {
         setActiveMeeting(response.meeting);
+        setIsMyMeeting(true);
         setNotification({ type: 'success', message: 'Meeting created successfully!' });
         
         // Load resources for the new meeting
@@ -115,6 +123,7 @@ const AdminCommunityTab = () => {
       if (response.success) {
         setActiveMeeting(null);
         setResources([]);
+        setIsMyMeeting(false);
         setNotification({ type: 'success', message: 'Meeting ended successfully!' });
       } else {
         setNotification({ type: 'error', message: response.error || 'Failed to end meeting' });
@@ -132,6 +141,26 @@ const AdminCommunityTab = () => {
 
   const clearNotification = () => {
     setNotification({ type: '', message: '' });
+  };
+
+  const clearAllMeetings = async () => {
+    try {
+      // This would call your new backend endpoint
+      const response = await fetch(`${process.env.VITE_MEET_API_BASE_URL || 'https://travel-tour-academy-backend.onrender.com/api/meet'}/clear-all`, {
+        method: 'DELETE'
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setActiveMeeting(null);
+        setResources([]);
+        setIsMyMeeting(false);
+        setNotification({ type: 'success', message: 'All meetings cleared successfully!' });
+      }
+    } catch (error) {
+      console.error('Error clearing meetings:', error);
+      setNotification({ type: 'error', message: 'Failed to clear meetings' });
+    }
   };
 
   if (isLoading) {
@@ -193,6 +222,28 @@ const AdminCommunityTab = () => {
       {/* Active Meeting Section */}
       {activeMeeting ? (
         <div className="row">
+          <div className="col-12">
+            {/* Admin Alert for Other User's Meeting */}
+            {!isMyMeeting && (
+              <div className="alert alert-warning mb-4">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <i className="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Notice:</strong> There's already an active meeting created by another admin.
+                  </div>
+                  <button 
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={clearAllMeetings}
+                    title="Clear all meetings (Admin only)"
+                  >
+                    <i className="fas fa-trash me-1"></i>
+                    Clear All Meetings
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="col-lg-8">
             {/* Meeting Info Card */}
             <div className="card mb-4">
@@ -200,7 +251,7 @@ const AdminCommunityTab = () => {
                 <div className="d-flex justify-content-between align-items-center">
                   <h5 className="card-title mb-0">
                     <i className="fas fa-video me-2"></i>
-                    Live Stream Active
+                    {isMyMeeting ? 'Your Live Stream Active' : 'Active Live Stream'}
                   </h5>
                   <span className="badge bg-success">
                     <i className="fas fa-circle me-1"></i>
@@ -237,15 +288,18 @@ const AdminCommunityTab = () => {
                         className="btn btn-success me-2"
                       >
                         <i className="fas fa-play-circle me-2"></i>
-                        Join Google Meet
+                        {isMyMeeting ? 'Host Meeting' : 'Join Stream'}
                       </a>
-                      <button 
-                        className="btn btn-outline-danger"
-                        onClick={handleEndMeeting}
-                      >
-                        <i className="fas fa-stop-circle me-2"></i>
-                        End Stream
-                      </button>
+                      
+                      {isMyMeeting && (
+                        <button 
+                          className="btn btn-outline-danger"
+                          onClick={handleEndMeeting}
+                        >
+                          <i className="fas fa-stop-circle me-2"></i>
+                          End Stream
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="col-md-4">
@@ -256,9 +310,9 @@ const AdminCommunityTab = () => {
                         <small className="text-muted">Participants</small>
                       </div>
                       <div className="bg-light rounded p-3">
-                        <i className="fas fa-clock fa-3x text-warning mb-2"></i>
-                        <h4 className="mb-0">Active</h4>
-                        <small className="text-muted">Stream Status</small>
+                        <i className={`fas ${isMyMeeting ? 'fa-crown text-warning' : 'fa-user text-info'} fa-3x mb-2`}></i>
+                        <h4 className="mb-0">{isMyMeeting ? 'You' : 'Other'}</h4>
+                        <small className="text-muted">Stream Owner</small>
                       </div>
                     </div>
                   </div>
@@ -266,22 +320,24 @@ const AdminCommunityTab = () => {
               </div>
             </div>
 
-            {/* Resource Sharing Section */}
-            <div className="card">
-              <div className="card-header">
-                <h5 className="card-title mb-0">
-                  <i className="fas fa-share-alt me-2"></i>
-                  Share Resources with Participants
-                </h5>
+            {/* Resource Sharing Section - Only show for meeting owner */}
+            {isMyMeeting && (
+              <div className="card">
+                <div className="card-header">
+                  <h5 className="card-title mb-0">
+                    <i className="fas fa-share-alt me-2"></i>
+                    Share Resources with Participants
+                  </h5>
+                </div>
+                <div className="card-body">
+                  <ResourceUploader 
+                    meetingId={activeMeeting.id}
+                    user={userData}
+                    onResourceShared={handleResourceShared}
+                  />
+                </div>
               </div>
-              <div className="card-body">
-                <ResourceUploader 
-                  meetingId={activeMeeting.id}
-                  user={userData}
-                  onResourceShared={handleResourceShared}
-                />
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="col-lg-4">
@@ -313,33 +369,69 @@ const AdminCommunityTab = () => {
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="card mt-4">
-              <div className="card-header">
-                <h5 className="card-title mb-0">
-                  <i className="fas fa-bolt me-2"></i>
-                  Quick Actions
-                </h5>
+            {/* Quick Actions - Only show for meeting owner */}
+            {isMyMeeting && (
+              <div className="card mt-4">
+                <div className="card-header">
+                  <h5 className="card-title mb-0">
+                    <i className="fas fa-bolt me-2"></i>
+                    Quick Actions
+                  </h5>
+                </div>
+                <div className="card-body">
+                  <div className="d-grid gap-2">
+                    <button 
+                      className="btn btn-outline-warning"
+                      onClick={() => setShowExtensionModal(true)}
+                    >
+                      <i className="fas fa-clock me-2"></i>
+                      Extend Meeting
+                    </button>
+                    <button 
+                      className="btn btn-outline-info"
+                      onClick={() => navigator.clipboard.writeText(activeMeeting.meetingLink)}
+                    >
+                      <i className="fas fa-copy me-2"></i>
+                      Copy Meeting Link
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="card-body">
-                <div className="d-grid gap-2">
+            )}
+
+            {/* Create New Meeting Button when viewing other admin's meeting */}
+            {!isMyMeeting && activeMeeting && (
+              <div className="card mt-4 border-warning">
+                <div className="card-header bg-warning text-dark">
+                  <h5 className="card-title mb-0">
+                    <i className="fas fa-plus-circle me-2"></i>
+                    Create Your Own Stream
+                  </h5>
+                </div>
+                <div className="card-body">
+                  <p className="small text-muted mb-3">
+                    You can create your own live stream even if there's an active meeting.
+                  </p>
                   <button 
-                    className="btn btn-outline-warning"
-                    onClick={() => setShowExtensionModal(true)}
+                    className="btn btn-warning w-100"
+                    onClick={createMeeting}
+                    disabled={isCreating}
                   >
-                    <i className="fas fa-clock me-2"></i>
-                    Extend Meeting
-                  </button>
-                  <button 
-                    className="btn btn-outline-info"
-                    onClick={() => navigator.clipboard.writeText(activeMeeting.meetingLink)}
-                  >
-                    <i className="fas fa-copy me-2"></i>
-                    Copy Meeting Link
+                    {isCreating ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-rocket me-2"></i>
+                        Create New Stream
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       ) : (

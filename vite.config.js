@@ -24,8 +24,7 @@ export default defineConfig({
           utils: ['axios', 'jwt-decode']
         }
       },
-      // Externalize Agora to prevent bundling issues
-      external: ['agora-rtc-sdk']
+      // 🚨 REMOVED: Agora external reference
     }
   },
   define: {
@@ -40,10 +39,10 @@ export default defineConfig({
   },
   // CRITICAL: Ensure external scripts are handled properly
   optimizeDeps: {
-    exclude: ['agora-rtc-sdk'], // Agora is loaded via CDN, don't try to bundle it
+    // 🚨 REMOVED: Agora exclusion
     include: ['react', 'react-dom', 'axios', 'jwt-decode'] // Explicitly include core deps
   },
-  // Additional configuration for better Agora compatibility
+  // Additional configuration for better compatibility
   esbuild: {
     logOverride: { 'this-is-undefined-in-esm': 'silent' }
   }

@@ -21,7 +21,7 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# CORS/Agora Headers (Applies to all files)
+# CORS Headers (Applies to all files)
 [[headers]]
   for = "/*"
   [headers.values]
@@ -41,12 +41,21 @@
 # Environment variables for Netlify
 [context.production.environment]
   VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
-  VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
+  # 🚨 REMOVED: Socket URL (WebRTC old system)
+  # VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
+  # 🎯 ADD: Meet Module URL
+  VITE_MEET_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api/meet"
 
 [context.deploy-preview.environment]
   VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
-  VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
+  # 🚨 REMOVED: Socket URL
+  # VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
+  # 🎯 ADD: Meet Module URL
+  VITE_MEET_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api/meet"
 
 [context.branch-deploy.environment]
   VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
-  VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
+  # 🚨 REMOVED: Socket URL
+  # VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
+  # 🎯 ADD: Meet Module URL
+  VITE_MEET_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api/meet"

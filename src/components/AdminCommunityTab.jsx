@@ -1,352 +1,400 @@
+// travel-tour-frontend/src/components/AdminCommunityTab.jsx
 import React, { useState, useEffect } from 'react';
-import AgoraVideoCall from './AgoraVideoCall';
-import MessageThread from './MessageThread';
-import socketService from '../services/socketService';
+import MeetApiService from '../services/meet-api';
+import ResourceUploader from './ResourceUploader';
+import ResourceItem from './ResourceItem';
+import ExtensionModal from './ExtensionModal';
 
 const AdminCommunityTab = () => {
-  const [isCallActive, setIsCallActive] = useState(false);
-  const [hasActiveStream, setHasActiveStream] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [activeMeeting, setActiveMeeting] = useState(null);
+  const [resources, setResources] = useState([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [showExtensionModal, setShowExtensionModal] = useState(false);
+  const [notification, setNotification] = useState({ type: '', message: '' });
   const [userData, setUserData] = useState(null);
-  const [currentCallId, setCurrentCallId] = useState(null);
-  const [participants, setParticipants] = useState([]);
-  const [isCreatingStream, setIsCreatingStream] = useState(false);
 
   useEffect(() => {
-    const storedUserData = JSON.parse(localStorage.getItem('userData') || '{}');
-    setUserData(storedUserData);
+    const user = JSON.parse(localStorage.getItem('userData') || '{}');
+    setUserData(user);
+    loadActiveMeeting();
     
-    const socket = socketService.connect();
-    
-    const handleUserJoinedCall = (event) => {
-      console.log('👤 User joined call:', event.detail);
-      addSystemMessage(`${event.detail.userName} joined the stream`);
-      
-      setParticipants(prev => {
-        const exists = prev.find(p => p.userId === event.detail.userId);
-        if (!exists) {
-          return [...prev, {
-            userId: event.detail.userId,
-            userName: event.detail.userName,
-            socketId: event.detail.socketId,
-            role: event.detail.role
-          }];
-        }
-        return prev;
-      });
-    };
-
-    const handleUserLeftCall = (event) => {
-      console.log('👤 User left call:', event.detail);
-      addSystemMessage(`${event.detail.userName} left the stream`);
-      
-      setParticipants(prev => prev.filter(p => p.userId !== event.detail.userId));
-    };
-
-    const handleNewMessage = (event) => {
-      console.log('💬 New message received:', event.detail);
-      setMessages(prev => [...prev, event.detail]);
-    };
-
-    window.addEventListener('user_joined_call', handleUserJoinedCall);
-    window.addEventListener('user_left_call', handleUserLeftCall);
-    window.addEventListener('new_message', handleNewMessage);
-
-    return () => {
-      window.removeEventListener('user_joined_call', handleUserJoinedCall);
-      window.removeEventListener('user_left_call', handleUserLeftCall);
-      window.removeEventListener('new_message', handleNewMessage);
-    };
+    // Check for meeting every 30 seconds
+    const interval = setInterval(loadActiveMeeting, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const startCall = async () => {
-    console.log('🎬 Admin starting community call...');
-    setIsCreatingStream(true);
-    
+  const loadActiveMeeting = async () => {
     try {
-      // Simulate stream creation process
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Start the call via socket
-      socketService.startCommunityCall({
-        adminName: userData?.name || 'Admin',
-        message: 'Join the community stream!'
-      });
-      
-      setIsCallActive(true);
-      setHasActiveStream(true);
-      addSystemMessage('Admin started a community stream');
-      
-      // Add admin as first participant
-      setParticipants([{
-        userId: userData?.id || 'admin',
-        userName: userData?.name || 'Admin',
-        role: 'admin',
-        isYou: true
-      }]);
-      
+      const response = await MeetApiService.getActiveMeeting();
+      if (response.success && response.active) {
+        setActiveMeeting(response.meeting);
+        setResources(response.resources || []);
+      } else {
+        setActiveMeeting(null);
+        setResources([]);
+      }
     } catch (error) {
-      console.error('Error starting stream:', error);
+      console.error('Error loading active meeting:', error);
+      setNotification({ type: 'error', message: 'Failed to load meeting data' });
+    }
+  };
+
+  const createMeeting = async () => {
+    if (!userData) {
+      setNotification({ type: 'error', message: 'User data not found' });
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const response = await MeetApiService.createMeeting(
+        userData.id, 
+        'The Conclave Academy Live Stream',
+        'Join our community training session'
+      );
+
+      if (response.success) {
+        setActiveMeeting(response.meeting);
+        setNotification({ type: 'success', message: 'Meeting created successfully!' });
+        
+        // Simulate meeting time warnings (in real app, these would come from push notifications)
+        simulateMeetingWarnings(response.meeting);
+      } else {
+        setNotification({ type: 'error', message: response.error || 'Failed to create meeting' });
+      }
+    } catch (error) {
+      console.error('Error creating meeting:', error);
+      setNotification({ type: 'error', message: 'Failed to create meeting' });
     } finally {
-      setIsCreatingStream(false);
+      setIsCreating(false);
     }
   };
 
-  const endCall = () => {
-    console.log('🛑 Admin ending community call...');
-    
-    if (currentCallId) {
-      socketService.endCommunityCall(currentCallId);
-    }
-    
-    setIsCallActive(false);
-    setHasActiveStream(false);
-    setCurrentCallId(null);
-    setParticipants([]);
-    addSystemMessage('Admin ended the community stream');
+  const simulateMeetingWarnings = (meeting) => {
+    // Simulate 10-minute warning after 40 minutes
+    setTimeout(() => {
+      setShowExtensionModal(true);
+    }, 40 * 60 * 1000); // 40 minutes for demo (in production this would be 45 minutes)
   };
 
-  const addSystemMessage = (text) => {
-    const message = {
-      id: Date.now() + Math.random(),
-      sender: 'System',
-      text: text,
-      timestamp: new Date(),
-      isSystem: true
-    };
-    setMessages(prev => [...prev, message]);
-  };
+  const handleExtendMeeting = async () => {
+    if (!activeMeeting || !userData) return;
 
-  const addMessage = (messageText) => {
-    const message = {
-      id: Date.now() + Math.random(),
-      sender: userData?.name || 'Admin',
-      text: messageText,
-      timestamp: new Date(),
-      isAdmin: true
-    };
-    setMessages(prev => [...prev, message]);
-    
-    if (currentCallId && isCallActive) {
-      socketService.sendCommunityMessage({
-        text: messageText,
-        callId: currentCallId
-      });
+    try {
+      const response = await MeetApiService.extendMeeting(activeMeeting.meetingId, userData.id);
+      
+      if (response.success) {
+        setActiveMeeting(response.meeting);
+        setShowExtensionModal(false);
+        setNotification({ type: 'success', message: 'Meeting extended successfully!' });
+      } else {
+        setNotification({ type: 'error', message: response.error || 'Failed to extend meeting' });
+      }
+    } catch (error) {
+      console.error('Error extending meeting:', error);
+      setNotification({ type: 'error', message: 'Failed to extend meeting' });
     }
   };
 
-  const handleCallStarted = (event) => {
-    console.log('📞 Call started event received:', event.detail);
-    setCurrentCallId(event.detail.callId);
-    setHasActiveStream(true);
-  };
+  const handleEndMeeting = async () => {
+    if (!activeMeeting || !userData) return;
 
-  const handleCallEnded = (event) => {
-    console.log('📞 Call ended event received');
-    setCurrentCallId(null);
-    setHasActiveStream(false);
-    if (isCallActive) {
-      setIsCallActive(false);
+    try {
+      const response = await MeetApiService.endMeeting(activeMeeting.meetingId, userData.id);
+      
+      if (response.success) {
+        setActiveMeeting(null);
+        setResources([]);
+        setNotification({ type: 'success', message: 'Meeting ended successfully!' });
+      } else {
+        setNotification({ type: 'error', message: response.error || 'Failed to end meeting' });
+      }
+    } catch (error) {
+      console.error('Error ending meeting:', error);
+      setNotification({ type: 'error', message: 'Failed to end meeting' });
     }
   };
 
-  useEffect(() => {
-    window.addEventListener('community_call_started', handleCallStarted);
-    window.addEventListener('community_call_ended', handleCallEnded);
+  const handleResourceShared = (newResource) => {
+    setResources(prev => [newResource, ...prev]);
+    setNotification({ type: 'success', message: 'Resource shared successfully!' });
+  };
 
-    return () => {
-      window.removeEventListener('community_call_started', handleCallStarted);
-      window.removeEventListener('community_call_ended', handleCallEnded);
-    };
-  }, [isCallActive]);
+  const clearNotification = () => {
+    setNotification({ type: '', message: '' });
+  };
 
   return (
-    <div className="container-fluid py-3">
-      <div className="row">
+    <div className="container-fluid py-4">
+      {/* Notification */}
+      {notification.message && (
+        <div className={`alert alert-${notification.type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`} role="alert">
+          {notification.message}
+          <button type="button" className="btn-close" onClick={clearNotification}></button>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="row mb-4">
         <div className="col-12">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body text-center">
-              <h2 className="card-title h4 mb-2">Community Hub - Admin</h2>
-              <p className="text-muted mb-4">
-                Start live streams and connect with all users in real-time with video, audio, and chat
-              </p>
-              
-              <div className="d-flex justify-content-center align-items-center gap-3 mb-3 flex-wrap">
-                {!isCallActive ? (
-                  <button 
-                    onClick={startCall}
-                    disabled={isCreatingStream}
-                    className="btn btn-primary btn-lg"
-                  >
-                    {isCreatingStream ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin me-2"></i>
-                        Creating Stream...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-video me-2"></i>
-                        Start Live Stream
-                      </>
-                    )}
-                  </button>
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <h1 className="h3 mb-1">Welcome to The Conclave Streams</h1>
+              <p className="text-muted mb-0">Manage your community live streams and training sessions</p>
+            </div>
+            {!activeMeeting && (
+              <button 
+                className="btn btn-primary btn-lg"
+                onClick={createMeeting}
+                disabled={isCreating}
+              >
+                {isCreating ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Creating Stream...
+                  </>
                 ) : (
-                  <div className="alert alert-success mb-0">
-                    <i className="fas fa-broadcast-tower me-2"></i>
-                    Live stream is active - {participants.length} participant(s) connected
+                  <>
+                    <i className="fas fa-plus-circle me-2"></i>
+                    Create Stream
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Active Meeting Section */}
+      {activeMeeting ? (
+        <div className="row">
+          <div className="col-lg-8">
+            {/* Meeting Info Card */}
+            <div className="card mb-4">
+              <div className="card-header bg-primary text-white">
+                <div className="d-flex justify-content-between align-items-center">
+                  <h5 className="card-title mb-0">
+                    <i className="fas fa-video me-2"></i>
+                    Live Stream Active
+                  </h5>
+                  <span className="badge bg-success">
+                    <i className="fas fa-circle me-1"></i>
+                    LIVE
+                  </span>
+                </div>
+              </div>
+              <div className="card-body">
+                <div className="row">
+                  <div className="col-md-8">
+                    <h4 className="text-primary">{activeMeeting.title}</h4>
+                    <p className="text-muted">{activeMeeting.description}</p>
+                    
+                    <div className="row mt-3">
+                      <div className="col-sm-6">
+                        <small className="text-muted">Started</small>
+                        <p className="mb-0 fw-semibold">
+                          {new Date(activeMeeting.scheduledStart).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="col-sm-6">
+                        <small className="text-muted">Ends</small>
+                        <p className="mb-0 fw-semibold">
+                          {new Date(activeMeeting.scheduledEnd).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <a 
+                        href={activeMeeting.meetLink} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="btn btn-success me-2"
+                      >
+                        <i className="fas fa-play-circle me-2"></i>
+                        Join Google Meet
+                      </a>
+                      <button 
+                        className="btn btn-outline-danger"
+                        onClick={handleEndMeeting}
+                      >
+                        <i className="fas fa-stop-circle me-2"></i>
+                        End Stream
+                      </button>
+                    </div>
+                  </div>
+                  <div className="col-md-4">
+                    <div className="text-center">
+                      <div className="bg-light rounded p-3 mb-3">
+                        <i className="fas fa-users fa-3x text-primary mb-2"></i>
+                        <h4 className="mb-0">{activeMeeting.participantCount || 0}</h4>
+                        <small className="text-muted">Participants</small>
+                      </div>
+                      <div className="bg-light rounded p-3">
+                        <i className="fas fa-clock fa-3x text-warning mb-2"></i>
+                        <h4 className="mb-0">{activeMeeting.extensions || 0}/2</h4>
+                        <small className="text-muted">Extensions Used</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Resource Sharing Section */}
+            <div className="card">
+              <div className="card-header">
+                <h5 className="card-title mb-0">
+                  <i className="fas fa-share-alt me-2"></i>
+                  Share Resources with Participants
+                </h5>
+              </div>
+              <div className="card-body">
+                <ResourceUploader 
+                  meetingId={activeMeeting.meetingId}
+                  user={userData}
+                  onResourceShared={handleResourceShared}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="col-lg-4">
+            {/* Shared Resources */}
+            <div className="card">
+              <div className="card-header">
+                <h5 className="card-title mb-0">
+                  <i className="fas fa-file-alt me-2"></i>
+                  Shared Resources ({resources.length})
+                </h5>
+              </div>
+              <div className="card-body p-0">
+                {resources.length > 0 ? (
+                  <div className="list-group list-group-flush">
+                    {resources.map(resource => (
+                      <ResourceItem 
+                        key={resource.resourceId} 
+                        resource={resource} 
+                        user={userData}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <i className="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                    <p className="text-muted mb-0">No resources shared yet</p>
                   </div>
                 )}
               </div>
-
-              {/* Connection Status */}
-              <div className="d-flex justify-content-center gap-3 flex-wrap">
-                <small className={`badge ${socketService.isSocketConnected() ? 'bg-success' : 'bg-warning'}`}>
-                  {socketService.isSocketConnected() ? '🟢 Connected' : '🟡 Connecting...'}
-                </small>
-                {hasActiveStream && (
-                  <small className="badge bg-info">
-                    <i className="fas fa-users me-1"></i>
-                    {participants.length} online
-                  </small>
-                )}
-              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="row mt-4">
-        {/* Community Chat - Improved mobile responsiveness */}
-        <div className="col-12 col-lg-6 mb-3">
-          <div className="card h-100">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h3 className="h5 mb-0">Community Chat</h3>
-              <div>
-                <span className="badge bg-primary me-2">{messages.length}</span>
-                {hasActiveStream && (
-                  <span className="badge bg-success">{participants.length} online</span>
-                )}
-              </div>
-            </div>
-            <div className="card-body d-flex flex-column p-0">
-              <MessageThread 
-                messages={messages}
-                onSendMessage={addMessage}
-                currentUser={userData?.name || 'Admin'}
-                isAdmin={true}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Stream Information & Participants */}
-        <div className="col-12 col-lg-6">
-          {/* Active Participants */}
-          {hasActiveStream && participants.length > 0 && (
-            <div className="card border-success mb-3">
-              <div className="card-header bg-success text-white">
-                <h4 className="h6 mb-0">
-                  <i className="fas fa-users me-2"></i>
-                  Active Participants ({participants.length})
-                </h4>
+            {/* Quick Actions */}
+            <div className="card mt-4">
+              <div className="card-header">
+                <h5 className="card-title mb-0">
+                  <i className="fas fa-bolt me-2"></i>
+                  Quick Actions
+                </h5>
               </div>
               <div className="card-body">
-                <div className="participants-list">
-                  {participants.map(participant => (
-                    <div key={participant.userId} className="d-flex align-items-center justify-content-between py-2 border-bottom">
-                      <div className="d-flex align-items-center">
-                        <i className={`fas ${participant.role === 'admin' ? 'fa-crown text-warning' : 'fa-user'} me-2`}></i>
-                        <span>
-                          {participant.userName}
-                          {participant.isYou && <span className="text-info ms-1">(You)</span>}
-                        </span>
+                <div className="d-grid gap-2">
+                  <button 
+                    className="btn btn-outline-warning"
+                    onClick={() => setShowExtensionModal(true)}
+                    disabled={activeMeeting?.extensions >= activeMeeting?.maxExtensions}
+                  >
+                    <i className="fas fa-clock me-2"></i>
+                    Extend Meeting
+                  </button>
+                  <button 
+                    className="btn btn-outline-info"
+                    onClick={() => navigator.clipboard.writeText(activeMeeting.meetLink)}
+                  >
+                    <i className="fas fa-copy me-2"></i>
+                    Copy Meeting Link
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* No Active Meeting - Welcome State */
+        <div className="row justify-content-center">
+          <div className="col-md-8 text-center">
+            <div className="card border-0 shadow-sm">
+              <div className="card-body py-5">
+                <div className="mb-4">
+                  <i className="fas fa-video fa-5x text-primary mb-4"></i>
+                  <h2 className="text-primary">Start a Live Stream</h2>
+                  <p className="text-muted lead">
+                    Create a Google Meet session to connect with your community. 
+                    Share resources, conduct training, and engage with participants in real-time.
+                  </p>
+                </div>
+                
+                <div className="row mt-5">
+                  <div className="col-md-4 mb-3">
+                    <div className="text-center">
+                      <div className="bg-primary bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
+                        <i className="fas fa-link fa-2x text-primary"></i>
                       </div>
-                      <span className={`badge ${participant.role === 'admin' ? 'bg-warning text-dark' : 'bg-secondary'}`}>
-                        {participant.role}
-                      </span>
+                      <h5>Instant Meeting</h5>
+                      <p className="text-muted small">Generate Google Meet link instantly</p>
                     </div>
-                  ))}
+                  </div>
+                  <div className="col-md-4 mb-3">
+                    <div className="text-center">
+                      <div className="bg-success bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
+                        <i className="fas fa-share-alt fa-2x text-success"></i>
+                      </div>
+                      <h5>Resource Sharing</h5>
+                      <p className="text-muted small">Share files and links with participants</p>
+                    </div>
+                  </div>
+                  <div className="col-md-4 mb-3">
+                    <div className="text-center">
+                      <div className="bg-warning bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
+                        <i className="fas fa-clock fa-2x text-warning"></i>
+                      </div>
+                      <h5>Time Management</h5>
+                      <p className="text-muted small">Automatic extensions when needed</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <button 
+                    className="btn btn-primary btn-lg px-5"
+                    onClick={createMeeting}
+                    disabled={isCreating}
+                  >
+                    {isCreating ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Creating Your Stream...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-rocket me-2"></i>
+                        Launch Live Stream
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Stream Features */}
-          <div className="card">
-            <div className="card-header bg-primary text-white">
-              <h3 className="h5 mb-0">Stream Features</h3>
-            </div>
-            <div className="card-body">
-              <ul className="list-unstyled mb-0">
-                <li className="mb-3 p-2 border rounded">
-                  <i className="fas fa-video text-primary me-2"></i>
-                  <strong>Live Video Streaming</strong>
-                  <p className="small text-muted mb-0 mt-1">
-                    High-quality video calls with multiple participants
-                  </p>
-                </li>
-                <li className="mb-3 p-2 border rounded">
-                  <i className="fas fa-microphone text-primary me-2"></i>
-                  <strong>Crystal Clear Audio</strong>
-                  <p className="small text-muted mb-0 mt-1">
-                    Real-time audio with noise cancellation
-                  </p>
-                </li>
-                <li className="mb-3 p-2 border rounded">
-                  <i className="fas fa-comments text-primary me-2"></i>
-                  <strong>Integrated Text Chat</strong>
-                  <p className="small text-muted mb-0 mt-1">
-                    Chat with participants during the stream
-                  </p>
-                </li>
-                <li className="p-2 border rounded">
-                  <i className="fas fa-users text-primary me-2"></i>
-                  <strong>Community Building</strong>
-                  <p className="small text-muted mb-0 mt-1">
-                    Connect with all users simultaneously
-                  </p>
-                </li>
-              </ul>
             </div>
           </div>
-
-          {/* Stream Instructions */}
-          {isCallActive && (
-            <div className="card border-warning mt-3">
-              <div className="card-header bg-warning text-dark">
-                <h4 className="h6 mb-0">
-                  <i className="fas fa-info-circle me-2"></i>
-                  Stream Active
-                </h4>
-              </div>
-              <div className="card-body">
-                <p className="mb-2">
-                  <strong>Your stream is live!</strong> Users can now join using the community tab.
-                </p>
-                <div className="alert alert-info small">
-                  <i className="fas fa-lightbulb me-2"></i>
-                  Use the controls to mute/unmute audio and video during the stream
-                </div>
-                <button 
-                  onClick={endCall}
-                  className="btn btn-outline-danger btn-sm w-100"
-                >
-                  <i className="fas fa-stop me-2"></i>
-                  End Stream for Everyone
-                </button>
-              </div>
-            </div>
-          )}
         </div>
-      </div>
+      )}
 
-      {/* Agora Video Call Modal */}
-      <AgoraVideoCall
-        isOpen={isCallActive}
-        onClose={endCall}
-        isAdmin={true}
-        currentUserName={userData?.name || 'Admin'}
-        userData={userData}
+      {/* Extension Modal */}
+      <ExtensionModal 
+        visible={showExtensionModal}
+        meeting={activeMeeting}
+        user={userData}
+        onExtend={handleExtendMeeting}
+        onClose={() => setShowExtensionModal(false)}
       />
     </div>
   );

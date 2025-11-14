@@ -1,4 +1,4 @@
-//travel-tour-frontend/src/App.jsx - COMPLETE INTEGRATED VERSION WITH VIDEO COURSES
+// travel-tour-frontend/src/App.jsx - COMPLETE INTEGRATED VERSION WITH GOOGLE MEET
 import React, { useState, useEffect } from 'react';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { jwtDecode } from 'jwt-decode';
@@ -23,6 +23,7 @@ import AdminManageCourses from './components/AdminManageCourses';
 import GeneralCourseQuestions from './components/GeneralCourseQuestions';
 import MasterclassCourseQuestions from './components/MasterclassCourseQuestions';
 import QuizAttempt from './components/QuizAttempt';
+// 🎯 UPDATED: Google Meet Community Components
 import AdminCommunityTab from './components/AdminCommunityTab';
 import UserCommunityTab from './components/UserCommunityTab';
 // 🚨 ADDED: Video Components
@@ -561,6 +562,7 @@ const App = () => {
       icon: "fa-solid fa-phone",
       action: () => navigateTo('contact-us')
     },
+    // 🎯 UPDATED: Community with Google Meet
     { 
       name: "Community", 
       icon: "fa-solid fa-users",
@@ -630,6 +632,7 @@ const App = () => {
       icon: "fa-solid fa-bullhorn",
       action: () => navigateTo('admin-send-information')
     },
+    // 🎯 UPDATED: Community with Google Meet for Admin
     { 
       name: "Community", 
       icon: "fa-solid fa-users",
@@ -869,7 +872,7 @@ const App = () => {
             {/* 🚨 ADDED: Admin Video Courses */}
             {currentPage === 'admin-video-courses' && <AdminVideoCourses />}
             
-            {/* Community Pages */}
+            {/* 🎯 UPDATED: Community Pages with Google Meet */}
             {currentPage === 'community' && userRole === 'admin' && <AdminCommunityTab />}
             {currentPage === 'community' && userRole !== 'admin' && <UserCommunityTab />}
             {currentPage === 'admin-community' && <AdminCommunityTab />}

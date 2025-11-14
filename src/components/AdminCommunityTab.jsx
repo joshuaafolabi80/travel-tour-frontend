@@ -12,6 +12,7 @@ const AdminCommunityTab = () => {
   const [showExtensionModal, setShowExtensionModal] = useState(false);
   const [notification, setNotification] = useState({ type: '', message: '' });
   const [userData, setUserData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('userData') || '{}');
@@ -25,10 +26,17 @@ const AdminCommunityTab = () => {
 
   const loadActiveMeeting = async () => {
     try {
+      setIsLoading(true);
       const response = await MeetApiService.getActiveMeeting();
-      if (response.success && response.active) {
+      console.log('🔍 Active meeting response:', response);
+      
+      if (response.success && response.meeting) {
         setActiveMeeting(response.meeting);
-        setResources(response.resources || []);
+        // Load resources for this meeting
+        const resourcesResponse = await MeetApiService.getMeetingResources(response.meeting.id);
+        if (resourcesResponse.success) {
+          setResources(resourcesResponse.resources || []);
+        }
       } else {
         setActiveMeeting(null);
         setResources([]);
@@ -36,6 +44,8 @@ const AdminCommunityTab = () => {
     } catch (error) {
       console.error('Error loading active meeting:', error);
       setNotification({ type: 'error', message: 'Failed to load meeting data' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -53,12 +63,19 @@ const AdminCommunityTab = () => {
         'Join our community training session'
       );
 
+      console.log('🔍 Create meeting response:', response);
+
       if (response.success) {
         setActiveMeeting(response.meeting);
         setNotification({ type: 'success', message: 'Meeting created successfully!' });
         
-        // Simulate meeting time warnings (in real app, these would come from push notifications)
-        simulateMeetingWarnings(response.meeting);
+        // Load resources for the new meeting
+        if (response.meeting.id) {
+          const resourcesResponse = await MeetApiService.getMeetingResources(response.meeting.id);
+          if (resourcesResponse.success) {
+            setResources(resourcesResponse.resources || []);
+          }
+        }
       } else {
         setNotification({ type: 'error', message: response.error || 'Failed to create meeting' });
       }
@@ -70,18 +87,11 @@ const AdminCommunityTab = () => {
     }
   };
 
-  const simulateMeetingWarnings = (meeting) => {
-    // Simulate 10-minute warning after 40 minutes
-    setTimeout(() => {
-      setShowExtensionModal(true);
-    }, 40 * 60 * 1000); // 40 minutes for demo (in production this would be 45 minutes)
-  };
-
   const handleExtendMeeting = async () => {
     if (!activeMeeting || !userData) return;
 
     try {
-      const response = await MeetApiService.extendMeeting(activeMeeting.meetingId, userData.id);
+      const response = await MeetApiService.extendMeeting(activeMeeting.id, userData.id);
       
       if (response.success) {
         setActiveMeeting(response.meeting);
@@ -100,7 +110,7 @@ const AdminCommunityTab = () => {
     if (!activeMeeting || !userData) return;
 
     try {
-      const response = await MeetApiService.endMeeting(activeMeeting.meetingId, userData.id);
+      const response = await MeetApiService.endMeeting(activeMeeting.id, userData.id);
       
       if (response.success) {
         setActiveMeeting(null);
@@ -123,6 +133,21 @@ const AdminCommunityTab = () => {
   const clearNotification = () => {
     setNotification({ type: '', message: '' });
   };
+
+  if (isLoading) {
+    return (
+      <div className="container-fluid py-4">
+        <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+          <div className="text-center">
+            <div className="spinner-border text-primary mb-3" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="text-muted">Loading community data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container-fluid py-4">
@@ -193,20 +218,20 @@ const AdminCommunityTab = () => {
                       <div className="col-sm-6">
                         <small className="text-muted">Started</small>
                         <p className="mb-0 fw-semibold">
-                          {new Date(activeMeeting.scheduledStart).toLocaleString()}
+                          {new Date(activeMeeting.startTime).toLocaleString()}
                         </p>
                       </div>
                       <div className="col-sm-6">
-                        <small className="text-muted">Ends</small>
+                        <small className="text-muted">Participants</small>
                         <p className="mb-0 fw-semibold">
-                          {new Date(activeMeeting.scheduledEnd).toLocaleString()}
+                          {activeMeeting.participants?.length || 0} joined
                         </p>
                       </div>
                     </div>
 
                     <div className="mt-3">
                       <a 
-                        href={activeMeeting.meetLink} 
+                        href={activeMeeting.meetingLink} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="btn btn-success me-2"
@@ -227,13 +252,13 @@ const AdminCommunityTab = () => {
                     <div className="text-center">
                       <div className="bg-light rounded p-3 mb-3">
                         <i className="fas fa-users fa-3x text-primary mb-2"></i>
-                        <h4 className="mb-0">{activeMeeting.participantCount || 0}</h4>
+                        <h4 className="mb-0">{activeMeeting.participants?.length || 0}</h4>
                         <small className="text-muted">Participants</small>
                       </div>
                       <div className="bg-light rounded p-3">
                         <i className="fas fa-clock fa-3x text-warning mb-2"></i>
-                        <h4 className="mb-0">{activeMeeting.extensions || 0}/2</h4>
-                        <small className="text-muted">Extensions Used</small>
+                        <h4 className="mb-0">Active</h4>
+                        <small className="text-muted">Stream Status</small>
                       </div>
                     </div>
                   </div>
@@ -251,7 +276,7 @@ const AdminCommunityTab = () => {
               </div>
               <div className="card-body">
                 <ResourceUploader 
-                  meetingId={activeMeeting.meetingId}
+                  meetingId={activeMeeting.id}
                   user={userData}
                   onResourceShared={handleResourceShared}
                 />
@@ -273,7 +298,7 @@ const AdminCommunityTab = () => {
                   <div className="list-group list-group-flush">
                     {resources.map(resource => (
                       <ResourceItem 
-                        key={resource.resourceId} 
+                        key={resource.id} 
                         resource={resource} 
                         user={userData}
                       />
@@ -301,14 +326,13 @@ const AdminCommunityTab = () => {
                   <button 
                     className="btn btn-outline-warning"
                     onClick={() => setShowExtensionModal(true)}
-                    disabled={activeMeeting?.extensions >= activeMeeting?.maxExtensions}
                   >
                     <i className="fas fa-clock me-2"></i>
                     Extend Meeting
                   </button>
                   <button 
                     className="btn btn-outline-info"
-                    onClick={() => navigator.clipboard.writeText(activeMeeting.meetLink)}
+                    onClick={() => navigator.clipboard.writeText(activeMeeting.meetingLink)}
                   >
                     <i className="fas fa-copy me-2"></i>
                     Copy Meeting Link

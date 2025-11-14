@@ -23,9 +23,15 @@ const UserCommunityTab = () => {
     try {
       setIsLoading(true);
       const response = await MeetApiService.getActiveMeeting();
-      if (response.success && response.active) {
+      console.log('🔍 User - Active meeting response:', response);
+      
+      if (response.success && response.meeting) {
         setActiveMeeting(response.meeting);
-        setResources(response.resources || []);
+        // Load resources for this meeting
+        const resourcesResponse = await MeetApiService.getMeetingResources(response.meeting.id);
+        if (resourcesResponse.success) {
+          setResources(resourcesResponse.resources || []);
+        }
       } else {
         setActiveMeeting(null);
         setResources([]);
@@ -34,6 +40,29 @@ const UserCommunityTab = () => {
       console.error('Error loading active meeting:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleJoinMeeting = async () => {
+    if (!activeMeeting || !userData) return;
+
+    try {
+      // Join the meeting
+      const joinResponse = await MeetApiService.joinMeeting(
+        activeMeeting.id, 
+        userData.id, 
+        userData.name || userData.username
+      );
+      
+      if (joinResponse.success) {
+        console.log('✅ Successfully joined meeting');
+        // Open meeting link in new tab
+        window.open(activeMeeting.meetingLink, '_blank');
+      }
+    } catch (error) {
+      console.error('Error joining meeting:', error);
+      // Still open the meeting link even if join tracking fails
+      window.open(activeMeeting.meetingLink, '_blank');
     }
   };
 
@@ -48,7 +77,7 @@ const UserCommunityTab = () => {
   };
 
   const handleDownloadResource = async (resource) => {
-    await handleResourceAccess(resource.resourceId, 'download');
+    await handleResourceAccess(resource.id, 'download');
     
     // Create a temporary link to download the resource
     const link = document.createElement('a');
@@ -113,24 +142,22 @@ const UserCommunityTab = () => {
                     
                     <div className="d-flex flex-wrap gap-2 mb-3">
                       <span className="badge bg-primary">
-                        <i className="fas fa-user-tie me-1"></i>
-                        Host: {activeMeeting.adminName}
+                        <i className="fas fa-clock me-1"></i>
+                        Started: {new Date(activeMeeting.startTime).toLocaleTimeString()}
                       </span>
                       <span className="badge bg-secondary">
-                        <i className="fas fa-clock me-1"></i>
-                        Started: {new Date(activeMeeting.scheduledStart).toLocaleTimeString()}
+                        <i className="fas fa-users me-1"></i>
+                        {activeMeeting.participants?.length || 0} participants
                       </span>
                     </div>
 
-                    <a 
-                      href={activeMeeting.meetLink} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
+                    <button 
+                      onClick={handleJoinMeeting}
                       className="btn btn-success btn-lg"
                     >
                       <i className="fas fa-play-circle me-2"></i>
                       Join Live Stream on Google Meet
-                    </a>
+                    </button>
                   </div>
                   <div className="col-md-4 text-center">
                     <div className="bg-success bg-opacity-10 rounded-circle p-4 d-inline-flex mb-3">
@@ -205,7 +232,7 @@ const UserCommunityTab = () => {
                   <div className="list-group list-group-flush">
                     {resources.map(resource => (
                       <ResourceItem 
-                        key={resource.resourceId} 
+                        key={resource.id} 
                         resource={resource} 
                         user={userData}
                         onAccess={handleResourceAccess}

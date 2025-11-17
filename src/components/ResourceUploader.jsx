@@ -7,6 +7,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   const [showUploadOptions, setShowUploadOptions] = useState(false);
   const [linkForm, setLinkForm] = useState({ title: '', url: '', description: '' });
   const [textForm, setTextForm] = useState({ title: '', content: '', description: '' });
+  const [selectedFile, setSelectedFile] = useState(null);
 
   const pickFile = () => {
     const input = document.createElement('input');
@@ -22,18 +23,29 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
         const videoExtensions = ['mp4', 'mov', 'avi', 'wmv', 'flv', 'webm', 'mkv'];
         
         if (videoExtensions.includes(fileExtension)) {
-          alert('❌ Video files are not supported to save storage space. Please upload documents, PDFs, or images instead. However you can use the "Video Courses" menu tab dedicated strictly to handle and manage your videos.');
+          alert('❌ Video files are not supported to save storage space. Please upload documents, PDFs, or images instead.');
           return;
         }
 
-        await uploadFile(file);
+        // File size validation
+        if (file.size > 50 * 1024 * 1024) { // 50MB
+          alert('❌ File size must be less than 50MB');
+          return;
+        }
+
+        setSelectedFile(file);
       }
     };
     
     input.click();
   };
 
-  const uploadFile = async (file) => {
+  const uploadFile = async () => {
+    if (!selectedFile) {
+      alert('Please select a file first');
+      return;
+    }
+
     if (!meetingId || !user) {
       alert('Meeting ID or user data missing');
       return;
@@ -43,27 +55,62 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
     
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('meetingId', meetingId);
-      formData.append('sharedBy', user.id);
-      formData.append('sharedByName', user.name || user.username || 'Admin');
-      formData.append('title', file.name);
-      formData.append('description', `Uploaded file: ${file.name}`);
+      formData.append('file', selectedFile);
 
-      const response = await MeetApiService.uploadFile(formData);
+      console.log('📤 Uploading file:', selectedFile.name);
       
-      if (response.success) {
-        onResourceShared(response.resource);
+      // First upload the file
+      const uploadResponse = await MeetApiService.uploadFile(formData);
+      
+      if (!uploadResponse.success) {
+        throw new Error(uploadResponse.error || 'File upload failed');
+      }
+
+      console.log('✅ File uploaded successfully:', uploadResponse);
+
+      // Then share the resource with the uploaded file URL
+      const resourceData = {
+        meetingId,
+        resourceType: getResourceTypeFromFile(selectedFile),
+        title: selectedFile.name.replace(/\.[^/.]+$/, ""), // Remove extension
+        content: uploadResponse.fileUrl || uploadResponse.url,
+        fileName: selectedFile.name,
+        fileSize: selectedFile.size,
+        uploadedBy: user.id,
+        uploadedByName: user.name || user.username || 'Admin'
+      };
+
+      console.log('🎯 Sharing resource:', resourceData);
+
+      const shareResponse = await MeetApiService.shareResource(resourceData);
+      
+      if (shareResponse.success) {
+        onResourceShared(shareResponse.resource);
+        setSelectedFile(null);
         setShowUploadOptions(false);
+        alert('✅ File shared successfully!');
       } else {
-        alert(response.error || 'Failed to upload file');
+        throw new Error(shareResponse.error || 'Failed to share resource');
       }
     } catch (error) {
       console.error('File upload error:', error);
-      alert('Upload failed. Please try again.');
+      alert(`❌ Upload failed: ${error.message}`);
     } finally {
       setIsUploading(false);
     }
+  };
+
+  // Helper function to determine resource type from file
+  const getResourceTypeFromFile = (file) => {
+    const extension = file.name.split('.').pop().toLowerCase();
+    const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    const pdfTypes = ['pdf'];
+    const documentTypes = ['doc', 'docx', 'txt', 'ppt', 'pptx', 'xls', 'xlsx'];
+    
+    if (imageTypes.includes(extension)) return 'image';
+    if (pdfTypes.includes(extension)) return 'pdf';
+    if (documentTypes.includes(extension)) return 'document';
+    return 'document'; // default fallback
   };
 
   const shareLink = async () => {
@@ -82,13 +129,15 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
     try {
       const resourceData = {
         meetingId,
-        type: 'link',
+        resourceType: 'link',
         title: linkForm.title,
         content: linkForm.url,
         description: linkForm.description,
-        sharedBy: user.id,
-        sharedByName: user.name || user.username || 'Admin'
+        uploadedBy: user.id,
+        uploadedByName: user.name || user.username || 'Admin'
       };
+
+      console.log('🎯 Sharing link:', resourceData);
 
       const response = await MeetApiService.shareResource(resourceData);
       
@@ -96,6 +145,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
         onResourceShared(response.resource);
         setLinkForm({ title: '', url: '', description: '' });
         setShowUploadOptions(false);
+        alert('✅ Link shared successfully!');
       } else {
         alert(response.error || 'Failed to share link');
       }
@@ -123,13 +173,15 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
     try {
       const resourceData = {
         meetingId,
-        type: 'text',
+        resourceType: 'text',
         title: textForm.title,
         content: textForm.content,
         description: textForm.description,
-        sharedBy: user.id,
-        sharedByName: user.name || user.username || 'Admin'
+        uploadedBy: user.id,
+        uploadedByName: user.name || user.username || 'Admin'
       };
+
+      console.log('🎯 Sharing text:', resourceData);
 
       const response = await MeetApiService.shareResource(resourceData);
       
@@ -137,6 +189,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
         onResourceShared(response.resource);
         setTextForm({ title: '', content: '', description: '' });
         setShowUploadOptions(false);
+        alert('✅ Text shared successfully!');
       } else {
         alert(response.error || 'Failed to share text');
       }
@@ -153,22 +206,26 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
 
     const resourceData = {
       meetingId,
-      type: 'text',
+      resourceType: 'text',
       title: title,
       content: content,
       description: `Quick ${type} shared by admin`,
-      sharedBy: user.id,
-      sharedByName: user.name || user.username || 'Admin'
+      uploadedBy: user.id,
+      uploadedByName: user.name || user.username || 'Admin'
     };
 
     MeetApiService.shareResource(resourceData)
       .then(response => {
         if (response.success) {
           onResourceShared(response.resource);
+          alert(`✅ ${title} shared successfully!`);
+        } else {
+          alert(`Failed to share ${type}: ${response.error}`);
         }
       })
       .catch(error => {
         console.error('Quick share error:', error);
+        alert(`Failed to share ${type}. Please try again.`);
       });
   };
 
@@ -206,7 +263,10 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
               <button
                 type="button"
                 className="btn-close"
-                onClick={() => setShowUploadOptions(false)}
+                onClick={() => {
+                  setShowUploadOptions(false);
+                  setSelectedFile(null);
+                }}
                 disabled={isUploading}
               ></button>
             </div>
@@ -218,7 +278,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 <div>
                   <strong>Storage Notice:</strong> All resources are permanently saved. 
                   <span className="text-danger ms-1">
-                    Video files are disabled to conserve storage space, however you can use the "Video Courses" menu tab dedicated strictly to handle and manage your videos.
+                    Video files are disabled to conserve storage space.
                   </span>
                 </div>
               </div>
@@ -256,16 +316,54 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
             <div className="mb-3">
               <label className="form-label small text-muted">Upload File:</label>
               <button
-                className="btn btn-outline-primary w-100"
+                className="btn btn-outline-primary w-100 mb-2"
                 onClick={pickFile}
                 disabled={isUploading}
               >
                 <i className="fas fa-upload me-2"></i>
-                {/* 🚫 UPDATED: Removed "Videos" from button text */}
                 Choose File (PDF, Images, Documents)
               </button>
-              <div className="form-text">
-                {/* 🚫 UPDATED: Removed videos from supported formats */}
+              
+              {/* Show selected file */}
+              {selectedFile && (
+                <div className="alert alert-success py-2 mb-2">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <i className="fas fa-check-circle me-2 text-success"></i>
+                      <strong>Selected:</strong> {selectedFile.name}
+                      <span className="ms-2 text-muted">
+                        ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-close btn-close-sm"
+                      onClick={() => setSelectedFile(null)}
+                      disabled={isUploading}
+                    ></button>
+                  </div>
+                </div>
+              )}
+              
+              <button
+                className="btn btn-success w-100"
+                onClick={uploadFile}
+                disabled={isUploading || !selectedFile}
+              >
+                {isUploading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-cloud-upload-alt me-2"></i>
+                    Upload & Share File
+                  </>
+                )}
+              </button>
+              
+              <div className="form-text mt-2">
                 Max file size: 50MB. Supported: PDF, Images, Office Documents
                 <span className="text-danger ms-1">
                   <i className="fas fa-ban me-1"></i>
@@ -280,7 +378,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
               <input
                 type="text"
                 className="form-control form-control-sm mb-2"
-                placeholder="Link Title"
+                placeholder="Link Title *"
                 value={linkForm.title}
                 onChange={(e) => setLinkForm({ ...linkForm, title: e.target.value })}
                 disabled={isUploading}
@@ -288,7 +386,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
               <input
                 type="url"
                 className="form-control form-control-sm mb-2"
-                placeholder="https://example.com"
+                placeholder="https://example.com *"
                 value={linkForm.url}
                 onChange={(e) => setLinkForm({ ...linkForm, url: e.target.value })}
                 disabled={isUploading}
@@ -317,14 +415,14 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
               <input
                 type="text"
                 className="form-control form-control-sm mb-2"
-                placeholder="Text Title"
+                placeholder="Text Title *"
                 value={textForm.title}
                 onChange={(e) => setTextForm({ ...textForm, title: e.target.value })}
                 disabled={isUploading}
               />
               <textarea
                 className="form-control form-control-sm mb-2"
-                placeholder="Enter your text content here..."
+                placeholder="Enter your text content here... *"
                 rows="3"
                 value={textForm.content}
                 onChange={(e) => setTextForm({ ...textForm, content: e.target.value })}

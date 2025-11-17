@@ -1,7 +1,6 @@
 // travel-tour-frontend/src/components/UserCommunityTab.jsx
 import React, { useState, useEffect } from 'react';
 import MeetApiService from '../services/meet-api';
-import ResourceItem from './ResourceItem';
 
 const UserCommunityTab = () => {
   const [activeMeeting, setActiveMeeting] = useState(null);
@@ -9,26 +8,30 @@ const UserCommunityTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState(null);
   const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // 🆕 PAGINATION & SEARCH STATE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchType, setSearchType] = useState('all');
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('userData') || '{}');
     setUserData(user);
     loadActiveMeeting();
-    
-    // Check for active meeting every 30 seconds
-    const interval = setInterval(loadActiveMeeting, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   const loadActiveMeeting = async () => {
     try {
-      setIsLoading(true);
+      setIsRefreshing(true);
       const response = await MeetApiService.getActiveMeeting();
       console.log('🔍 User - Active meeting response:', response);
       
       if (response.success && response.meeting) {
         setActiveMeeting(response.meeting);
-        // Load resources for this meeting
         await loadMeetingResources(response.meeting.id);
       } else {
         setActiveMeeting(null);
@@ -38,6 +41,7 @@ const UserCommunityTab = () => {
       console.error('Error loading active meeting:', error);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -60,7 +64,6 @@ const UserCommunityTab = () => {
     if (!activeMeeting || !userData) return;
 
     try {
-      // Join the meeting in our system
       const joinResponse = await MeetApiService.joinMeeting(
         activeMeeting.id, 
         userData.id, 
@@ -69,13 +72,10 @@ const UserCommunityTab = () => {
       
       if (joinResponse.success) {
         console.log('✅ Successfully joined meeting in system');
-        
-        // Open the real meeting link
         window.open(activeMeeting.meetingLink, '_blank', 'noopener,noreferrer');
       }
     } catch (error) {
       console.error('Error joining meeting:', error);
-      // Still open the meeting link even if join tracking fails
       window.open(activeMeeting.meetingLink, '_blank', 'noopener,noreferrer');
     }
   };
@@ -90,23 +90,75 @@ const UserCommunityTab = () => {
     }
   };
 
-  const handleDownloadResource = async (resource) => {
-    await handleResourceAccess(resource.id, 'download');
-    
-    // Create a temporary link to download the resource
-    const link = document.createElement('a');
-    link.href = resource.content;
-    link.download = resource.fileName || resource.title;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleManualRefresh = async () => {
+    await loadActiveMeeting();
   };
 
-  const refreshResources = async () => {
-    if (activeMeeting) {
-      await loadMeetingResources(activeMeeting.id);
+  // 🆕 PAGINATION & SEARCH FUNCTIONS
+  const filteredResources = resources.filter(resource => {
+    const matchesSearch = searchTerm === '' || 
+      resource.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      resource.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      resource.uploadedByName?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesType = searchType === 'all' || 
+      (resource.resourceType || resource.type) === searchType;
+
+    return matchesSearch && matchesType;
+  });
+
+  const sortedResources = [...filteredResources].sort((a, b) => {
+    const aValue = a[sortField] || '';
+    const bValue = b[sortField] || '';
+    
+    if (sortOrder === 'asc') {
+      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+    } else {
+      return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
     }
+  });
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentResources = sortedResources.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedResources.length / itemsPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const getResourceIcon = (resourceType) => {
+    switch (resourceType) {
+      case 'link': return 'fas fa-link text-primary';
+      case 'document': return 'fas fa-file-alt text-info';
+      case 'pdf': return 'fas fa-file-pdf text-danger';
+      case 'image': return 'fas fa-image text-success';
+      case 'text': return 'fas fa-sticky-note text-warning';
+      default: return 'fas fa-file text-secondary';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown date';
+    try {
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? 'Unknown date' : date.toLocaleString();
+    } catch (error) {
+      return 'Unknown date';
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    const mb = bytes / 1024 / 1024;
+    return mb >= 1 ? `${mb.toFixed(2)} MB` : `${(bytes / 1024).toFixed(2)} KB`;
   };
 
   if (isLoading) {
@@ -229,7 +281,7 @@ const UserCommunityTab = () => {
                       </li>
                       <li className="mb-2">
                         <i className="fas fa-check-circle text-success me-2"></i>
-                        Download resources for future reference
+                        Take notes during the session
                       </li>
                       <li className="mb-2">
                         <i className="fas fa-check-circle text-success me-2"></i>
@@ -243,21 +295,21 @@ const UserCommunityTab = () => {
           </div>
 
           <div className="col-lg-4">
-            {/* Shared Resources Section - ENHANCED */}
+            {/* 🆕 ENHANCED RESOURCES TABLE */}
             <div className="card">
               <div className="card-header bg-primary text-white">
                 <div className="d-flex justify-content-between align-items-center">
                   <h5 className="card-title mb-0">
-                    <i className="fas fa-file-download me-2"></i>
+                    <i className="fas fa-file-alt me-2"></i>
                     Training Resources ({resources.length})
                   </h5>
                   <button 
                     className="btn btn-sm btn-light"
-                    onClick={refreshResources}
-                    disabled={resourcesLoading}
+                    onClick={handleManualRefresh}
+                    disabled={resourcesLoading || isRefreshing}
                     title="Refresh resources"
                   >
-                    {resourcesLoading ? (
+                    {resourcesLoading || isRefreshing ? (
                       <span className="spinner-border spinner-border-sm" role="status"></span>
                     ) : (
                       <i className="fas fa-sync-alt"></i>
@@ -265,58 +317,222 @@ const UserCommunityTab = () => {
                   </button>
                 </div>
               </div>
-              <div className="card-body p-0">
-                {resources.length > 0 ? (
+              <div className="card-body">
+                {/* 🆕 RESOURCE INFO BANNER */}
+                <div className="alert alert-info mb-3">
+                  <div className="d-flex align-items-center">
+                    <i className="fas fa-info-circle me-2"></i>
+                    <small>
+                      <strong>All resources are permanently saved</strong> and will remain available even after the meeting ends.
+                    </small>
+                  </div>
+                </div>
+
+                {/* 🆕 SEARCH AND FILTERS */}
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <div className="input-group">
+                      <span className="input-group-text">
+                        <i className="fas fa-search"></i>
+                      </span>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Search resources..."
+                        value={searchTerm}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <select
+                      className="form-select"
+                      value={searchType}
+                      onChange={(e) => {
+                        setSearchType(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <option value="all">All Types</option>
+                      <option value="text">Text</option>
+                      <option value="link">Link</option>
+                      <option value="document">Document</option>
+                      <option value="pdf">PDF</option>
+                      <option value="image">Image</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 🆕 RESOURCES TABLE */}
+                {currentResources.length > 0 ? (
                   <>
-                    {/* 🆕 RESOURCE INFO BANNER */}
-                    <div className="alert alert-info m-3 mb-0">
-                      <div className="d-flex align-items-center">
-                        <i className="fas fa-info-circle me-2"></i>
-                        <small>
-                          <strong>All resources are permanently saved</strong> and will remain available even after the meeting ends.
-                        </small>
-                      </div>
+                    <div className="table-responsive">
+                      <table className="table table-hover">
+                        <thead className="table-light">
+                          <tr>
+                            <th 
+                              style={{ cursor: 'pointer', width: '40%' }}
+                              onClick={() => handleSort('title')}
+                            >
+                              Resource
+                              {sortField === 'title' && (
+                                <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                              )}
+                            </th>
+                            <th style={{ width: '15%' }}>Type</th>
+                            <th style={{ width: '30%' }}>Details</th>
+                            <th style={{ width: '15%' }}>View</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {currentResources.map((resource) => (
+                            <tr key={resource.id}>
+                              <td>
+                                <div className="d-flex align-items-center">
+                                  <i className={`${getResourceIcon(resource.resourceType || resource.type)} me-2`}></i>
+                                  <div>
+                                    <div className="fw-semibold text-primary">
+                                      {resource.title}
+                                    </div>
+                                    <small className="text-muted">
+                                      by {resource.uploadedByName || 'Unknown'}
+                                    </small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`badge ${
+                                  (resource.resourceType || resource.type) === 'link' ? 'bg-primary' :
+                                  (resource.resourceType || resource.type) === 'document' ? 'bg-info' :
+                                  (resource.resourceType || resource.type) === 'pdf' ? 'bg-danger' :
+                                  (resource.resourceType || resource.type) === 'image' ? 'bg-success' : 'bg-secondary'
+                                }`}>
+                                  {resource.resourceType || resource.type}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="small text-muted">
+                                  {resource.description || resource.content?.substring(0, 60)}
+                                  {resource.content && resource.content.length > 60 && '...'}
+                                  {resource.fileSize && (
+                                    <div className="mt-1">
+                                      <i className="fas fa-hdd me-1"></i>
+                                      {formatFileSize(resource.fileSize)}
+                                    </div>
+                                  )}
+                                  <div className="mt-1">
+                                    <i className="fas fa-calendar me-1"></i>
+                                    {formatDate(resource.createdAt || resource.sharedAt)}
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <button
+                                  className="btn btn-outline-primary btn-sm"
+                                  onClick={() => {
+                                    handleResourceAccess(resource.id, 'view');
+                                    if (resource.resourceType === 'link' || resource.type === 'link') {
+                                      window.open(resource.content, '_blank', 'noopener,noreferrer');
+                                    } else {
+                                      // For other resources, show content in modal or new tab
+                                      const win = window.open('', '_blank');
+                                      win.document.write(`
+                                        <html>
+                                          <head><title>${resource.title}</title></head>
+                                          <body style="padding: 20px; font-family: Arial, sans-serif;">
+                                            <h2>${resource.title}</h2>
+                                            <p><strong>Type:</strong> ${resource.resourceType || resource.type}</p>
+                                            <p><strong>Uploaded by:</strong> ${resource.uploadedByName}</p>
+                                            <p><strong>Date:</strong> ${formatDate(resource.createdAt || resource.sharedAt)}</p>
+                                            <hr>
+                                            <div style="white-space: pre-wrap; line-height: 1.6;">${resource.content}</div>
+                                          </body>
+                                        </html>
+                                      `);
+                                    }
+                                  }}
+                                  title="View Resource"
+                                >
+                                  <i className="fas fa-eye me-1"></i>
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    
-                    <div className="list-group list-group-flush">
-                      {resources.map(resource => (
-                        <ResourceItem 
-                          key={resource.id} 
-                          resource={resource} 
-                          user={userData}
-                          onAccess={handleResourceAccess}
-                          onDownload={handleDownloadResource}
-                          showActions={true}
-                        />
-                      ))}
-                    </div>
+
+                    {/* 🆕 PAGINATION */}
+                    {totalPages > 1 && (
+                      <nav className="mt-3">
+                        <ul className="pagination justify-content-center pagination-sm">
+                          <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                            <button 
+                              className="page-link" 
+                              onClick={() => paginate(currentPage - 1)}
+                              disabled={currentPage === 1}
+                            >
+                              <i className="fas fa-chevron-left"></i>
+                            </button>
+                          </li>
+                          
+                          {[...Array(totalPages)].map((_, index) => {
+                            const pageNumber = index + 1;
+                            if (
+                              pageNumber === 1 ||
+                              pageNumber === totalPages ||
+                              (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                            ) {
+                              return (
+                                <li 
+                                  key={pageNumber} 
+                                  className={`page-item ${currentPage === pageNumber ? 'active' : ''}`}
+                                >
+                                  <button 
+                                    className="page-link" 
+                                    onClick={() => paginate(pageNumber)}
+                                  >
+                                    {pageNumber}
+                                  </button>
+                                </li>
+                              );
+                            } else if (
+                              pageNumber === currentPage - 2 ||
+                              pageNumber === currentPage + 2
+                            ) {
+                              return (
+                                <li key={pageNumber} className="page-item disabled">
+                                  <span className="page-link">...</span>
+                                </li>
+                              );
+                            }
+                            return null;
+                          })}
+                          
+                          <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                            <button 
+                              className="page-link" 
+                              onClick={() => paginate(currentPage + 1)}
+                              disabled={currentPage === totalPages}
+                            >
+                              <i className="fas fa-chevron-right"></i>
+                            </button>
+                          </li>
+                        </ul>
+                      </nav>
+                    )}
                   </>
                 ) : (
                   <div className="text-center py-4">
                     <i className="fas fa-folder-open fa-2x text-muted mb-3"></i>
-                    <p className="text-muted mb-0">No resources shared yet</p>
+                    <p className="text-muted mb-0">No resources found</p>
                     <small className="text-muted">
-                      Resources shared by the host will appear here automatically
+                      {searchTerm || searchType !== 'all' ? 'Try adjusting your search filters' : 'No resources have been shared yet'}
                     </small>
-                    <div className="mt-2">
-                      <button 
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={refreshResources}
-                        disabled={resourcesLoading}
-                      >
-                        {resourcesLoading ? (
-                          <>
-                            <span className="spinner-border spinner-border-sm me-1" role="status"></span>
-                            Checking...
-                          </>
-                        ) : (
-                          <>
-                            <i className="fas fa-sync-alt me-1"></i>
-                            Check for Resources
-                          </>
-                        )}
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>
@@ -369,13 +585,12 @@ const UserCommunityTab = () => {
                   <li>Contact support if issues persist</li>
                 </ul>
                 
-                {/* �Resource Access Help */}
                 <div className="mt-3 pt-3 border-top">
                   <p className="small text-muted mb-2">
                     <strong>Resource Access:</strong>
                   </p>
                   <ul className="small text-muted ps-3 mb-0">
-                    <li>Click on resources to view/download</li>
+                    <li>Click "View" to access resources</li>
                     <li>All resources are saved permanently</li>
                     <li>Refresh to see new shared resources</li>
                   </ul>
@@ -427,10 +642,20 @@ const UserCommunityTab = () => {
                 <div className="mt-4">
                   <button 
                     className="btn btn-outline-primary"
-                    onClick={loadActiveMeeting}
+                    onClick={handleManualRefresh}
+                    disabled={isRefreshing}
                   >
-                    <i className="fas fa-sync-alt me-2"></i>
-                    Check Again
+                    {isRefreshing ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-sync-alt me-2"></i>
+                        Check Again
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

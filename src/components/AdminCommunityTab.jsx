@@ -131,6 +131,24 @@ const AdminCommunityTab = () => {
     }
   };
 
+  const handleClearMeeting = async () => {
+    try {
+      const response = await MeetApiService.clearAllMeetings();
+      
+      if (response.success) {
+        setActiveMeeting(null);
+        setResources([]);
+        setIsMyMeeting(false);
+        setNotification({ type: 'success', message: 'All meetings cleared successfully!' });
+      } else {
+        setNotification({ type: 'error', message: response.error || 'Failed to clear meetings' });
+      }
+    } catch (error) {
+      console.error('Error clearing meetings:', error);
+      setNotification({ type: 'error', message: 'Failed to clear meetings' });
+    }
+  };
+
   const handleResourceShared = (newResource) => {
     setResources(prev => [newResource, ...prev]);
     setNotification({ type: 'success', message: 'Resource shared successfully and saved permanently!' });
@@ -208,57 +226,21 @@ const AdminCommunityTab = () => {
                     <i className="fas fa-exclamation-triangle me-2"></i>
                     <strong>Notice:</strong> There's already an active meeting created by another admin.
                   </div>
+                  <button 
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={handleClearMeeting}
+                    title="Clear all active meetings"
+                  >
+                    <i className="fas fa-times me-1"></i>
+                    Clear Meeting
+                  </button>
                 </div>
               </div>
             )}
           </div>
 
-          {/* 🆕 REORDERED: SHARE RESOURCES SECTION FIRST */}
           <div className="col-lg-8">
-            {/* Resource Sharing Section - Only show for meeting owner */}
-            {isMyMeeting && (
-              <div className="card mb-4">
-                <div className="card-header bg-info text-white">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <h5 className="card-title mb-0">
-                      <i className="fas fa-share-alt me-2"></i>
-                      Share Resources with Participants
-                    </h5>
-                    <span className="badge bg-light text-info">
-                      <i className="fas fa-database me-1"></i>
-                      Permanent Storage
-                    </span>
-                  </div>
-                </div>
-                <div className="card-body">
-                  {/* 🆕 IMPORTANT GUIDANCE */}
-                  <div className="alert alert-info mb-4">
-                    <div className="d-flex">
-                      <i className="fas fa-info-circle fa-2x me-3 text-info"></i>
-                      <div>
-                        <h6 className="alert-heading mb-2">Resource Sharing Guide</h6>
-                        <p className="mb-2">
-                          <strong>Resources shared here are permanently saved</strong> and will be available to users during and after the live call.
-                        </p>
-                        <p className="mb-0 small">
-                          <i className="fas fa-lightbulb me-1 text-warning"></i>
-                          <strong>Tip:</strong> Share documents, links, and files here for participants to access anytime. 
-                          Video files are not supported to save storage space.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <ResourceUploader 
-                    meetingId={activeMeeting.id}
-                    user={userData}
-                    onResourceShared={handleResourceShared}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Meeting Info Card - MOVED BELOW RESOURCES */}
+            {/* Meeting Info Card */}
             <div className="card mb-4">
               <div className="card-header bg-primary text-white">
                 <div className="d-flex justify-content-between align-items-center">
@@ -293,7 +275,21 @@ const AdminCommunityTab = () => {
                       </div>
                     </div>
 
+                    {/* 🆕 FIXED: SHARE RESOURCES AND JOIN STREAM IN SAME LINE */}
                     <div className="mt-3">
+                      {/* Share Resources Button - Only for meeting owner */}
+                      {isMyMeeting && (
+                        <button 
+                          className="btn btn-info me-2"
+                          data-bs-toggle="modal"
+                          data-bs-target="#shareResourcesModal"
+                        >
+                          <i className="fas fa-share-alt me-2"></i>
+                          Share Resources
+                        </button>
+                      )}
+                      
+                      {/* Join Stream Button */}
                       <a 
                         href={activeMeeting.meetingLink} 
                         target="_blank" 
@@ -304,6 +300,7 @@ const AdminCommunityTab = () => {
                         {isMyMeeting ? 'Host Meeting' : 'Join Stream'}
                       </a>
                       
+                      {/* End Stream Button - Only for meeting owner */}
                       {isMyMeeting && (
                         <button 
                           className="btn btn-outline-danger"
@@ -332,47 +329,49 @@ const AdminCommunityTab = () => {
                 </div>
               </div>
             </div>
+
+            {/* Resource Sharing Section - Now in Modal */}
+            {isMyMeeting && (
+              <div className="card mb-4">
+                <div className="card-header bg-info text-white">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <h5 className="card-title mb-0">
+                      <i className="fas fa-share-alt me-2"></i>
+                      Shared Resources ({resources.length})
+                    </h5>
+                    <span className="badge bg-light text-info">
+                      <i className="fas fa-database me-1"></i>
+                      Permanent Storage
+                    </span>
+                  </div>
+                </div>
+                <div className="card-body p-0">
+                  {resources.length > 0 ? (
+                    <div className="list-group list-group-flush">
+                      {resources.map(resource => (
+                        <ResourceItem 
+                          key={resource.id} 
+                          resource={resource} 
+                          user={userData}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <i className="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                      <p className="text-muted mb-0">No resources shared yet</p>
+                      <small className="text-muted">Share resources using the "Share Resources" button above</small>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="col-lg-4">
-            {/* Shared Resources */}
-            <div className="card">
-              <div className="card-header bg-success text-white">
-                <div className="d-flex justify-content-between align-items-center">
-                  <h5 className="card-title mb-0">
-                    <i className="fas fa-file-alt me-2"></i>
-                    Shared Resources ({resources.length})
-                  </h5>
-                  <span className="badge bg-light text-success">
-                    <i className="fas fa-check me-1"></i>
-                    Permanent
-                  </span>
-                </div>
-              </div>
-              <div className="card-body p-0">
-                {resources.length > 0 ? (
-                  <div className="list-group list-group-flush">
-                    {resources.map(resource => (
-                      <ResourceItem 
-                        key={resource.id} 
-                        resource={resource} 
-                        user={userData}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <i className="fas fa-folder-open fa-3x text-muted mb-3"></i>
-                    <p className="text-muted mb-0">No resources shared yet</p>
-                    <small className="text-muted">Share resources above for participants</small>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Quick Actions - Only show for meeting owner */}
             {isMyMeeting && (
-              <div className="card mt-4">
+              <div className="card">
                 <div className="card-header">
                   <h5 className="card-title mb-0">
                     <i className="fas fa-bolt me-2"></i>
@@ -402,7 +401,7 @@ const AdminCommunityTab = () => {
 
             {/* Create New Meeting Button when viewing other admin's meeting */}
             {!isMyMeeting && activeMeeting && (
-              <div className="card mt-4 border-warning">
+              <div className="card border-warning">
                 <div className="card-header bg-warning text-dark">
                   <h5 className="card-title mb-0">
                     <i className="fas fa-plus-circle me-2"></i>
@@ -499,6 +498,51 @@ const AdminCommunityTab = () => {
                     )}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Resources Modal */}
+      {isMyMeeting && (
+        <div className="modal fade" id="shareResourcesModal" tabIndex="-1" aria-labelledby="shareResourcesModalLabel" aria-hidden="true">
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header bg-info text-white">
+                <h5 className="modal-title" id="shareResourcesModalLabel">
+                  <i className="fas fa-share-alt me-2"></i>
+                  Share Resources with Participants
+                </h5>
+                <button type="button" className="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div className="modal-body">
+                {/* 🆕 IMPORTANT GUIDANCE */}
+                <div className="alert alert-info mb-4">
+                  <div className="d-flex">
+                    <i className="fas fa-info-circle fa-2x me-3 text-info"></i>
+                    <div>
+                      <h6 className="alert-heading mb-2">Resource Sharing Guide</h6>
+                      <p className="mb-2">
+                        <strong>Resources shared here are permanently saved</strong> and will be available to users during and after the live call.
+                      </p>
+                      <p className="mb-0 small">
+                        <i className="fas fa-lightbulb me-1 text-warning"></i>
+                        <strong>Tip:</strong> Share documents, links, and files here for participants to access anytime. 
+                        Video files are not supported to save storage space.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <ResourceUploader 
+                  meetingId={activeMeeting?.id}
+                  user={userData}
+                  onResourceShared={handleResourceShared}
+                />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
               </div>
             </div>
           </div>

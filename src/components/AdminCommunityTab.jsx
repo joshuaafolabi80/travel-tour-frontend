@@ -15,19 +15,21 @@ const AdminCommunityTab = () => {
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMyMeeting, setIsMyMeeting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('userData') || '{}');
     setUserData(user);
     loadActiveMeeting();
     
-    const interval = setInterval(loadActiveMeeting, 30000);
-    return () => clearInterval(interval);
+    // 🚫 REMOVED: Auto-refresh interval that was causing issues
+    // const interval = setInterval(loadActiveMeeting, 30000);
+    // return () => clearInterval(interval);
   }, []);
 
   const loadActiveMeeting = async () => {
     try {
-      setIsLoading(true);
+      setIsRefreshing(true);
       const response = await MeetApiService.getActiveMeeting();
       console.log('🔍 Active meeting response:', response);
       
@@ -51,7 +53,13 @@ const AdminCommunityTab = () => {
       setNotification({ type: 'error', message: 'Failed to load meeting data' });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const handleManualRefresh = async () => {
+    await loadActiveMeeting();
+    setNotification({ type: 'info', message: 'Data refreshed successfully!' });
   };
 
   const createMeeting = async () => {
@@ -136,11 +144,6 @@ const AdminCommunityTab = () => {
     try {
       console.log('🧹 Attempting to clear meetings...');
       
-      // Check if the function exists
-      if (!MeetApiService.clearAllMeetings) {
-        throw new Error('clearAllMeetings function not found in MeetApiService');
-      }
-      
       const response = await MeetApiService.clearAllMeetings();
       
       if (response.success) {
@@ -203,25 +206,42 @@ const AdminCommunityTab = () => {
               <h1 className="h3 mb-1">Welcome to The Conclave Streams</h1>
               <p className="text-muted mb-0">Manage your community live streams and training sessions</p>
             </div>
-            {!activeMeeting && (
+            <div className="d-flex gap-2">
+              {/* 🆕 ADDED: Manual Refresh Button */}
               <button 
-                className="btn btn-primary btn-lg"
-                onClick={createMeeting}
-                disabled={isCreating}
+                className="btn btn-outline-secondary btn-sm"
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                title="Refresh data"
               >
-                {isCreating ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Creating Stream...
-                  </>
+                {isRefreshing ? (
+                  <span className="spinner-border spinner-border-sm me-1" role="status"></span>
                 ) : (
-                  <>
-                    <i className="fas fa-plus-circle me-2"></i>
-                    Create Stream
-                  </>
+                  <i className="fas fa-sync-alt me-1"></i>
                 )}
+                Refresh
               </button>
-            )}
+              
+              {!activeMeeting && (
+                <button 
+                  className="btn btn-primary btn-lg"
+                  onClick={createMeeting}
+                  disabled={isCreating}
+                >
+                  {isCreating ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                      Creating Stream...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-plus-circle me-2"></i>
+                      Create Stream
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -260,10 +280,17 @@ const AdminCommunityTab = () => {
                     <i className="fas fa-video me-2"></i>
                     {isMyMeeting ? 'Your Live Stream Active' : 'Active Live Stream'}
                   </h5>
-                  <span className="badge bg-success">
-                    <i className="fas fa-circle me-1"></i>
-                    LIVE
-                  </span>
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="badge bg-success">
+                      <i className="fas fa-circle me-1"></i>
+                      LIVE
+                    </span>
+                    {/* 🆕 ADDED: Participant Count Badge */}
+                    <span className="badge bg-info">
+                      <i className="fas fa-users me-1"></i>
+                      {activeMeeting.participants?.length || 0}
+                    </span>
+                  </div>
                 </div>
               </div>
               <div className="card-body">
@@ -280,9 +307,9 @@ const AdminCommunityTab = () => {
                         </p>
                       </div>
                       <div className="col-sm-6">
-                        <small className="text-muted">Participants</small>
+                        <small className="text-muted">Host</small>
                         <p className="mb-0 fw-semibold">
-                          {activeMeeting.participants?.length || 0} joined
+                          {activeMeeting.adminName || 'Admin'}
                         </p>
                       </div>
                     </div>
@@ -341,7 +368,7 @@ const AdminCommunityTab = () => {
               </div>
             </div>
 
-            {/* Resource Sharing Section - Now in Modal */}
+            {/* Shared Resources Section */}
             {isMyMeeting && (
               <div className="card mb-4">
                 <div className="card-header bg-info text-white">
@@ -400,10 +427,30 @@ const AdminCommunityTab = () => {
                     </button>
                     <button 
                       className="btn btn-outline-info"
-                      onClick={() => navigator.clipboard.writeText(activeMeeting.meetingLink)}
+                      onClick={() => {
+                        navigator.clipboard.writeText(activeMeeting.meetingLink);
+                        setNotification({ type: 'success', message: 'Meeting link copied to clipboard!' });
+                      }}
                     >
                       <i className="fas fa-copy me-2"></i>
                       Copy Meeting Link
+                    </button>
+                    <button 
+                      className="btn btn-outline-primary"
+                      onClick={handleManualRefresh}
+                      disabled={isRefreshing}
+                    >
+                      {isRefreshing ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                          Refreshing...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-sync-alt me-2"></i>
+                          Refresh Data
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

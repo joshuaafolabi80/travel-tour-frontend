@@ -11,11 +11,21 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   const pickFile = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.mp4,.mov,.avi';
+    // 🚫 REMOVED: Video file types (.mp4,.mov,.avi)
+    input.accept = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif';
     
     input.onchange = async (e) => {
       const file = e.target.files[0];
       if (file) {
+        // 🚫 ADDED: Video file validation
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        const videoExtensions = ['mp4', 'mov', 'avi', 'wmv', 'flv', 'webm', 'mkv'];
+        
+        if (videoExtensions.includes(fileExtension)) {
+          alert('❌ Video files are not supported to save storage space. Please upload documents, PDFs, or images instead. However you can use the "Video Courses" menu tab dedicated strictly to handle and manage your videos.');
+          return;
+        }
+
         await uploadFile(file);
       }
     };
@@ -201,6 +211,19 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
               ></button>
             </div>
 
+            {/* 🆕 ADDED: Storage Warning */}
+            <div className="alert alert-warning mb-3">
+              <div className="d-flex align-items-center">
+                <i className="fas fa-database me-2 text-warning"></i>
+                <div>
+                  <strong>Storage Notice:</strong> All resources are permanently saved. 
+                  <span className="text-danger ms-1">
+                    Video files are disabled to conserve storage space, however you can use the "Video Courses" menu tab dedicated strictly to handle and manage your videos.
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Quick Share Buttons */}
             <div className="mb-4">
               <label className="form-label small text-muted mb-2">Quick Share:</label>
@@ -238,10 +261,16 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 disabled={isUploading}
               >
                 <i className="fas fa-upload me-2"></i>
-                Choose File (PDF, Images, Videos, Documents)
+                {/* 🚫 UPDATED: Removed "Videos" from button text */}
+                Choose File (PDF, Images, Documents)
               </button>
               <div className="form-text">
-                Max file size: 50MB. Supported: PDF, Images, Videos, Office Documents
+                {/* 🚫 UPDATED: Removed videos from supported formats */}
+                Max file size: 50MB. Supported: PDF, Images, Office Documents
+                <span className="text-danger ms-1">
+                  <i className="fas fa-ban me-1"></i>
+                  Videos are not supported
+                </span>
               </div>
             </div>
 

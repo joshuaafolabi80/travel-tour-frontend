@@ -391,10 +391,10 @@ class MeetApiService {
     }
   }
 
-  // 🆕 ADDED: Delete resource function
+  // 🆕 ADDED: Delete resource function - HARD DELETE
   static async deleteResource(resourceId) {
     try {
-      console.log('🗑️ Deleting resource:', resourceId);
+      console.log('💀 HARD DELETING resource:', resourceId);
       const response = await fetch(`${MEET_API_BASE_URL}/resources/${resourceId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -405,7 +405,7 @@ class MeetApiService {
       }
       
       const result = await response.json();
-      console.log('✅ Resource deletion response:', result);
+      console.log('✅ Resource HARD DELETE response:', result);
       return result;
     } catch (error) {
       console.error('❌ Meet API delete resource error:', error);

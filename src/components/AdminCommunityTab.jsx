@@ -1,8 +1,8 @@
-// travel-tour-frontend/src/components/AdminCommunityTab.jsx
 import React, { useState, useEffect } from 'react';
 import MeetApiService from '../services/meet-api';
 import ResourceUploader from './ResourceUploader';
 import ExtensionModal from './ExtensionModal';
+import ResourceViewer from './ResourceViewer'; // 🆕 ADD IMPORT
 
 const AdminCommunityTab = () => {
   const [activeMeeting, setActiveMeeting] = useState(null);
@@ -15,6 +15,7 @@ const AdminCommunityTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isMyMeeting, setIsMyMeeting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [viewingResource, setViewingResource] = useState(null); // 🆕 ADD STATE FOR VIEWER
 
   // 🆕 PAGINATION & SEARCH STATE
   const [currentPage, setCurrentPage] = useState(1);
@@ -194,6 +195,16 @@ const AdminCommunityTab = () => {
       console.error('Error deleting resource:', error);
       setNotification({ type: 'error', message: 'Failed to delete resource' });
     }
+  };
+
+  // 🆕 ADD RESOURCE VIEWING HANDLER
+  const handleViewResource = (resource) => {
+    // Track resource access
+    if (userData) {
+      MeetApiService.recordResourceAccess(resource.id, userData.id, 'view')
+        .catch(error => console.error('Error tracking resource access:', error));
+    }
+    setViewingResource(resource);
   };
 
   const clearNotification = () => {
@@ -583,29 +594,10 @@ const AdminCommunityTab = () => {
                                 </td>
                                 <td>
                                   <div className="btn-group btn-group-sm">
+                                    {/* 🆕 UPDATED VIEW BUTTON - USE RESOURCEVIEWER */}
                                     <button
                                       className="btn btn-outline-primary"
-                                      onClick={() => {
-                                        if (resource.resourceType === 'link' || resource.type === 'link') {
-                                          window.open(resource.content, '_blank', 'noopener,noreferrer');
-                                        } else {
-                                          // For other resources, show content in modal or new tab
-                                          const win = window.open('', '_blank');
-                                          win.document.write(`
-                                            <html>
-                                              <head><title>${resource.title}</title></head>
-                                              <body style="padding: 20px; font-family: Arial, sans-serif;">
-                                                <h2>${resource.title}</h2>
-                                                <p><strong>Type:</strong> ${resource.resourceType || resource.type}</p>
-                                                <p><strong>Uploaded by:</strong> ${resource.uploadedByName}</p>
-                                                <p><strong>Date:</strong> ${formatDate(resource.createdAt || resource.sharedAt)}</p>
-                                                <hr>
-                                                <div>${resource.content}</div>
-                                              </body>
-                                            </html>
-                                          `);
-                                        }
-                                      }}
+                                      onClick={() => handleViewResource(resource)}
                                       title="View Resource"
                                     >
                                       <i className="fas fa-eye"></i>
@@ -920,6 +912,14 @@ const AdminCommunityTab = () => {
         onExtend={handleExtendMeeting}
         onClose={() => setShowExtensionModal(false)}
       />
+
+      {/* 🆕 RESOURCE VIEWER MODAL */}
+      {viewingResource && (
+        <ResourceViewer
+          resource={viewingResource}
+          onClose={() => setViewingResource(null)}
+        />
+      )}
     </div>
   );
 };

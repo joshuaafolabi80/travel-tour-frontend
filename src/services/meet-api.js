@@ -201,6 +201,33 @@ class MeetApiService {
     }
   }
 
+  // 🆕 ADD THIS MISSING METHOD
+  static async recordResourceAccess(resourceId, userId, action = 'view') {
+    try {
+      console.log('🎯 Recording resource access:', { resourceId, userId, action });
+      const response = await fetch(`${MEET_API_BASE_URL}/resources/${resourceId}/access`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Resource access recorded:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Meet API record resource access error:', error);
+      return { 
+        success: false, 
+        error: 'Failed to record access',
+        details: error.message 
+      };
+    }
+  }
+
   static async getMeetingHistory(adminId) {
     try {
       console.log('🎯 Fetching meeting history for admin:', adminId);

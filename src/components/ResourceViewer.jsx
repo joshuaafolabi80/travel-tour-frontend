@@ -120,6 +120,45 @@ const ResourceViewer = ({ resource, onClose }) => {
       );
     }
 
+    // Links - Open in new tab
+    if (resource.resourceType === 'link' || resource.type === 'link') {
+      return (
+        <div className="text-center py-5">
+          <i className="fas fa-link fa-3x text-warning mb-3"></i>
+          <h5>{resource.title}</h5>
+          <p className="text-muted mb-4">
+            This is a web link that will open in a new tab.
+          </p>
+          <div className="d-flex gap-2 justify-content-center">
+            <button
+              className="btn btn-primary"
+              onClick={() => window.open(resource.content, '_blank', 'noopener,noreferrer')}
+            >
+              <i className="fas fa-external-link-alt me-2"></i>
+              Open Link
+            </button>
+          </div>
+          <div className="mt-3">
+            <small className="text-muted">
+              URL: {resource.content}
+            </small>
+          </div>
+        </div>
+      );
+    }
+
+    // Text content - Display directly
+    if (resource.resourceType === 'text') {
+      return (
+        <div className="p-4">
+          <h5 className="mb-3">{resource.title}</h5>
+          <div className="bg-light p-4 rounded" style={{ whiteSpace: 'pre-wrap' }}>
+            {resource.content}
+          </div>
+        </div>
+      );
+    }
+
     // Default fallback - Online viewing if possible
     return (
       <div className="text-center py-5">
@@ -138,6 +177,17 @@ const ResourceViewer = ({ resource, onClose }) => {
       </div>
     );
   };
+
+  useEffect(() => {
+    // Auto-hide loading after 3 seconds if still loading
+    const timer = setTimeout(() => {
+      if (isLoading) {
+        setIsLoading(false);
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   return (
     <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>

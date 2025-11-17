@@ -83,11 +83,15 @@ const UserCommunityTab = () => {
 
   // 🆕 UPDATED RESOURCE ACCESS HANDLER
   const handleViewResource = (resource) => {
+    console.log('🔍 User viewing resource:', resource);
+    
     // Track resource access
     if (userData) {
       MeetApiService.recordResourceAccess(resource.id, userData.id, 'view')
-        .catch(error => console.error('Error tracking resource access:', error));
+        .then(result => console.log('✅ Resource access tracked:', result))
+        .catch(error => console.error('❌ Error tracking resource access:', error));
     }
+    
     setViewingResource(resource);
   };
 

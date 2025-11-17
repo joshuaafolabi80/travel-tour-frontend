@@ -1,32 +1,62 @@
 import React, { useState, useEffect } from 'react';
+import MeetApiService from '../services/meet-api';
 
 const ResourceViewer = ({ resource, onClose }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [documentContent, setDocumentContent] = useState(null);
+  const [contentType, setContentType] = useState('text');
+  const [documentLoading, setDocumentLoading] = useState(false);
 
-  const getFileUrl = () => {
-    if (resource.fileUrl) {
-      // If it's a relative URL, make it absolute
-      if (resource.fileUrl.startsWith('/')) {
-        return `${process.env.VITE_MEET_API_BASE_URL}${resource.fileUrl}`;
+  // 🆕 GET API URL FROM REACT ENV
+  const MEET_API_BASE_URL = process.env.REACT_APP_MEET_API_BASE_URL || 'https://travel-tour-academy-backend.onrender.com/api/meet';
+
+  const loadResourceContent = async () => {
+    if (!resource) return;
+    
+    try {
+      setDocumentLoading(true);
+      setDocumentContent(null);
+      console.log('📖 Loading resource content for:', resource.id);
+      
+      // 🆕 USE THE NEW ENDPOINT (SIMILAR TO GENERAL COURSES)
+      const response = await fetch(`${MEET_API_BASE_URL}/resources/${resource.id}/view`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return resource.fileUrl;
+      
+      const result = await response.json();
+      console.log('📄 Resource content response:', result);
+      
+      if (result.success) {
+        setContentType(result.contentType || 'text');
+        setDocumentContent(result.content);
+        console.log('✅ Resource content loaded successfully');
+      } else {
+        setDocumentContent('Error: ' + (result.error || 'Failed to load resource'));
+        console.error('❌ Resource loading failed:', result.error);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error loading resource content:', error);
+      setDocumentContent('Error loading resource: ' + (error.message));
+    } finally {
+      setDocumentLoading(false);
+      setIsLoading(false);
     }
-    return null;
   };
 
   const getViewerContent = () => {
-    const fileUrl = getFileUrl();
-    
-    if (!fileUrl) {
+    if (!documentContent) {
       return (
         <div className="text-center py-5">
           <i className="fas fa-file fa-3x text-muted mb-3"></i>
-          <h5>No file content available</h5>
-          <p className="text-muted">This resource doesn't have a downloadable file.</p>
+          <h5>No content available</h5>
+          <p className="text-muted">This resource doesn't have viewable content.</p>
           {resource.content && (
             <div className="mt-4 p-3 bg-light rounded">
-              <h6>Resource Content:</h6>
+              <h6>Resource Information:</h6>
               <p className="mb-0">{resource.content}</p>
             </div>
           )}
@@ -34,33 +64,26 @@ const ResourceViewer = ({ resource, onClose }) => {
       );
     }
 
-    const fileExtension = resource.fileName?.split('.').pop()?.toLowerCase() || '';
-    const mimeType = resource.mimeType || '';
-
     // PDF Files - View inline
-    if (fileExtension === 'pdf' || mimeType === 'application/pdf') {
+    if (contentType === 'pdf') {
       return (
         <div className="h-100">
           <iframe
-            src={fileUrl}
+            src={`${MEET_API_BASE_URL}${documentContent}`}
             className="w-100 h-100 border-0"
             title={resource.title}
             onLoad={() => setIsLoading(false)}
-            onError={() => {
-              setIsLoading(false);
-              setError('Failed to load PDF');
-            }}
           />
         </div>
       );
     }
 
     // Image Files - View inline
-    if (fileExtension.match(/(jpg|jpeg|png|gif|webp|svg)$/) || mimeType.startsWith('image/')) {
+    if (contentType === 'image') {
       return (
         <div className="text-center">
           <img
-            src={fileUrl}
+            src={`${MEET_API_BASE_URL}${documentContent}`}
             alt={resource.title}
             className="img-fluid"
             style={{ maxHeight: '70vh' }}
@@ -74,65 +97,39 @@ const ResourceViewer = ({ resource, onClose }) => {
       );
     }
 
-    // Text Files - View inline
-    if (fileExtension.match(/(txt|csv)$/) || mimeType.startsWith('text/')) {
+    // Text content - Display directly (LIKE GENERAL COURSES)
+    if (contentType === 'text') {
       return (
-        <div className="h-100">
-          <iframe
-            src={fileUrl}
-            className="w-100 h-100 border-0"
-            title={resource.title}
-            onLoad={() => setIsLoading(false)}
-            onError={() => {
-              setIsLoading(false);
-              setError('Failed to load text file');
+        <div className="p-4">
+          <h5 className="mb-3">{resource.title}</h5>
+          <div 
+            className="bg-light p-4 rounded" 
+            style={{ 
+              whiteSpace: 'pre-wrap',
+              lineHeight: '1.6',
+              fontFamily: 'Arial, sans-serif',
+              fontSize: '16px'
             }}
-          />
-        </div>
-      );
-    }
-
-    // Office Documents - Online viewing only (no downloads)
-    if (fileExtension.match(/(doc|docx|xls|xlsx|ppt|pptx)$/)) {
-      return (
-        <div className="text-center py-5">
-          <i className="fas fa-file-word fa-3x text-primary mb-3"></i>
-          <h5>{resource.title}</h5>
-          <p className="text-muted mb-4">
-            View this document online using Microsoft Office Online viewer.
-          </p>
-          <div className="d-flex gap-2 justify-content-center">
-            <button
-              className="btn btn-primary"
-              onClick={() => window.open(`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`, '_blank')}
-            >
-              <i className="fas fa-external-link-alt me-2"></i>
-              View Online
-            </button>
-          </div>
-          <div className="mt-3 alert alert-info">
-            <small>
-              <i className="fas fa-info-circle me-2"></i>
-              Document opens in a new tab for viewing. Download functionality is disabled.
-            </small>
+          >
+            {documentContent}
           </div>
         </div>
       );
     }
 
-    // Links - Open in new tab
-    if (resource.resourceType === 'link' || resource.type === 'link') {
+    // Links - Show link information
+    if (contentType === 'link') {
       return (
         <div className="text-center py-5">
-          <i className="fas fa-link fa-3x text-warning mb-3"></i>
+          <i className="fas fa-link fa-3x text-primary mb-3"></i>
           <h5>{resource.title}</h5>
           <p className="text-muted mb-4">
-            This is a web link that will open in a new tab.
+            This is a web link resource.
           </p>
           <div className="d-flex gap-2 justify-content-center">
             <button
               className="btn btn-primary"
-              onClick={() => window.open(resource.content, '_blank', 'noopener,noreferrer')}
+              onClick={() => window.open(documentContent, '_blank', 'noopener,noreferrer')}
             >
               <i className="fas fa-external-link-alt me-2"></i>
               Open Link
@@ -140,51 +137,64 @@ const ResourceViewer = ({ resource, onClose }) => {
           </div>
           <div className="mt-3">
             <small className="text-muted">
-              URL: {resource.content}
+              URL: {documentContent}
             </small>
           </div>
         </div>
       );
     }
 
-    // Text content - Display directly
-    if (resource.resourceType === 'text') {
+    // Office documents - Show information
+    if (contentType === 'office') {
       return (
-        <div className="p-4">
-          <h5 className="mb-3">{resource.title}</h5>
-          <div className="bg-light p-4 rounded" style={{ whiteSpace: 'pre-wrap' }}>
-            {resource.content}
-          </div>
+        <div className="text-center py-5">
+          <i className="fas fa-file-word fa-3x text-primary mb-3"></i>
+          <h5>{resource.title}</h5>
+          <p className="text-muted mb-4">
+            {documentContent}
+          </p>
+          {resource.fileUrl && (
+            <div className="d-flex gap-2 justify-content-center">
+              <a
+                href={`${MEET_API_BASE_URL}${resource.fileUrl}`}
+                className="btn btn-primary"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <i className="fas fa-download me-2"></i>
+                Download Document
+              </a>
+            </div>
+          )}
         </div>
       );
     }
 
-    // Default fallback - Online viewing if possible
+    // Default fallback
     return (
-      <div className="text-center py-5">
-        <i className="fas fa-file fa-3x text-info mb-3"></i>
-        <h5>{resource.title}</h5>
-        <p className="text-muted mb-4">
-          This file type can be viewed in your browser.
-        </p>
-        <button
-          className="btn btn-primary"
-          onClick={() => window.open(fileUrl, '_blank')}
+      <div className="p-4">
+        <h5 className="mb-3">{resource.title}</h5>
+        <div 
+          className="bg-light p-4 rounded" 
+          style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}
         >
-          <i className="fas fa-external-link-alt me-2"></i>
-          View in Browser
-        </button>
+          {documentContent}
+        </div>
       </div>
     );
   };
 
   useEffect(() => {
-    // Auto-hide loading after 3 seconds if still loading
+    loadResourceContent();
+  }, [resource]);
+
+  useEffect(() => {
+    // Auto-hide loading after 5 seconds if still loading
     const timer = setTimeout(() => {
       if (isLoading) {
         setIsLoading(false);
       }
-    }, 3000);
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, [isLoading]);
@@ -197,7 +207,6 @@ const ResourceViewer = ({ resource, onClose }) => {
             <h5 className="modal-title">
               <i className="fas fa-eye me-2"></i>
               {resource.title}
-              <small className="ms-2 opacity-75">(View Only)</small>
             </h5>
             <button
               type="button"
@@ -211,7 +220,7 @@ const ResourceViewer = ({ resource, onClose }) => {
                 <div className="spinner-border text-primary" role="status">
                   <span className="visually-hidden">Loading...</span>
                 </div>
-                <p className="text-muted mt-2">Loading document...</p>
+                <p className="text-muted mt-2">Loading resource...</p>
               </div>
             )}
             
@@ -222,7 +231,7 @@ const ResourceViewer = ({ resource, onClose }) => {
                 <div className="mt-2">
                   <button
                     className="btn btn-outline-danger btn-sm"
-                    onClick={() => window.location.reload()}
+                    onClick={loadResourceContent}
                   >
                     Retry
                   </button>
@@ -230,7 +239,17 @@ const ResourceViewer = ({ resource, onClose }) => {
               </div>
             )}
 
-            <div style={{ opacity: isLoading ? 0 : 1, transition: 'opacity 0.3s' }}>
+            {documentLoading && (
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary mb-3" style={{width: '3rem', height: '3rem'}}>
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <h4 className="text-primary">Loading Document</h4>
+                <p className="text-muted">Please wait while we load the document content...</p>
+              </div>
+            )}
+
+            <div style={{ opacity: (isLoading || documentLoading) ? 0 : 1, transition: 'opacity 0.3s' }}>
               {getViewerContent()}
             </div>
           </div>
@@ -243,18 +262,13 @@ const ResourceViewer = ({ resource, onClose }) => {
                   <strong> Uploaded by:</strong> {resource.uploadedByName}
                 </small>
               </div>
-              <div className="d-flex gap-2">
-                <span className="badge bg-warning text-dark">
-                  <i className="fas fa-eye me-1"></i>View Only
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={onClose}
-                >
-                  Close
-                </button>
-              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={onClose}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

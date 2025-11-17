@@ -9,6 +9,9 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
+  // 🆕 GET API URL FROM REACT ENV
+  const MEET_API_BASE_URL = process.env.REACT_APP_MEET_API_BASE_URL || 'https://travel-tour-academy-backend.onrender.com/api/meet';
+
   // Custom notification function
   const showNotification = (type, message) => {
     setNotification({ show: true, type, message });
@@ -62,7 +65,6 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
     setIsUploading(true);
     
     try {
-      // 🆕 USE FormData FOR ACTUAL FILE UPLOAD
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('meetingId', meetingId);
@@ -72,14 +74,10 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
       formData.append('uploadedByName', user.name || user.username || 'Admin');
       formData.append('createdAt', new Date().toISOString());
 
-      console.log('📤 Uploading actual file:', selectedFile.name);
+      console.log('📤 Uploading actual file via service:', selectedFile.name);
 
-      const shareResponse = await fetch(`${process.env.VITE_MEET_API_BASE_URL}/resources/share`, {
-        method: 'POST',
-        body: formData, // 🆕 SEND FormData INSTEAD OF JSON
-      });
-      
-      const result = await shareResponse.json();
+      // 🆕 USE THE SERVICE METHOD
+      const result = await MeetApiService.uploadFileResource(formData);
       
       if (result.success) {
         onResourceShared(result.resource);

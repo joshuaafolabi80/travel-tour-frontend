@@ -1,11 +1,16 @@
 // travel-tour-frontend/src/services/meet-api.js
 import { MEET_API_BASE_URL } from './api';
 
+// 🆕 USE REACT ENV VARIABLE AS FALLBACK
+const API_BASE_URL = MEET_API_BASE_URL || process.env.REACT_APP_MEET_API_BASE_URL || 'https://travel-tour-academy-backend.onrender.com/api/meet';
+
+console.log('🔗 Meet API Base URL:', API_BASE_URL);
+
 class MeetApiService {
   static async createMeeting(adminId, title, description = '', adminName = '') {
     try {
       console.log('🎯 Creating meeting with:', { adminId, title, description, adminName });
-      const response = await fetch(`${MEET_API_BASE_URL}/create`, {
+      const response = await fetch(`${API_BASE_URL}/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminId, title, description, adminName })
@@ -31,7 +36,7 @@ class MeetApiService {
   static async getActiveMeeting() {
     try {
       console.log('🎯 Fetching active meeting...');
-      const response = await fetch(`${MEET_API_BASE_URL}/active`);
+      const response = await fetch(`${API_BASE_URL}/active`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -53,7 +58,7 @@ class MeetApiService {
   static async extendMeeting(meetingId, adminId) {
     try {
       console.log('🎯 Extending meeting:', { meetingId, adminId });
-      const response = await fetch(`${MEET_API_BASE_URL}/${meetingId}/extend`, {
+      const response = await fetch(`${API_BASE_URL}/${meetingId}/extend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminId })
@@ -79,7 +84,7 @@ class MeetApiService {
   static async endMeeting(meetingId, adminId) {
     try {
       console.log('🎯 Ending meeting:', { meetingId, adminId });
-      const response = await fetch(`${MEET_API_BASE_URL}/${meetingId}/end`, {
+      const response = await fetch(`${API_BASE_URL}/${meetingId}/end`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminId })
@@ -105,7 +110,7 @@ class MeetApiService {
   static async shareResource(resourceData) {
     try {
       console.log('🎯 Sharing resource:', resourceData);
-      const response = await fetch(`${MEET_API_BASE_URL}/resources/share`, {
+      const response = await fetch(`${API_BASE_URL}/resources/share-json`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(resourceData)
@@ -131,7 +136,7 @@ class MeetApiService {
   static async getMeetingResources(meetingId) {
     try {
       console.log('🎯 Fetching meeting resources for:', meetingId);
-      const response = await fetch(`${MEET_API_BASE_URL}/resources/meeting/${meetingId}`);
+      const response = await fetch(`${API_BASE_URL}/resources/meeting/${meetingId}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -150,10 +155,40 @@ class MeetApiService {
     }
   }
 
+  // 🆕 ADD FILE UPLOAD METHOD USING FormData
+  static async uploadFileResource(formData) {
+    try {
+      console.log('📤 Uploading file resource with FormData...');
+      
+      const response = await fetch(`${API_BASE_URL}/resources/share`, {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header - let browser set it with boundary
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Server response error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ File upload response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Meet API upload file resource error:', error);
+      return { 
+        success: false, 
+        error: 'Failed to upload file',
+        details: error.message 
+      };
+    }
+  }
+
   static async uploadFile(formData) {
     try {
       console.log('🎯 Uploading file...');
-      const response = await fetch(`${MEET_API_BASE_URL}/uploads/upload`, {
+      const response = await fetch(`${API_BASE_URL}/uploads/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -178,7 +213,7 @@ class MeetApiService {
   static async trackResourceAccess(resourceId, userId, device = 'web', action = 'view') {
     try {
       console.log('🎯 Tracking resource access:', { resourceId, userId, device, action });
-      const response = await fetch(`${MEET_API_BASE_URL}/resources/${resourceId}/access`, {
+      const response = await fetch(`${API_BASE_URL}/resources/${resourceId}/access`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, device, action })
@@ -205,7 +240,7 @@ class MeetApiService {
   static async recordResourceAccess(resourceId, userId, action = 'view') {
     try {
       console.log('🎯 Recording resource access:', { resourceId, userId, action });
-      const response = await fetch(`${MEET_API_BASE_URL}/resources/${resourceId}/access`, {
+      const response = await fetch(`${API_BASE_URL}/resources/${resourceId}/access`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, action })
@@ -231,7 +266,7 @@ class MeetApiService {
   static async getMeetingHistory(adminId) {
     try {
       console.log('🎯 Fetching meeting history for admin:', adminId);
-      const response = await fetch(`${MEET_API_BASE_URL}/history/${adminId}`);
+      const response = await fetch(`${API_BASE_URL}/history/${adminId}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -253,7 +288,7 @@ class MeetApiService {
   static async getMeetingParticipants(meetingId) {
     try {
       console.log('🎯 Fetching meeting participants for:', meetingId);
-      const response = await fetch(`${MEET_API_BASE_URL}/${meetingId}/participants`);
+      const response = await fetch(`${API_BASE_URL}/${meetingId}/participants`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -275,7 +310,7 @@ class MeetApiService {
   static async joinMeeting(meetingId, userId, userName) {
     try {
       console.log('🎯 Joining meeting:', { meetingId, userId, userName });
-      const response = await fetch(`${MEET_API_BASE_URL}/${meetingId}/join`, {
+      const response = await fetch(`${API_BASE_URL}/${meetingId}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, userName })
@@ -301,7 +336,7 @@ class MeetApiService {
   static async leaveMeeting(meetingId, userId) {
     try {
       console.log('🎯 Leaving meeting:', { meetingId, userId });
-      const response = await fetch(`${MEET_API_BASE_URL}/${meetingId}/leave`, {
+      const response = await fetch(`${API_BASE_URL}/${meetingId}/leave`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })
@@ -327,7 +362,7 @@ class MeetApiService {
   static async healthCheck() {
     try {
       console.log('🎯 Performing meet service health check...');
-      const response = await fetch(`${MEET_API_BASE_URL}/health`);
+      const response = await fetch(`${API_BASE_URL}/health`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -350,7 +385,7 @@ class MeetApiService {
   static async clearAllMeetings() {
     try {
       console.log('🧹 Clearing all meetings...');
-      const response = await fetch(`${MEET_API_BASE_URL}/clear-all`, {
+      const response = await fetch(`${API_BASE_URL}/clear-all`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -376,7 +411,7 @@ class MeetApiService {
   static async getAllMeetings() {
     try {
       console.log('🎯 Fetching all meetings for debugging...');
-      const response = await fetch(`${MEET_API_BASE_URL}/debug/all`);
+      const response = await fetch(`${API_BASE_URL}/debug/all`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -399,7 +434,7 @@ class MeetApiService {
   static async getAllMeetingResources(meetingId) {
     try {
       console.log('🎯 Fetching ALL resources for meeting:', meetingId);
-      const response = await fetch(`${MEET_API_BASE_URL}/resources/meeting/${meetingId}/all`);
+      const response = await fetch(`${API_BASE_URL}/resources/meeting/${meetingId}/all`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -422,7 +457,7 @@ class MeetApiService {
   static async deleteResource(resourceId) {
     try {
       console.log('💀 HARD DELETING resource:', resourceId);
-      const response = await fetch(`${MEET_API_BASE_URL}/resources/${resourceId}`, {
+      const response = await fetch(`${API_BASE_URL}/resources/${resourceId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       });

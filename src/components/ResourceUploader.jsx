@@ -1,4 +1,3 @@
-// travel-tour-frontend/src/components/ResourceUploader.jsx
 import React, { useState } from 'react';
 import MeetApiService from '../services/meet-api';
 
@@ -21,13 +20,12 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   const pickFile = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    // 🚫 REMOVED: Video file types (.mp4,.mov,.avi)
-    input.accept = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif';
+    input.accept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.gif';
     
     input.onchange = async (e) => {
       const file = e.target.files[0];
       if (file) {
-        // 🚫 ADDED: Video file validation
+        // 🚫 Video file validation
         const fileExtension = file.name.split('.').pop().toLowerCase();
         const videoExtensions = ['mp4', 'mov', 'avi', 'wmv', 'flv', 'webm', 'mkv'];
         
@@ -37,7 +35,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
         }
 
         // File size validation
-        if (file.size > 50 * 1024 * 1024) { // 50MB
+        if (file.size > 50 * 1024 * 1024) {
           showNotification('error', '❌ File size must be less than 50MB');
           return;
         }
@@ -64,32 +62,32 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
     setIsUploading(true);
     
     try {
-      // 🆕 FIX: Instead of using the upload endpoint, share the file directly as a document resource
-      const resourceData = {
-        meetingId,
-        resourceType: getResourceTypeFromFile(selectedFile),
-        title: selectedFile.name.replace(/\.[^/.]+$/, ""), // Remove extension
-        content: `File: ${selectedFile.name} (${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`,
-        fileName: selectedFile.name,
-        fileSize: selectedFile.size,
-        uploadedBy: user.id,
-        uploadedByName: user.name || user.username || 'Admin',
-        description: `File uploaded: ${selectedFile.name}`,
-        // 🆕 ADDED: Explicit timestamp to prevent "Invalid Date"
-        createdAt: new Date().toISOString()
-      };
+      // 🆕 USE FormData FOR ACTUAL FILE UPLOAD
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('meetingId', meetingId);
+      formData.append('resourceType', getResourceTypeFromFile(selectedFile));
+      formData.append('title', selectedFile.name.replace(/\.[^/.]+$/, ""));
+      formData.append('uploadedBy', user.id);
+      formData.append('uploadedByName', user.name || user.username || 'Admin');
+      formData.append('createdAt', new Date().toISOString());
 
-      console.log('🎯 Sharing file as resource:', resourceData);
+      console.log('📤 Uploading actual file:', selectedFile.name);
 
-      const shareResponse = await MeetApiService.shareResource(resourceData);
+      const shareResponse = await fetch(`${process.env.VITE_MEET_API_BASE_URL}/resources/share`, {
+        method: 'POST',
+        body: formData, // 🆕 SEND FormData INSTEAD OF JSON
+      });
       
-      if (shareResponse.success) {
-        onResourceShared(shareResponse.resource);
+      const result = await shareResponse.json();
+      
+      if (result.success) {
+        onResourceShared(result.resource);
         setSelectedFile(null);
         setShowUploadOptions(false);
-        showNotification('success', '✅ File shared successfully!');
+        showNotification('success', '✅ File uploaded and shared successfully!');
       } else {
-        throw new Error(shareResponse.error || 'Failed to share resource');
+        throw new Error(result.error || 'Failed to upload file');
       }
     } catch (error) {
       console.error('File upload error:', error);
@@ -104,22 +102,24 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
     const extension = file.name.split('.').pop().toLowerCase();
     const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     const pdfTypes = ['pdf'];
-    const documentTypes = ['doc', 'docx', 'txt', 'ppt', 'pptx', 'xls', 'xlsx'];
+    const textTypes = ['txt', 'csv'];
+    const documentTypes = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
     
     if (imageTypes.includes(extension)) return 'image';
     if (pdfTypes.includes(extension)) return 'pdf';
+    if (textTypes.includes(extension)) return 'text';
     if (documentTypes.includes(extension)) return 'document';
-    return 'document'; // default fallback
+    return 'document';
   };
 
   const shareLink = async () => {
-    if (!linkForm.title || !linkForm.url) {
-      showNotification('error', 'Please provide both title and URL');
+    if (!meetingId || !user) {
+      showNotification('error', 'Meeting ID or user data missing');
       return;
     }
 
-    if (!meetingId || !user) {
-      showNotification('error', 'Meeting ID or user data missing');
+    if (!linkForm.title || !linkForm.url) {
+      showNotification('error', 'Link title and URL are required');
       return;
     }
 
@@ -127,43 +127,82 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
     
     try {
       const resourceData = {
-        meetingId,
+        meetingId: meetingId,
         resourceType: 'link',
         title: linkForm.title,
         content: linkForm.url,
         description: linkForm.description,
         uploadedBy: user.id,
         uploadedByName: user.name || user.username || 'Admin',
-        // 🆕 ADDED: Explicit timestamp to prevent "Invalid Date"
         createdAt: new Date().toISOString()
       };
 
-      console.log('🎯 Sharing link:', resourceData);
+      console.log('🔗 Sharing link:', resourceData);
 
-      const response = await MeetApiService.shareResource(resourceData);
+      const result = await MeetApiService.shareResource(resourceData);
       
-      if (response.success) {
-        onResourceShared(response.resource);
+      if (result.success) {
+        onResourceShared(result.resource);
         setLinkForm({ title: '', url: '', description: '' });
         setShowUploadOptions(false);
-        showNotification('success', '✅ Link shared successfully!');
+        showNotification('success', '🔗 Link shared successfully!');
       } else {
-        showNotification('error', response.error || 'Failed to share link');
+        throw new Error(result.error || 'Failed to share link');
       }
     } catch (error) {
       console.error('Link share error:', error);
-      showNotification('error', 'Failed to share link. Please try again.');
+      showNotification('error', `❌ Failed to share link: ${error.message}`);
     } finally {
       setIsUploading(false);
     }
   };
 
   const shareText = async () => {
-    if (!textForm.title || !textForm.content) {
-      showNotification('error', 'Please provide both title and content');
+    if (!meetingId || !user) {
+      showNotification('error', 'Meeting ID or user data missing');
       return;
     }
 
+    if (!textForm.title || !textForm.content) {
+      showNotification('error', 'Text title and content are required');
+      return;
+    }
+
+    setIsUploading(true);
+    
+    try {
+      const resourceData = {
+        meetingId: meetingId,
+        resourceType: 'text',
+        title: textForm.title,
+        content: textForm.content,
+        description: textForm.description,
+        uploadedBy: user.id,
+        uploadedByName: user.name || user.username || 'Admin',
+        createdAt: new Date().toISOString()
+      };
+
+      console.log('📝 Sharing text:', resourceData);
+
+      const result = await MeetApiService.shareResource(resourceData);
+      
+      if (result.success) {
+        onResourceShared(result.resource);
+        setTextForm({ title: '', content: '', description: '' });
+        setShowUploadOptions(false);
+        showNotification('success', '📝 Text shared successfully!');
+      } else {
+        throw new Error(result.error || 'Failed to share text');
+      }
+    } catch (error) {
+      console.error('Text share error:', error);
+      showNotification('error', `❌ Failed to share text: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const quickShare = async (type, content, title) => {
     if (!meetingId || !user) {
       showNotification('error', 'Meeting ID or user data missing');
       return;
@@ -173,65 +212,32 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
     
     try {
       const resourceData = {
-        meetingId,
+        meetingId: meetingId,
         resourceType: 'text',
-        title: textForm.title,
-        content: textForm.content,
-        description: textForm.description,
+        title: title,
+        content: content,
         uploadedBy: user.id,
         uploadedByName: user.name || user.username || 'Admin',
-        // 🆕 ADDED: Explicit timestamp to prevent "Invalid Date"
         createdAt: new Date().toISOString()
       };
 
-      console.log('🎯 Sharing text:', resourceData);
+      console.log('⚡ Quick sharing:', resourceData);
 
-      const response = await MeetApiService.shareResource(resourceData);
+      const result = await MeetApiService.shareResource(resourceData);
       
-      if (response.success) {
-        onResourceShared(response.resource);
-        setTextForm({ title: '', content: '', description: '' });
+      if (result.success) {
+        onResourceShared(result.resource);
         setShowUploadOptions(false);
-        showNotification('success', '✅ Text shared successfully!');
+        showNotification('success', '⚡ Resource shared successfully!');
       } else {
-        showNotification('error', response.error || 'Failed to share text');
+        throw new Error(result.error || 'Failed to share resource');
       }
     } catch (error) {
-      console.error('Text share error:', error);
-      showNotification('error', 'Failed to share text. Please try again.');
+      console.error('Quick share error:', error);
+      showNotification('error', `❌ Failed to share resource: ${error.message}`);
     } finally {
       setIsUploading(false);
     }
-  };
-
-  const quickShare = (type, content, title) => {
-    if (!meetingId || !user) return;
-
-    const resourceData = {
-      meetingId,
-      resourceType: 'text',
-      title: title,
-      content: content,
-      description: `Quick ${type} shared by admin`,
-      uploadedBy: user.id,
-      uploadedByName: user.name || user.username || 'Admin',
-      // 🆕 ADDED: Explicit timestamp to prevent "Invalid Date"
-      createdAt: new Date().toISOString()
-    };
-
-    MeetApiService.shareResource(resourceData)
-      .then(response => {
-        if (response.success) {
-          onResourceShared(response.resource);
-          showNotification('success', `✅ ${title} shared successfully!`);
-        } else {
-          showNotification('error', `Failed to share ${type}: ${response.error}`);
-        }
-      })
-      .catch(error => {
-        console.error('Quick share error:', error);
-        showNotification('error', `Failed to share ${type}. Please try again.`);
-      });
   };
 
   return (
@@ -296,12 +302,12 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
               ></button>
             </div>
 
-            {/* 🆕 ADDED: Storage Warning */}
+            {/* Storage Warning */}
             <div className="alert alert-warning mb-3">
               <div className="d-flex align-items-center">
                 <i className="fas fa-database me-2 text-warning"></i>
                 <div>
-                  <strong>Storage Notice:</strong> All resources are permanently saved. 
+                  <strong>Storage Notice:</strong> Files are now stored on the server. 
                   <span className="text-danger ms-1">
                     Video files are disabled to conserve storage space.
                   </span>
@@ -346,7 +352,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 disabled={isUploading}
               >
                 <i className="fas fa-upload me-2"></i>
-                Choose File (PDF, Images, Documents)
+                Choose File (PDF, Images, Documents, Text)
               </button>
               
               {/* Show selected file */}
@@ -389,7 +395,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
               </button>
               
               <div className="form-text mt-2">
-                Max file size: 50MB. Supported: PDF, Images, Office Documents
+                Max file size: 50MB. Supported: PDF, Images, Office Documents, Text files
                 <span className="text-danger ms-1">
                   <i className="fas fa-ban me-1"></i>
                   Videos are not supported

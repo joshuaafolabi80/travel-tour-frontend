@@ -390,6 +390,32 @@ class MeetApiService {
       };
     }
   }
+
+  // 🆕 ADDED: Delete resource function
+  static async deleteResource(resourceId) {
+    try {
+      console.log('🗑️ Deleting resource:', resourceId);
+      const response = await fetch(`${MEET_API_BASE_URL}/resources/${resourceId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Resource deletion response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Meet API delete resource error:', error);
+      return { 
+        success: false, 
+        error: 'Meet service unavailable',
+        details: error.message 
+      };
+    }
+  }
 }
 
 export default MeetApiService;

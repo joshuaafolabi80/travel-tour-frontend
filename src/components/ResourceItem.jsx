@@ -1,183 +1,280 @@
 // travel-tour-frontend/src/components/ResourceItem.jsx
 import React, { useState } from 'react';
+import MeetApiService from '../services/meet-api';
 
-const ResourceItem = ({ resource, user, onAccess, onDownload, showActions = false }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
+const ResourceItem = ({ resource, user, onAccess, onDownload, showActions = false, onResourceDeleted }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
-  const getResourceIcon = (type) => {
-    switch (type) {
+  // Custom notification function
+  const showNotification = (type, message) => {
+    setNotification({ show: true, type, message });
+    setTimeout(() => {
+      setNotification({ show: false, type: '', message: '' });
+    }, 4000);
+  };
+
+  // 🆕 ADDED: Format date properly to prevent "Invalid Date"
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown date';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Unknown date';
+      }
+      return date.toLocaleString();
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'Unknown date';
+    }
+  };
+
+  const getResourceIcon = () => {
+    switch (resource.resourceType || resource.type) {
+      case 'link':
+        return 'fas fa-link text-primary';
+      case 'document':
+      case 'file':
+        return 'fas fa-file-alt text-info';
       case 'pdf':
         return 'fas fa-file-pdf text-danger';
       case 'image':
-        return 'fas fa-file-image text-success';
-      case 'video':
-        return 'fas fa-file-video text-primary';
-      case 'document':
-        return 'fas fa-file-word text-info';
-      case 'presentation':
-        return 'fas fa-file-powerpoint text-warning';
-      case 'spreadsheet':
-        return 'fas fa-file-excel text-success';
-      case 'link':
-        return 'fas fa-link text-primary';
+        return 'fas fa-image text-success';
       case 'text':
-        return 'fas fa-file-alt text-secondary';
+        return 'fas fa-sticky-note text-warning';
       default:
-        return 'fas fa-file text-muted';
+        return 'fas fa-file text-secondary';
     }
   };
 
-  const getFileSize = (bytes) => {
-    if (!bytes) return '';
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  const handleView = async () => {
-    if (onAccess) {
-      setIsProcessing(true);
-      await onAccess(resource.resourceId, 'view');
-      setIsProcessing(false);
+  const handleResourceClick = () => {
+    if (onAccess && resource.id) {
+      onAccess(resource.id, 'view');
     }
 
-    if (resource.type === 'link') {
+    if (resource.resourceType === 'link' || resource.type === 'link') {
       window.open(resource.content, '_blank', 'noopener,noreferrer');
-    } else {
-      // For files, open in new tab or download based on type
-      window.open(resource.content, '_blank', 'noopener,noreferrer');
+    } else if (onDownload && (resource.fileName || resource.title)) {
+      onDownload(resource);
     }
   };
 
-  const handleDownload = async () => {
-    if (onAccess) {
-      setIsProcessing(true);
-      await onAccess(resource.resourceId, 'download');
-      setIsProcessing(false);
-    }
-
+  const handleDownload = (e) => {
+    e.stopPropagation();
     if (onDownload) {
       onDownload(resource);
-    } else {
-      // Fallback download
-      const link = document.createElement('a');
-      link.href = resource.content;
-      link.download = resource.fileName || resource.title;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    }
+    if (onAccess && resource.id) {
+      onAccess(resource.id, 'download');
     }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString();
+  // 🆕 ADDED: Delete resource function
+  const handleDeleteResource = async () => {
+    if (!resource.id) {
+      showNotification('error', 'Cannot delete resource: No resource ID found');
+      return;
+    }
+
+    setIsDeleting(true);
+    
+    try {
+      const response = await MeetApiService.deleteResource(resource.id);
+      
+      if (response.success) {
+        showNotification('success', '✅ Resource deleted successfully!');
+        setShowDeleteModal(false);
+        if (onResourceDeleted) {
+          onResourceDeleted(resource.id);
+        }
+      } else {
+        throw new Error(response.error || 'Failed to delete resource');
+      }
+    } catch (error) {
+      console.error('Delete resource error:', error);
+      showNotification('error', `❌ Failed to delete resource: ${error.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
-  return (
-    <div className="list-group-item">
-      <div className="d-flex align-items-start">
-        {/* Resource Icon */}
-        <div className="flex-shrink-0 me-3">
-          <i className={`${getResourceIcon(resource.type)} fa-2x`}></i>
-        </div>
-        
-        {/* Resource Content */}
-        <div className="flex-grow-1">
-          <div className="d-flex justify-content-between align-items-start mb-1">
-            <h6 className="mb-0 text-break">{resource.title}</h6>
-            <small className="text-muted">{formatDate(resource.sharedAt)}</small>
-          </div>
-          
-          {resource.description && (
-            <p className="small text-muted mb-1">{resource.description}</p>
-          )}
-          
-          <div className="d-flex flex-wrap gap-2 align-items-center">
-            <small className="text-muted">
-              <i className="fas fa-user me-1"></i>
-              {resource.sharedByName}
-            </small>
-            
-            {resource.fileSize && (
-              <small className="text-muted">
-                <i className="fas fa-weight-hanging me-1"></i>
-                {getFileSize(resource.fileSize)}
-              </small>
-            )}
-            
-            {resource.accessCount > 0 && (
-              <small className="text-muted">
-                <i className="fas fa-eye me-1"></i>
-                {resource.accessCount} views
-              </small>
-            )}
-          </div>
+  // 🆕 ADDED: Check if user is admin (you might need to adjust this based on your user structure)
+  const isAdmin = user && (user.role === 'admin' || user.role === 'superadmin');
 
-          {/* Actions */}
-          {showActions && (
-            <div className="mt-2">
-              <div className="btn-group btn-group-sm" role="group">
-                <button
-                  type="button"
-                  className="btn btn-outline-primary"
-                  onClick={handleView}
-                  disabled={isProcessing}
+  return (
+    <>
+      {/* Custom Notification */}
+      {notification.show && (
+        <div 
+          className={`alert alert-${notification.type === 'error' ? 'danger' : 'success'} alert-dismissible fade show position-fixed`}
+          style={{
+            top: '20px',
+            right: '20px',
+            zIndex: 9999,
+            minWidth: '300px',
+            animation: 'slideInRight 0.3s ease-out'
+          }}
+          role="alert"
+        >
+          <div className="d-flex align-items-center">
+            <i className={`fas ${notification.type === 'error' ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2`}></i>
+            <span>{notification.message}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="list-group-item list-group-item-action">
+        <div className="d-flex justify-content-between align-items-start">
+          <div className="flex-grow-1" style={{ cursor: 'pointer' }} onClick={handleResourceClick}>
+            <div className="d-flex align-items-center mb-1">
+              <i className={`${getResourceIcon()} me-2`}></i>
+              <h6 className="mb-0 text-primary">{resource.title}</h6>
+            </div>
+            
+            <p className="mb-1 text-muted small">
+              {resource.description || resource.content?.substring(0, 100)}
+              {resource.content && resource.content.length > 100 && '...'}
+            </p>
+            
+            <div className="d-flex flex-wrap gap-3 mt-2">
+              <small className="text-muted">
+                <i className="fas fa-user me-1"></i>
+                {resource.uploadedByName || resource.sharedByName || 'Unknown'}
+              </small>
+              <small className="text-muted">
+                <i className="fas fa-clock me-1"></i>
+                {/* 🆕 FIXED: Using proper date formatting */}
+                {formatDate(resource.createdAt || resource.sharedAt)}
+              </small>
+              {resource.fileSize && (
+                <small className="text-muted">
+                  <i className="fas fa-hdd me-1"></i>
+                  {(resource.fileSize / 1024 / 1024).toFixed(2)} MB
+                </small>
+              )}
+            </div>
+          </div>
+          
+          <div className="d-flex flex-column gap-1 ms-2">
+            {showActions && (resource.resourceType === 'document' || resource.type === 'document' || resource.fileName) && (
+              <button
+                className="btn btn-outline-primary btn-sm"
+                onClick={handleDownload}
+                title="Download"
+              >
+                <i className="fas fa-download"></i>
+              </button>
+            )}
+            
+            {/* 🆕 ADDED: Delete button for admin users */}
+            {isAdmin && (
+              <button
+                className="btn btn-outline-danger btn-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDeleteModal(true);
+                }}
+                title="Delete Resource"
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <span className="spinner-border spinner-border-sm" role="status"></span>
+                ) : (
+                  <i className="fas fa-trash"></i>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 🆕 ADDED: Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="modal show d-block" tabIndex="-1" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-danger text-white">
+                <h5 className="modal-title">
+                  <i className="fas fa-exclamation-triangle me-2"></i>
+                  Confirm Deletion
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={isDeleting}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-warning">
+                  <i className="fas fa-warning me-2"></i>
+                  <strong>Warning:</strong> This action cannot be undone!
+                </div>
+                <p>Are you sure you want to delete the resource:</p>
+                <div className="card bg-light">
+                  <div className="card-body">
+                    <strong>{resource.title}</strong>
+                    <br />
+                    <small className="text-muted">
+                      Type: {resource.resourceType || resource.type} | 
+                      Created: {formatDate(resource.createdAt || resource.sharedAt)}
+                    </small>
+                  </div>
+                </div>
+                <p className="mt-3 mb-0 text-danger">
+                  <i className="fas fa-info-circle me-1"></i>
+                  This will permanently remove the resource from the database.
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={isDeleting}
                 >
-                  {isProcessing ? (
-                    <span className="spinner-border spinner-border-sm" role="status"></span>
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-danger" 
+                  onClick={handleDeleteResource}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                      Deleting...
+                    </>
                   ) : (
                     <>
-                      <i className="fas fa-external-link-alt me-1"></i>
-                      {resource.type === 'link' ? 'Open Link' : 'View'}
+                      <i className="fas fa-trash me-2"></i>
+                      Delete Permanently
                     </>
                   )}
                 </button>
-                
-                {(resource.type !== 'link' && resource.type !== 'text') && (
-                  <button
-                    type="button"
-                    className="btn btn-outline-success"
-                    onClick={handleDownload}
-                    disabled={isProcessing}
-                  >
-                    <i className="fas fa-download me-1"></i>
-                    Download
-                  </button>
-                )}
               </div>
             </div>
-          )}
-
-          {/* Link Preview */}
-          {resource.type === 'link' && !showActions && (
-            <div className="mt-1">
-              <a 
-                href={resource.content} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="small text-break"
-                onClick={() => onAccess && onAccess(resource.resourceId, 'view')}
-              >
-                {resource.content}
-              </a>
-            </div>
-          )}
-
-          {/* Text Preview */}
-          {resource.type === 'text' && !showActions && (
-            <div className="mt-1">
-              <p className="small text-muted mb-0">
-                {resource.content.length > 100 
-                  ? `${resource.content.substring(0, 100)}...` 
-                  : resource.content
-                }
-              </p>
-            </div>
-          )}
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+
+      {/* Add CSS for animation */}
+      <style jsx>{`
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+    </>
   );
 };
 

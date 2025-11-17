@@ -74,7 +74,9 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
         fileSize: selectedFile.size,
         uploadedBy: user.id,
         uploadedByName: user.name || user.username || 'Admin',
-        description: `File uploaded: ${selectedFile.name}`
+        description: `File uploaded: ${selectedFile.name}`,
+        // 🆕 ADDED: Explicit timestamp to prevent "Invalid Date"
+        createdAt: new Date().toISOString()
       };
 
       console.log('🎯 Sharing file as resource:', resourceData);
@@ -131,7 +133,9 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
         content: linkForm.url,
         description: linkForm.description,
         uploadedBy: user.id,
-        uploadedByName: user.name || user.username || 'Admin'
+        uploadedByName: user.name || user.username || 'Admin',
+        // 🆕 ADDED: Explicit timestamp to prevent "Invalid Date"
+        createdAt: new Date().toISOString()
       };
 
       console.log('🎯 Sharing link:', resourceData);
@@ -175,7 +179,9 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
         content: textForm.content,
         description: textForm.description,
         uploadedBy: user.id,
-        uploadedByName: user.name || user.username || 'Admin'
+        uploadedByName: user.name || user.username || 'Admin',
+        // 🆕 ADDED: Explicit timestamp to prevent "Invalid Date"
+        createdAt: new Date().toISOString()
       };
 
       console.log('🎯 Sharing text:', resourceData);
@@ -208,7 +214,9 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
       content: content,
       description: `Quick ${type} shared by admin`,
       uploadedBy: user.id,
-      uploadedByName: user.name || user.username || 'Admin'
+      uploadedByName: user.name || user.username || 'Admin',
+      // 🆕 ADDED: Explicit timestamp to prevent "Invalid Date"
+      createdAt: new Date().toISOString()
     };
 
     MeetApiService.shareResource(resourceData)
@@ -295,7 +303,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 <div>
                   <strong>Storage Notice:</strong> All resources are permanently saved. 
                   <span className="text-danger ms-1">
-                    Video files are disabled to conserve storage space. However, you can use the "Video Resources" menu tab strictly dedicated to upload and manage your videos.
+                    Video files are disabled to conserve storage space.
                   </span>
                 </div>
               </div>

@@ -73,21 +73,30 @@ const ResourceItem = ({ resource, user, onAccess, onDownload, showActions = fals
 
   // 🆕 ADDED: Delete resource function
   const handleDeleteResource = async () => {
-    if (!resource.id) {
+    if (!resource.id && !resource.resourceId) {
       showNotification('error', 'Cannot delete resource: No resource ID found');
+      return;
+    }
+
+    // Use resourceId if available, otherwise use id
+    const resourceIdToDelete = resource.resourceId || resource.id;
+    
+    if (!resourceIdToDelete) {
+      showNotification('error', 'Cannot delete resource: No valid resource ID found');
       return;
     }
 
     setIsDeleting(true);
     
     try {
-      const response = await MeetApiService.deleteResource(resource.id);
+      console.log('🗑️ Attempting to delete resource:', resourceIdToDelete);
+      const response = await MeetApiService.deleteResource(resourceIdToDelete);
       
       if (response.success) {
         showNotification('success', '✅ Resource deleted successfully!');
         setShowDeleteModal(false);
         if (onResourceDeleted) {
-          onResourceDeleted(resource.id);
+          onResourceDeleted(resourceIdToDelete);
         }
       } else {
         throw new Error(response.error || 'Failed to delete resource');

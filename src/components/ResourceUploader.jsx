@@ -8,6 +8,15 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   const [linkForm, setLinkForm] = useState({ title: '', url: '', description: '' });
   const [textForm, setTextForm] = useState({ title: '', content: '', description: '' });
   const [selectedFile, setSelectedFile] = useState(null);
+  const [notification, setNotification] = useState({ show: false, type: '', message: '' });
+
+  // Custom notification function
+  const showNotification = (type, message) => {
+    setNotification({ show: true, type, message });
+    setTimeout(() => {
+      setNotification({ show: false, type: '', message: '' });
+    }, 4000);
+  };
 
   const pickFile = () => {
     const input = document.createElement('input');
@@ -23,17 +32,18 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
         const videoExtensions = ['mp4', 'mov', 'avi', 'wmv', 'flv', 'webm', 'mkv'];
         
         if (videoExtensions.includes(fileExtension)) {
-          alert('❌ Video files are not supported to save storage space. Please upload documents, PDFs, or images instead.');
+          showNotification('error', '❌ Video files are not supported to save storage space. Please upload documents, PDFs, or images instead.');
           return;
         }
 
         // File size validation
         if (file.size > 50 * 1024 * 1024) { // 50MB
-          alert('❌ File size must be less than 50MB');
+          showNotification('error', '❌ File size must be less than 50MB');
           return;
         }
 
         setSelectedFile(file);
+        showNotification('success', `✅ File selected: ${file.name}`);
       }
     };
     
@@ -42,45 +52,32 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
 
   const uploadFile = async () => {
     if (!selectedFile) {
-      alert('Please select a file first');
+      showNotification('error', 'Please select a file first');
       return;
     }
 
     if (!meetingId || !user) {
-      alert('Meeting ID or user data missing');
+      showNotification('error', 'Meeting ID or user data missing');
       return;
     }
 
     setIsUploading(true);
     
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-
-      console.log('📤 Uploading file:', selectedFile.name);
-      
-      // First upload the file
-      const uploadResponse = await MeetApiService.uploadFile(formData);
-      
-      if (!uploadResponse.success) {
-        throw new Error(uploadResponse.error || 'File upload failed');
-      }
-
-      console.log('✅ File uploaded successfully:', uploadResponse);
-
-      // Then share the resource with the uploaded file URL
+      // 🆕 FIX: Instead of using the upload endpoint, share the file directly as a document resource
       const resourceData = {
         meetingId,
         resourceType: getResourceTypeFromFile(selectedFile),
         title: selectedFile.name.replace(/\.[^/.]+$/, ""), // Remove extension
-        content: uploadResponse.fileUrl || uploadResponse.url,
+        content: `File: ${selectedFile.name} (${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`,
         fileName: selectedFile.name,
         fileSize: selectedFile.size,
         uploadedBy: user.id,
-        uploadedByName: user.name || user.username || 'Admin'
+        uploadedByName: user.name || user.username || 'Admin',
+        description: `File uploaded: ${selectedFile.name}`
       };
 
-      console.log('🎯 Sharing resource:', resourceData);
+      console.log('🎯 Sharing file as resource:', resourceData);
 
       const shareResponse = await MeetApiService.shareResource(resourceData);
       
@@ -88,13 +85,13 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
         onResourceShared(shareResponse.resource);
         setSelectedFile(null);
         setShowUploadOptions(false);
-        alert('✅ File shared successfully!');
+        showNotification('success', '✅ File shared successfully!');
       } else {
         throw new Error(shareResponse.error || 'Failed to share resource');
       }
     } catch (error) {
       console.error('File upload error:', error);
-      alert(`❌ Upload failed: ${error.message}`);
+      showNotification('error', `❌ Upload failed: ${error.message}`);
     } finally {
       setIsUploading(false);
     }
@@ -115,12 +112,12 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
 
   const shareLink = async () => {
     if (!linkForm.title || !linkForm.url) {
-      alert('Please provide both title and URL');
+      showNotification('error', 'Please provide both title and URL');
       return;
     }
 
     if (!meetingId || !user) {
-      alert('Meeting ID or user data missing');
+      showNotification('error', 'Meeting ID or user data missing');
       return;
     }
 
@@ -145,13 +142,13 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
         onResourceShared(response.resource);
         setLinkForm({ title: '', url: '', description: '' });
         setShowUploadOptions(false);
-        alert('✅ Link shared successfully!');
+        showNotification('success', '✅ Link shared successfully!');
       } else {
-        alert(response.error || 'Failed to share link');
+        showNotification('error', response.error || 'Failed to share link');
       }
     } catch (error) {
       console.error('Link share error:', error);
-      alert('Failed to share link. Please try again.');
+      showNotification('error', 'Failed to share link. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -159,12 +156,12 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
 
   const shareText = async () => {
     if (!textForm.title || !textForm.content) {
-      alert('Please provide both title and content');
+      showNotification('error', 'Please provide both title and content');
       return;
     }
 
     if (!meetingId || !user) {
-      alert('Meeting ID or user data missing');
+      showNotification('error', 'Meeting ID or user data missing');
       return;
     }
 
@@ -189,13 +186,13 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
         onResourceShared(response.resource);
         setTextForm({ title: '', content: '', description: '' });
         setShowUploadOptions(false);
-        alert('✅ Text shared successfully!');
+        showNotification('success', '✅ Text shared successfully!');
       } else {
-        alert(response.error || 'Failed to share text');
+        showNotification('error', response.error || 'Failed to share text');
       }
     } catch (error) {
       console.error('Text share error:', error);
-      alert('Failed to share text. Please try again.');
+      showNotification('error', 'Failed to share text. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -218,19 +215,39 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
       .then(response => {
         if (response.success) {
           onResourceShared(response.resource);
-          alert(`✅ ${title} shared successfully!`);
+          showNotification('success', `✅ ${title} shared successfully!`);
         } else {
-          alert(`Failed to share ${type}: ${response.error}`);
+          showNotification('error', `Failed to share ${type}: ${response.error}`);
         }
       })
       .catch(error => {
         console.error('Quick share error:', error);
-        alert(`Failed to share ${type}. Please try again.`);
+        showNotification('error', `Failed to share ${type}. Please try again.`);
       });
   };
 
   return (
     <div>
+      {/* Custom Notification */}
+      {notification.show && (
+        <div 
+          className={`alert alert-${notification.type === 'error' ? 'danger' : 'success'} alert-dismissible fade show position-fixed`}
+          style={{
+            top: '20px',
+            right: '20px',
+            zIndex: 9999,
+            minWidth: '300px',
+            animation: 'slideInRight 0.3s ease-out'
+          }}
+          role="alert"
+        >
+          <div className="d-flex align-items-center">
+            <i className={`fas ${notification.type === 'error' ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2`}></i>
+            <span>{notification.message}</span>
+          </div>
+        </div>
+      )}
+
       {/* Main Upload Button */}
       {!showUploadOptions && (
         <div className="d-grid">
@@ -278,7 +295,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 <div>
                   <strong>Storage Notice:</strong> All resources are permanently saved. 
                   <span className="text-danger ms-1">
-                    Video files are disabled to conserve storage space.
+                    Video files are disabled to conserve storage space. However, you can use the "Video Resources" menu tab strictly dedicated to upload and manage your videos.
                   </span>
                 </div>
               </div>
@@ -448,6 +465,20 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
           </div>
         </div>
       )}
+
+      {/* Add CSS for animation */}
+      <style jsx>{`
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };

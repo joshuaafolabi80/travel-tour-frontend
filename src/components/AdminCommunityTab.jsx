@@ -10,6 +10,7 @@ const AdminCommunityTab = () => {
   const [resources, setResources] = useState([]);
   const [isCreating, setIsCreating] = useState(false);
   const [showExtensionModal, setShowExtensionModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [notification, setNotification] = useState({ type: '', message: '' });
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -133,6 +134,13 @@ const AdminCommunityTab = () => {
 
   const handleClearMeeting = async () => {
     try {
+      console.log('🧹 Attempting to clear meetings...');
+      
+      // Check if the function exists
+      if (!MeetApiService.clearAllMeetings) {
+        throw new Error('clearAllMeetings function not found in MeetApiService');
+      }
+      
       const response = await MeetApiService.clearAllMeetings();
       
       if (response.success) {
@@ -144,13 +152,17 @@ const AdminCommunityTab = () => {
         setNotification({ type: 'error', message: response.error || 'Failed to clear meetings' });
       }
     } catch (error) {
-      console.error('Error clearing meetings:', error);
-      setNotification({ type: 'error', message: 'Failed to clear meetings' });
+      console.error('❌ Error clearing meetings:', error);
+      setNotification({ 
+        type: 'error', 
+        message: `Failed to clear meetings: ${error.message}` 
+      });
     }
   };
 
   const handleResourceShared = (newResource) => {
     setResources(prev => [newResource, ...prev]);
+    setShowShareModal(false);
     setNotification({ type: 'success', message: 'Resource shared successfully and saved permanently!' });
   };
 
@@ -276,13 +288,12 @@ const AdminCommunityTab = () => {
                     </div>
 
                     {/* 🆕 FIXED: SHARE RESOURCES AND JOIN STREAM IN SAME LINE */}
-                    <div className="mt-3">
+                    <div className="mt-3 d-flex flex-wrap gap-2 align-items-center">
                       {/* Share Resources Button - Only for meeting owner */}
                       {isMyMeeting && (
                         <button 
-                          className="btn btn-info me-2"
-                          data-bs-toggle="modal"
-                          data-bs-target="#shareResourcesModal"
+                          className="btn btn-info"
+                          onClick={() => setShowShareModal(true)}
                         >
                           <i className="fas fa-share-alt me-2"></i>
                           Share Resources
@@ -294,7 +305,7 @@ const AdminCommunityTab = () => {
                         href={activeMeeting.meetingLink} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="btn btn-success me-2"
+                        className="btn btn-success"
                       >
                         <i className="fas fa-play-circle me-2"></i>
                         {isMyMeeting ? 'Host Meeting' : 'Join Stream'}
@@ -505,19 +516,22 @@ const AdminCommunityTab = () => {
       )}
 
       {/* Share Resources Modal */}
-      {isMyMeeting && (
-        <div className="modal fade" id="shareResourcesModal" tabIndex="-1" aria-labelledby="shareResourcesModalLabel" aria-hidden="true">
+      {showShareModal && (
+        <div className="modal show d-block" tabIndex="-1" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header bg-info text-white">
-                <h5 className="modal-title" id="shareResourcesModalLabel">
+                <h5 className="modal-title">
                   <i className="fas fa-share-alt me-2"></i>
                   Share Resources with Participants
                 </h5>
-                <button type="button" className="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button 
+                  type="button" 
+                  className="btn-close btn-close-white" 
+                  onClick={() => setShowShareModal(false)}
+                ></button>
               </div>
               <div className="modal-body">
-                {/* 🆕 IMPORTANT GUIDANCE */}
                 <div className="alert alert-info mb-4">
                   <div className="d-flex">
                     <i className="fas fa-info-circle fa-2x me-3 text-info"></i>
@@ -542,7 +556,13 @@ const AdminCommunityTab = () => {
                 />
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowShareModal(false)}
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>

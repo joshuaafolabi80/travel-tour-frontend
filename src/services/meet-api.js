@@ -2,13 +2,13 @@
 import { MEET_API_BASE_URL } from './api';
 
 class MeetApiService {
-  static async createMeeting(adminId, title, description = '') {
+  static async createMeeting(adminId, title, description = '', adminName = '') {
     try {
-      console.log('🎯 Creating meeting with:', { adminId, title, description });
+      console.log('🎯 Creating meeting with:', { adminId, title, description, adminName });
       const response = await fetch(`${MEET_API_BASE_URL}/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminId, title, description })
+        body: JSON.stringify({ adminId, title, description, adminName })
       });
       
       if (!response.ok) {
@@ -311,6 +311,78 @@ class MeetApiService {
       return result;
     } catch (error) {
       console.error('❌ Meet API health check error:', error);
+      return { 
+        success: false, 
+        error: 'Meet service unavailable',
+        details: error.message 
+      };
+    }
+  }
+
+  // 🆕 ADDED: Clear all meetings function
+  static async clearAllMeetings() {
+    try {
+      console.log('🧹 Clearing all meetings...');
+      const response = await fetch(`${MEET_API_BASE_URL}/clear-all`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Clear meetings response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Meet API clear meetings error:', error);
+      return { 
+        success: false, 
+        error: 'Meet service unavailable',
+        details: error.message 
+      };
+    }
+  }
+
+  // 🆕 ADDED: Get all meetings for debugging
+  static async getAllMeetings() {
+    try {
+      console.log('🎯 Fetching all meetings for debugging...');
+      const response = await fetch(`${MEET_API_BASE_URL}/debug/all`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ All meetings response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Meet API get all meetings error:', error);
+      return { 
+        success: false, 
+        error: 'Meet service unavailable',
+        details: error.message 
+      };
+    }
+  }
+
+  // 🆕 ADDED: Get all resources for a meeting (even after it ends)
+  static async getAllMeetingResources(meetingId) {
+    try {
+      console.log('🎯 Fetching ALL resources for meeting:', meetingId);
+      const response = await fetch(`${MEET_API_BASE_URL}/resources/meeting/${meetingId}/all`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ All meeting resources response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Meet API get all meeting resources error:', error);
       return { 
         success: false, 
         error: 'Meet service unavailable',

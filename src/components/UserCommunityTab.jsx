@@ -8,6 +8,7 @@ const UserCommunityTab = () => {
   const [resources, setResources] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState(null);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('userData') || '{}');
@@ -28,10 +29,7 @@ const UserCommunityTab = () => {
       if (response.success && response.meeting) {
         setActiveMeeting(response.meeting);
         // Load resources for this meeting
-        const resourcesResponse = await MeetApiService.getMeetingResources(response.meeting.id);
-        if (resourcesResponse.success) {
-          setResources(resourcesResponse.resources || []);
-        }
+        await loadMeetingResources(response.meeting.id);
       } else {
         setActiveMeeting(null);
         setResources([]);
@@ -43,11 +41,26 @@ const UserCommunityTab = () => {
     }
   };
 
+  const loadMeetingResources = async (meetingId) => {
+    try {
+      setResourcesLoading(true);
+      const resourcesResponse = await MeetApiService.getMeetingResources(meetingId);
+      if (resourcesResponse.success) {
+        setResources(resourcesResponse.resources || []);
+        console.log('✅ Loaded resources:', resourcesResponse.resources.length);
+      }
+    } catch (error) {
+      console.error('Error loading meeting resources:', error);
+    } finally {
+      setResourcesLoading(false);
+    }
+  };
+
   const handleJoinMeeting = async () => {
     if (!activeMeeting || !userData) return;
 
     try {
-      // Join the meeting
+      // Join the meeting in our system
       const joinResponse = await MeetApiService.joinMeeting(
         activeMeeting.id, 
         userData.id, 
@@ -55,14 +68,15 @@ const UserCommunityTab = () => {
       );
       
       if (joinResponse.success) {
-        console.log('✅ Successfully joined meeting');
-        // Open meeting link in new tab
-        window.open(activeMeeting.meetingLink, '_blank');
+        console.log('✅ Successfully joined meeting in system');
+        
+        // Open the real meeting link
+        window.open(activeMeeting.meetingLink, '_blank', 'noopener,noreferrer');
       }
     } catch (error) {
       console.error('Error joining meeting:', error);
       // Still open the meeting link even if join tracking fails
-      window.open(activeMeeting.meetingLink, '_blank');
+      window.open(activeMeeting.meetingLink, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -87,6 +101,12 @@ const UserCommunityTab = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const refreshResources = async () => {
+    if (activeMeeting) {
+      await loadMeetingResources(activeMeeting.id);
+    }
   };
 
   if (isLoading) {
@@ -142,10 +162,14 @@ const UserCommunityTab = () => {
                     
                     <div className="d-flex flex-wrap gap-2 mb-3">
                       <span className="badge bg-primary">
+                        <i className="fas fa-user-tie me-1"></i>
+                        Host: {activeMeeting.adminName || 'Admin'}
+                      </span>
+                      <span className="badge bg-secondary">
                         <i className="fas fa-clock me-1"></i>
                         Started: {new Date(activeMeeting.startTime).toLocaleTimeString()}
                       </span>
-                      <span className="badge bg-secondary">
+                      <span className="badge bg-info">
                         <i className="fas fa-users me-1"></i>
                         {activeMeeting.participants?.length || 0} participants
                       </span>
@@ -156,7 +180,7 @@ const UserCommunityTab = () => {
                       className="btn btn-success btn-lg"
                     >
                       <i className="fas fa-play-circle me-2"></i>
-                      Join Live Stream on Google Meet
+                      Join Live Stream
                     </button>
                   </div>
                   <div className="col-md-4 text-center">
@@ -219,35 +243,110 @@ const UserCommunityTab = () => {
           </div>
 
           <div className="col-lg-4">
-            {/* Shared Resources */}
+            {/* Shared Resources Section - ENHANCED */}
             <div className="card">
-              <div className="card-header">
-                <h5 className="card-title mb-0">
-                  <i className="fas fa-file-download me-2"></i>
-                  Training Resources ({resources.length})
-                </h5>
+              <div className="card-header bg-primary text-white">
+                <div className="d-flex justify-content-between align-items-center">
+                  <h5 className="card-title mb-0">
+                    <i className="fas fa-file-download me-2"></i>
+                    Training Resources ({resources.length})
+                  </h5>
+                  <button 
+                    className="btn btn-sm btn-light"
+                    onClick={refreshResources}
+                    disabled={resourcesLoading}
+                    title="Refresh resources"
+                  >
+                    {resourcesLoading ? (
+                      <span className="spinner-border spinner-border-sm" role="status"></span>
+                    ) : (
+                      <i className="fas fa-sync-alt"></i>
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="card-body p-0">
                 {resources.length > 0 ? (
-                  <div className="list-group list-group-flush">
-                    {resources.map(resource => (
-                      <ResourceItem 
-                        key={resource.id} 
-                        resource={resource} 
-                        user={userData}
-                        onAccess={handleResourceAccess}
-                        onDownload={handleDownloadResource}
-                        showActions={true}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    {/* 🆕 RESOURCE INFO BANNER */}
+                    <div className="alert alert-info m-3 mb-0">
+                      <div className="d-flex align-items-center">
+                        <i className="fas fa-info-circle me-2"></i>
+                        <small>
+                          <strong>All resources are permanently saved</strong> and will remain available even after the meeting ends.
+                        </small>
+                      </div>
+                    </div>
+                    
+                    <div className="list-group list-group-flush">
+                      {resources.map(resource => (
+                        <ResourceItem 
+                          key={resource.id} 
+                          resource={resource} 
+                          user={userData}
+                          onAccess={handleResourceAccess}
+                          onDownload={handleDownloadResource}
+                          showActions={true}
+                        />
+                      ))}
+                    </div>
+                  </>
                 ) : (
                   <div className="text-center py-4">
                     <i className="fas fa-folder-open fa-2x text-muted mb-3"></i>
                     <p className="text-muted mb-0">No resources shared yet</p>
-                    <small className="text-muted">Check back during the session</small>
+                    <small className="text-muted">
+                      Resources shared by the host will appear here automatically
+                    </small>
+                    <div className="mt-2">
+                      <button 
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={refreshResources}
+                        disabled={resourcesLoading}
+                      >
+                        {resourcesLoading ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+                            Checking...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-sync-alt me-1"></i>
+                            Check for Resources
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Meeting Information */}
+            <div className="card mt-4">
+              <div className="card-header">
+                <h5 className="card-title mb-0">
+                  <i className="fas fa-info-circle me-2"></i>
+                  Meeting Information
+                </h5>
+              </div>
+              <div className="card-body">
+                <div className="mb-2">
+                  <small className="text-muted">Host</small>
+                  <p className="mb-0 fw-semibold">{activeMeeting.adminName || 'Admin'}</p>
+                </div>
+                <div className="mb-2">
+                  <small className="text-muted">Started</small>
+                  <p className="mb-0 fw-semibold">
+                    {new Date(activeMeeting.startTime).toLocaleString()}
+                  </p>
+                </div>
+                <div className="mb-2">
+                  <small className="text-muted">Participants</small>
+                  <p className="mb-0 fw-semibold">
+                    {activeMeeting.participants?.length || 0} joined
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -269,6 +368,18 @@ const UserCommunityTab = () => {
                   <li>Try using Google Chrome browser</li>
                   <li>Contact support if issues persist</li>
                 </ul>
+                
+                {/* �Resource Access Help */}
+                <div className="mt-3 pt-3 border-top">
+                  <p className="small text-muted mb-2">
+                    <strong>Resource Access:</strong>
+                  </p>
+                  <ul className="small text-muted ps-3 mb-0">
+                    <li>Click on resources to view/download</li>
+                    <li>All resources are saved permanently</li>
+                    <li>Refresh to see new shared resources</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>

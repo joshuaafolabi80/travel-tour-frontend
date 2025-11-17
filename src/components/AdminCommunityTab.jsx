@@ -20,7 +20,6 @@ const AdminCommunityTab = () => {
     setUserData(user);
     loadActiveMeeting();
     
-    // Check for meeting every 30 seconds
     const interval = setInterval(loadActiveMeeting, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -34,11 +33,9 @@ const AdminCommunityTab = () => {
       if (response.success && response.meeting) {
         setActiveMeeting(response.meeting);
         
-        // Check if this is the current admin's meeting
         const isAdminMeeting = response.meeting.adminId === userData?.id;
         setIsMyMeeting(isAdminMeeting);
         
-        // Load resources for this meeting
         const resourcesResponse = await MeetApiService.getMeetingResources(response.meeting.id);
         if (resourcesResponse.success) {
           setResources(resourcesResponse.resources || []);
@@ -67,7 +64,8 @@ const AdminCommunityTab = () => {
       const response = await MeetApiService.createMeeting(
         userData.id, 
         'The Conclave Academy Live Stream',
-        'Join our community training session'
+        'Join our community training session',
+        userData.name || userData.username
       );
 
       console.log('🔍 Create meeting response:', response);
@@ -77,7 +75,6 @@ const AdminCommunityTab = () => {
         setIsMyMeeting(true);
         setNotification({ type: 'success', message: 'Meeting created successfully!' });
         
-        // Load resources for the new meeting
         if (response.meeting.id) {
           const resourcesResponse = await MeetApiService.getMeetingResources(response.meeting.id);
           if (resourcesResponse.success) {
@@ -136,31 +133,11 @@ const AdminCommunityTab = () => {
 
   const handleResourceShared = (newResource) => {
     setResources(prev => [newResource, ...prev]);
-    setNotification({ type: 'success', message: 'Resource shared successfully!' });
+    setNotification({ type: 'success', message: 'Resource shared successfully and saved permanently!' });
   };
 
   const clearNotification = () => {
     setNotification({ type: '', message: '' });
-  };
-
-  const clearAllMeetings = async () => {
-    try {
-      // This would call your new backend endpoint
-      const response = await fetch(`${process.env.VITE_MEET_API_BASE_URL || 'https://travel-tour-academy-backend.onrender.com/api/meet'}/clear-all`, {
-        method: 'DELETE'
-      });
-      const result = await response.json();
-      
-      if (result.success) {
-        setActiveMeeting(null);
-        setResources([]);
-        setIsMyMeeting(false);
-        setNotification({ type: 'success', message: 'All meetings cleared successfully!' });
-      }
-    } catch (error) {
-      console.error('Error clearing meetings:', error);
-      setNotification({ type: 'error', message: 'Failed to clear meetings' });
-    }
   };
 
   if (isLoading) {
@@ -231,21 +208,57 @@ const AdminCommunityTab = () => {
                     <i className="fas fa-exclamation-triangle me-2"></i>
                     <strong>Notice:</strong> There's already an active meeting created by another admin.
                   </div>
-                  <button 
-                    className="btn btn-outline-danger btn-sm"
-                    onClick={clearAllMeetings}
-                    title="Clear all meetings (Admin only)"
-                  >
-                    <i className="fas fa-trash me-1"></i>
-                    Clear All Meetings
-                  </button>
                 </div>
               </div>
             )}
           </div>
 
+          {/* 🆕 REORDERED: SHARE RESOURCES SECTION FIRST */}
           <div className="col-lg-8">
-            {/* Meeting Info Card */}
+            {/* Resource Sharing Section - Only show for meeting owner */}
+            {isMyMeeting && (
+              <div className="card mb-4">
+                <div className="card-header bg-info text-white">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <h5 className="card-title mb-0">
+                      <i className="fas fa-share-alt me-2"></i>
+                      Share Resources with Participants
+                    </h5>
+                    <span className="badge bg-light text-info">
+                      <i className="fas fa-database me-1"></i>
+                      Permanent Storage
+                    </span>
+                  </div>
+                </div>
+                <div className="card-body">
+                  {/* 🆕 IMPORTANT GUIDANCE */}
+                  <div className="alert alert-info mb-4">
+                    <div className="d-flex">
+                      <i className="fas fa-info-circle fa-2x me-3 text-info"></i>
+                      <div>
+                        <h6 className="alert-heading mb-2">Resource Sharing Guide</h6>
+                        <p className="mb-2">
+                          <strong>Resources shared here are permanently saved</strong> and will be available to users during and after the live call.
+                        </p>
+                        <p className="mb-0 small">
+                          <i className="fas fa-lightbulb me-1 text-warning"></i>
+                          <strong>Tip:</strong> Share documents, links, and files here for participants to access anytime. 
+                          Video files are not supported to save storage space.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <ResourceUploader 
+                    meetingId={activeMeeting.id}
+                    user={userData}
+                    onResourceShared={handleResourceShared}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Meeting Info Card - MOVED BELOW RESOURCES */}
             <div className="card mb-4">
               <div className="card-header bg-primary text-white">
                 <div className="d-flex justify-content-between align-items-center">
@@ -319,35 +332,22 @@ const AdminCommunityTab = () => {
                 </div>
               </div>
             </div>
-
-            {/* Resource Sharing Section - Only show for meeting owner */}
-            {isMyMeeting && (
-              <div className="card">
-                <div className="card-header">
-                  <h5 className="card-title mb-0">
-                    <i className="fas fa-share-alt me-2"></i>
-                    Share Resources with Participants
-                  </h5>
-                </div>
-                <div className="card-body">
-                  <ResourceUploader 
-                    meetingId={activeMeeting.id}
-                    user={userData}
-                    onResourceShared={handleResourceShared}
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="col-lg-4">
             {/* Shared Resources */}
             <div className="card">
-              <div className="card-header">
-                <h5 className="card-title mb-0">
-                  <i className="fas fa-file-alt me-2"></i>
-                  Shared Resources ({resources.length})
-                </h5>
+              <div className="card-header bg-success text-white">
+                <div className="d-flex justify-content-between align-items-center">
+                  <h5 className="card-title mb-0">
+                    <i className="fas fa-file-alt me-2"></i>
+                    Shared Resources ({resources.length})
+                  </h5>
+                  <span className="badge bg-light text-success">
+                    <i className="fas fa-check me-1"></i>
+                    Permanent
+                  </span>
+                </div>
               </div>
               <div className="card-body p-0">
                 {resources.length > 0 ? (
@@ -364,6 +364,7 @@ const AdminCommunityTab = () => {
                   <div className="text-center py-4">
                     <i className="fas fa-folder-open fa-3x text-muted mb-3"></i>
                     <p className="text-muted mb-0">No resources shared yet</p>
+                    <small className="text-muted">Share resources above for participants</small>
                   </div>
                 )}
               </div>
@@ -444,7 +445,7 @@ const AdminCommunityTab = () => {
                   <i className="fas fa-video fa-5x text-primary mb-4"></i>
                   <h2 className="text-primary">Start a Live Stream</h2>
                   <p className="text-muted lead">
-                    Create a Google Meet session to connect with your community. 
+                    Create a video meeting to connect with your community. 
                     Share resources, conduct training, and engage with participants in real-time.
                   </p>
                 </div>
@@ -456,7 +457,7 @@ const AdminCommunityTab = () => {
                         <i className="fas fa-link fa-2x text-primary"></i>
                       </div>
                       <h5>Instant Meeting</h5>
-                      <p className="text-muted small">Generate Google Meet link instantly</p>
+                      <p className="text-muted small">Generate video meeting link instantly</p>
                     </div>
                   </div>
                   <div className="col-md-4 mb-3">
@@ -471,10 +472,10 @@ const AdminCommunityTab = () => {
                   <div className="col-md-4 mb-3">
                     <div className="text-center">
                       <div className="bg-warning bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
-                        <i className="fas fa-clock fa-2x text-warning"></i>
+                        <i className="fas fa-database fa-2x text-warning"></i>
                       </div>
-                      <h5>Time Management</h5>
-                      <p className="text-muted small">Automatic extensions when needed</p>
+                      <h5>Permanent Storage</h5>
+                      <p className="text-muted small">Resources saved permanently in database</p>
                     </div>
                   </div>
                 </div>

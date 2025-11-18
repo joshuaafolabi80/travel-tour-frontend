@@ -313,7 +313,7 @@ const AdminCommunityTab = () => {
           <div className="d-flex justify-content-between align-items-center">
             <div>
               <h1 className="h3 mb-1">Welcome to The Conclave Streams</h1>
-              <p className="text-muted mb-0">Manage your community live streams and training sessions</p>
+              <p className="text-muted mb-0">Manage your community live streams, webinars and training sessions</p>
             </div>
             <div className="d-flex gap-2">
               <button 
@@ -882,7 +882,7 @@ const AdminCommunityTab = () => {
                       <p className="mb-0 small">
                         <i className="fas fa-lightbulb me-1 text-warning"></i>
                         <strong>Tip:</strong> Share documents, links, and files here for participants to access anytime. 
-                        Video files are not supported to save storage space.
+                        Video files are not supported to save storage space. However, you can use the "Video Resources" tab strictly dedicated for uploading and managing your videos.
                       </p>
                     </div>
                   </div>

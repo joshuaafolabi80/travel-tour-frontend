@@ -188,7 +188,7 @@ const UserCommunityTab = () => {
         <div className="col-12">
           <div className="text-center">
             <h1 className="h3 mb-1">Welcome to The Conclave Streams</h1>
-            <p className="text-muted mb-0">Join live training sessions and access shared resources</p>
+            <p className="text-muted mb-0">Join our webinars, live training sessions and access shared resources</p>
           </div>
         </div>
       </div>

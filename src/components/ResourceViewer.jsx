@@ -87,7 +87,7 @@ const ResourceViewer = ({ resource, onClose }) => {
       return (
         <div className="h-100">
           <iframe
-            src={`${MEET_API_BASE_URL}${documentContent}`}
+            src={`${MEET_API_BASE_URL}${documentContent.startsWith('/') ? documentContent : '/' + documentContent}`}
             className="w-100 h-100 border-0"
             title={resource.title}
             onLoad={() => setIsLoading(false)}
@@ -101,7 +101,7 @@ const ResourceViewer = ({ resource, onClose }) => {
       return (
         <div className="text-center">
           <img
-            src={`${MEET_API_BASE_URL}${documentContent}`}
+            src={`${MEET_API_BASE_URL}${documentContent.startsWith('/') ? documentContent : '/' + documentContent}`}
             alt={resource.title}
             className="img-fluid"
             style={{ maxHeight: '70vh' }}
@@ -115,14 +115,14 @@ const ResourceViewer = ({ resource, onClose }) => {
       );
     }
 
-    // 🆕 HTML CONTENT - Display with formatting and images (LIKE GENERAL COURSES)
+    // 🆕 HTML CONTENT - Display with enhanced justified formatting
     if (contentType === 'html') {
       return (
-        <div className="p-4">
+        <div className="p-4 h-100">
           <div className="bg-light rounded p-3 mb-3 d-flex justify-content-between align-items-center">
             <small className="text-muted">
               <i className="fas fa-info-circle me-1"></i>
-              Document with images and formatting
+              Document with professional formatting
             </small>
             <small className="text-muted">
               <i className="fas fa-file-text me-1"></i>
@@ -130,16 +130,20 @@ const ResourceViewer = ({ resource, onClose }) => {
             </small>
           </div>
           <div 
-            className="document-content-display"
+            className="document-content-display h-100"
             style={{
               background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
               padding: '2.5rem',
               border: '1px solid #dee2e6',
               borderRadius: '0.75rem',
-              maxHeight: '60vh',
               overflowY: 'auto',
               wordWrap: 'break-word',
-              lineHeight: '1.7'
+              lineHeight: '1.7',
+              textAlign: 'justify',
+              fontSize: '16px',
+              fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+              wordSpacing: '0.1em',
+              letterSpacing: '0.01em'
             }}
           >
             <div dangerouslySetInnerHTML={{ __html: documentContent }} />
@@ -148,10 +152,10 @@ const ResourceViewer = ({ resource, onClose }) => {
       );
     }
 
-    // Text content - Display directly (LIKE GENERAL COURSES)
+    // Text content - Display with enhanced justified formatting
     if (contentType === 'text') {
       return (
-        <div className="p-4">
+        <div className="p-4 h-100">
           <div className="bg-light rounded p-3 mb-3 d-flex justify-content-between align-items-center">
             <small className="text-muted">
               <i className="fas fa-info-circle me-1"></i>
@@ -163,17 +167,20 @@ const ResourceViewer = ({ resource, onClose }) => {
             </small>
           </div>
           <div 
-            className="document-content-display"
+            className="document-content-display h-100"
             style={{
               background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
               padding: '2.5rem',
               border: '1px solid #dee2e6',
               borderRadius: '0.75rem',
-              maxHeight: '60vh',
               overflowY: 'auto',
               wordWrap: 'break-word',
               lineHeight: '1.7',
               textAlign: 'justify',
+              fontSize: '16px',
+              fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+              wordSpacing: '0.1em',
+              letterSpacing: '0.01em',
               whiteSpace: 'pre-wrap'
             }}
           >
@@ -212,15 +219,17 @@ const ResourceViewer = ({ resource, onClose }) => {
 
     // Default fallback - Show content in text format
     return (
-      <div className="p-4">
+      <div className="p-4 h-100">
         <h5 className="mb-3">{resource.title}</h5>
         <div 
-          className="bg-light p-4 rounded" 
+          className="bg-light p-4 rounded h-100" 
           style={{ 
             whiteSpace: 'pre-wrap', 
             lineHeight: '1.6',
-            maxHeight: '60vh',
-            overflowY: 'auto'
+            overflowY: 'auto',
+            textAlign: 'justify',
+            fontSize: '16px',
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
           }}
         >
           {documentContent}

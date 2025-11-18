@@ -17,10 +17,9 @@ const ResourceViewer = ({ resource, onClose }) => {
     try {
       setDocumentLoading(true);
       setDocumentContent(null);
-      setError(null);
       console.log('📖 Loading resource content for:', resource.id);
       
-      // 🆕 USE THE FIXED ENDPOINT (NOW WORKS LIKE GENERAL COURSES)
+      // 🆕 USE THE NEW ENDPOINT (SIMILAR TO GENERAL COURSES)
       const response = await fetch(`${MEET_API_BASE_URL}/resources/${resource.id}/view`);
       
       if (!response.ok) {
@@ -35,13 +34,13 @@ const ResourceViewer = ({ resource, onClose }) => {
         setDocumentContent(result.content);
         console.log('✅ Resource content loaded successfully');
       } else {
-        setError('Error: ' + (result.error || 'Failed to load resource'));
+        setDocumentContent('Error: ' + (result.error || 'Failed to load resource'));
         console.error('❌ Resource loading failed:', result.error);
       }
       
     } catch (error) {
       console.error('❌ Error loading resource content:', error);
-      setError('Error loading resource: ' + (error.message));
+      setDocumentContent('Error loading resource: ' + (error.message));
     } finally {
       setDocumentLoading(false);
       setIsLoading(false);
@@ -49,23 +48,6 @@ const ResourceViewer = ({ resource, onClose }) => {
   };
 
   const getViewerContent = () => {
-    if (error) {
-      return (
-        <div className="alert alert-danger text-center">
-          <i className="fas fa-exclamation-triangle me-2"></i>
-          {error}
-          <div className="mt-2">
-            <button
-              className="btn btn-outline-danger btn-sm"
-              onClick={loadResourceContent}
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-      );
-    }
-
     if (!documentContent) {
       return (
         <div className="text-center py-5">
@@ -115,66 +97,18 @@ const ResourceViewer = ({ resource, onClose }) => {
       );
     }
 
-    // 🆕 HTML CONTENT - Display with formatting and images (LIKE GENERAL COURSES)
-    if (contentType === 'html') {
-      return (
-        <div className="p-4">
-          <div className="bg-light rounded p-3 mb-3 d-flex justify-content-between align-items-center">
-            <small className="text-muted">
-              <i className="fas fa-info-circle me-1"></i>
-              Document with images and formatting
-            </small>
-            <small className="text-muted">
-              <i className="fas fa-file-text me-1"></i>
-              {documentContent.length} characters
-            </small>
-          </div>
-          <div 
-            className="document-content-display"
-            style={{
-              background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-              padding: '2.5rem',
-              border: '1px solid #dee2e6',
-              borderRadius: '0.75rem',
-              maxHeight: '60vh',
-              overflowY: 'auto',
-              wordWrap: 'break-word',
-              lineHeight: '1.7'
-            }}
-          >
-            <div dangerouslySetInnerHTML={{ __html: documentContent }} />
-          </div>
-        </div>
-      );
-    }
-
     // Text content - Display directly (LIKE GENERAL COURSES)
     if (contentType === 'text') {
       return (
         <div className="p-4">
-          <div className="bg-light rounded p-3 mb-3 d-flex justify-content-between align-items-center">
-            <small className="text-muted">
-              <i className="fas fa-info-circle me-1"></i>
-              Text document
-            </small>
-            <small className="text-muted">
-              <i className="fas fa-file-text me-1"></i>
-              {documentContent.length} characters
-            </small>
-          </div>
+          <h5 className="mb-3">{resource.title}</h5>
           <div 
-            className="document-content-display"
-            style={{
-              background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-              padding: '2.5rem',
-              border: '1px solid #dee2e6',
-              borderRadius: '0.75rem',
-              maxHeight: '60vh',
-              overflowY: 'auto',
-              wordWrap: 'break-word',
-              lineHeight: '1.7',
-              textAlign: 'justify',
-              whiteSpace: 'pre-wrap'
+            className="bg-light p-4 rounded" 
+            style={{ 
+              whiteSpace: 'pre-wrap',
+              lineHeight: '1.6',
+              fontFamily: 'Arial, sans-serif',
+              fontSize: '16px'
             }}
           >
             {documentContent}
@@ -210,18 +144,39 @@ const ResourceViewer = ({ resource, onClose }) => {
       );
     }
 
-    // Default fallback - Show content in text format
+    // Office documents - Show information
+    if (contentType === 'office') {
+      return (
+        <div className="text-center py-5">
+          <i className="fas fa-file-word fa-3x text-primary mb-3"></i>
+          <h5>{resource.title}</h5>
+          <p className="text-muted mb-4">
+            {documentContent}
+          </p>
+          {resource.fileUrl && (
+            <div className="d-flex gap-2 justify-content-center">
+              <a
+                href={`${MEET_API_BASE_URL}${resource.fileUrl}`}
+                className="btn btn-primary"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <i className="fas fa-download me-2"></i>
+                Download Document
+              </a>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Default fallback
     return (
       <div className="p-4">
         <h5 className="mb-3">{resource.title}</h5>
         <div 
           className="bg-light p-4 rounded" 
-          style={{ 
-            whiteSpace: 'pre-wrap', 
-            lineHeight: '1.6',
-            maxHeight: '60vh',
-            overflowY: 'auto'
-          }}
+          style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}
         >
           {documentContent}
         </div>
@@ -252,12 +207,6 @@ const ResourceViewer = ({ resource, onClose }) => {
             <h5 className="modal-title">
               <i className="fas fa-eye me-2"></i>
               {resource.title}
-              {contentType === 'html' && (
-                <span className="badge bg-success ms-2">
-                  <i className="fas fa-image me-1"></i>
-                  With Images
-                </span>
-              )}
             </h5>
             <button
               type="button"
@@ -275,6 +224,21 @@ const ResourceViewer = ({ resource, onClose }) => {
               </div>
             )}
             
+            {error && (
+              <div className="alert alert-danger text-center">
+                <i className="fas fa-exclamation-triangle me-2"></i>
+                {error}
+                <div className="mt-2">
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={loadResourceContent}
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            )}
+
             {documentLoading && (
               <div className="text-center py-5">
                 <div className="spinner-border text-primary mb-3" style={{width: '3rem', height: '3rem'}}>
@@ -285,11 +249,7 @@ const ResourceViewer = ({ resource, onClose }) => {
               </div>
             )}
 
-            <div style={{ 
-              opacity: (isLoading || documentLoading) ? 0 : 1, 
-              transition: 'opacity 0.3s',
-              height: '100%'
-            }}>
+            <div style={{ opacity: (isLoading || documentLoading) ? 0 : 1, transition: 'opacity 0.3s' }}>
               {getViewerContent()}
             </div>
           </div>

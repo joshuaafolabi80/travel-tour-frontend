@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import MeetApiService from '../services/meet-api';
-import ResourceViewer from './ResourceViewer'; // 🆕 ADD IMPORT
+import ResourceViewer from './ResourceViewer';
 
 const UserCommunityTab = () => {
   const [activeMeeting, setActiveMeeting] = useState(null);
@@ -9,9 +9,9 @@ const UserCommunityTab = () => {
   const [userData, setUserData] = useState(null);
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [viewingResource, setViewingResource] = useState(null); // 🆕 ADD STATE FOR VIEWER
+  const [viewingResource, setViewingResource] = useState(null);
 
-  // 🆕 PAGINATION & SEARCH STATE
+  // PAGINATION & SEARCH STATE
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,6 +24,55 @@ const UserCommunityTab = () => {
     setUserData(user);
     loadActiveMeeting();
   }, []);
+
+  // 🆕 ADD NEW TAB FUNCTIONALITY
+  const handleJoinMeetingInNewTab = async (meeting) => {
+    try {
+      console.log('🎯 User opening Google Meet in new tab...');
+      
+      // OPEN GOOGLE MEET IN NEW TAB
+      const windowFeatures = [
+        'width=1200,height=800',
+        'left=100,top=100',
+        'scrollbars=yes',
+        'resizable=yes'
+      ].join(',');
+
+      const newTab = window.open(
+        meeting.meetingLink, 
+        `google-meet-${meeting.id}`,
+        windowFeatures
+      );
+      
+      if (newTab) {
+        // FOCUS ON THE NEW TAB
+        newTab.focus();
+        
+        // RECORD JOIN ATTEMPT IN DATABASE
+        await MeetApiService.joinMeeting(meeting.id, {
+          userId: userData?.id,
+          userName: userData?.name || userData?.username,
+          action: 'join-new-tab'
+        });
+        
+        console.log('✅ Google Meet opened in new tab for user');
+      } else {
+        // POPUP BLOCKER HANDLING
+        const userAction = confirm(
+          'Popup blocked! Please allow popups for this site and try again, or click OK to copy the meeting link.'
+        );
+        
+        if (userAction) {
+          navigator.clipboard.writeText(meeting.meetingLink);
+          alert('🔗 Meeting link copied to clipboard!');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error opening meeting in new tab:', error);
+      // Fallback
+      window.open(meeting.meetingLink, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   const loadActiveMeeting = async () => {
     try {
@@ -81,7 +130,6 @@ const UserCommunityTab = () => {
     }
   };
 
-  // 🆕 UPDATED RESOURCE ACCESS HANDLER
   const handleViewResource = (resource) => {
     console.log('🔍 User viewing resource:', resource);
     
@@ -99,7 +147,7 @@ const UserCommunityTab = () => {
     await loadActiveMeeting();
   };
 
-  // 🆕 PAGINATION & SEARCH FUNCTIONS
+  // PAGINATION & SEARCH FUNCTIONS
   const filteredResources = resources.filter(resource => {
     const matchesSearch = searchTerm === '' || 
       resource.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -232,12 +280,13 @@ const UserCommunityTab = () => {
                       </span>
                     </div>
 
+                    {/* 🆕 UPDATED JOIN BUTTON - OPENS IN NEW TAB */}
                     <button 
-                      onClick={handleJoinMeeting}
+                      onClick={() => handleJoinMeetingInNewTab(activeMeeting)}
                       className="btn btn-success btn-lg"
                     >
-                      <i className="fas fa-play-circle me-2"></i>
-                      Join Live Stream
+                      <i className="fas fa-external-link-alt me-2"></i>
+                      Join Live Stream (New Tab)
                     </button>
                   </div>
                   <div className="col-md-4 text-center">
@@ -300,7 +349,7 @@ const UserCommunityTab = () => {
           </div>
 
           <div className="col-lg-4">
-            {/* 🆕 ENHANCED RESOURCES TABLE */}
+            {/* ENHANCED RESOURCES TABLE */}
             <div className="card">
               <div className="card-header bg-primary text-white">
                 <div className="d-flex justify-content-between align-items-center">
@@ -323,7 +372,7 @@ const UserCommunityTab = () => {
                 </div>
               </div>
               <div className="card-body">
-                {/* 🆕 RESOURCE INFO BANNER */}
+                {/* RESOURCE INFO BANNER */}
                 <div className="alert alert-info mb-3">
                   <div className="d-flex align-items-center">
                     <i className="fas fa-info-circle me-2"></i>
@@ -333,7 +382,7 @@ const UserCommunityTab = () => {
                   </div>
                 </div>
 
-                {/* 🆕 SEARCH AND FILTERS */}
+                {/* SEARCH AND FILTERS */}
                 <div className="row mb-3">
                   <div className="col-md-6">
                     <div className="input-group">
@@ -371,7 +420,7 @@ const UserCommunityTab = () => {
                   </div>
                 </div>
 
-                {/* 🆕 RESOURCES TABLE */}
+                {/* RESOURCES TABLE */}
                 {currentResources.length > 0 ? (
                   <>
                     <div className="table-responsive">
@@ -435,7 +484,6 @@ const UserCommunityTab = () => {
                                 </div>
                               </td>
                               <td>
-                                {/* 🆕 UPDATED VIEW BUTTON - USE RESOURCEVIEWER */}
                                 <button
                                   className="btn btn-outline-primary btn-sm"
                                   onClick={() => handleViewResource(resource)}
@@ -451,7 +499,7 @@ const UserCommunityTab = () => {
                       </table>
                     </div>
 
-                    {/* 🆕 PAGINATION */}
+                    {/* PAGINATION */}
                     {totalPages > 1 && (
                       <nav className="mt-3">
                         <ul className="pagination justify-content-center pagination-sm">
@@ -649,7 +697,7 @@ const UserCommunityTab = () => {
         </div>
       )}
 
-      {/* 🆕 RESOURCE VIEWER MODAL */}
+      {/* RESOURCE VIEWER MODAL */}
       {viewingResource && (
         <ResourceViewer
           resource={viewingResource}

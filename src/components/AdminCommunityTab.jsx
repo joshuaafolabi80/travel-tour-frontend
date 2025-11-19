@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import MeetApiService from '../services/meet-api';
 import ResourceUploader from './ResourceUploader';
 import ExtensionModal from './ExtensionModal';
-import ResourceViewer from './ResourceViewer'; // 🆕 ADD IMPORT
+import ResourceViewer from './ResourceViewer';
 
 const AdminCommunityTab = () => {
   const [activeMeeting, setActiveMeeting] = useState(null);
@@ -15,9 +15,9 @@ const AdminCommunityTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isMyMeeting, setIsMyMeeting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [viewingResource, setViewingResource] = useState(null); // 🆕 ADD STATE FOR VIEWER
+  const [viewingResource, setViewingResource] = useState(null);
 
-  // 🆕 PAGINATION & SEARCH STATE
+  // PAGINATION & SEARCH STATE
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,6 +30,67 @@ const AdminCommunityTab = () => {
     setUserData(user);
     loadActiveMeeting();
   }, []);
+
+  // 🆕 ADD NEW TAB FUNCTIONALITY
+  const handleJoinMeetingInNewTab = async (meeting) => {
+    try {
+      console.log('🎯 Opening Google Meet in new tab...');
+      
+      // OPEN GOOGLE MEET IN NEW TAB WITH ENHANCED FEATURES
+      const windowFeatures = [
+        'width=1200,height=800',
+        'left=100,top=100',
+        'scrollbars=yes',
+        'resizable=yes',
+        'toolbar=no',
+        'menubar=no',
+        'location=no',
+        'status=no'
+      ].join(',');
+
+      const newTab = window.open(
+        meeting.meetingLink, 
+        `google-meet-${meeting.id}`,
+        windowFeatures
+      );
+      
+      if (newTab) {
+        // FOCUS ON THE NEW TAB
+        newTab.focus();
+        
+        // RECORD JOIN ATTEMPT IN DATABASE
+        await MeetApiService.joinMeeting(meeting.id, {
+          userId: userData?.id,
+          userName: userData?.name || userData?.username,
+          action: 'join-new-tab'
+        });
+        
+        // SHOW USER-FRIENDLY MESSAGE
+        alert(`🎉 Google Meet opened in new tab! 
+        
+You can now:
+• Switch between Conclave and the meeting using Alt+Tab (Windows) or Cmd+Tab (Mac)
+• Share resources from Conclave while in the meeting
+• Manage participants and continue using all app features
+
+The meeting will continue running in the background.`);
+      } else {
+        // COMPREHENSIVE POPUP BLOCKER HANDLING
+        const userAction = confirm(
+          'Popup blocked! Please:\n\n1. Allow popups for this site\n2. Or click the link below to open manually\n\nClick OK to copy the meeting link to clipboard.'
+        );
+        
+        if (userAction) {
+          navigator.clipboard.writeText(meeting.meetingLink);
+          alert('🔗 Meeting link copied! Please paste it in a new tab to join.');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error opening meeting in new tab:', error);
+      // Fallback: open in current tab
+      window.open(meeting.meetingLink, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   const loadActiveMeeting = async () => {
     try {
@@ -197,7 +258,6 @@ const AdminCommunityTab = () => {
     }
   };
 
-  // 🆕 ADD RESOURCE VIEWING HANDLER
   const handleViewResource = (resource) => {
     console.log('🔍 Viewing resource:', resource);
     
@@ -215,7 +275,7 @@ const AdminCommunityTab = () => {
     setNotification({ type: '', message: '' });
   };
 
-  // 🆕 PAGINATION & SEARCH FUNCTIONS
+  // PAGINATION & SEARCH FUNCTIONS
   const filteredResources = resources.filter(resource => {
     const matchesSearch = searchTerm === '' || 
       resource.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -420,6 +480,7 @@ const AdminCommunityTab = () => {
                       </div>
                     </div>
 
+                    {/* 🆕 UPDATED JOIN BUTTONS SECTION */}
                     <div className="mt-3 d-flex flex-wrap gap-2 align-items-center">
                       {isMyMeeting && (
                         <button 
@@ -431,15 +492,14 @@ const AdminCommunityTab = () => {
                         </button>
                       )}
                       
-                      <a 
-                        href={activeMeeting.meetingLink} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
+                      {/* 🆕 UPDATED JOIN BUTTON - OPENS IN NEW TAB */}
+                      <button 
                         className="btn btn-success"
+                        onClick={() => handleJoinMeetingInNewTab(activeMeeting)}
                       >
-                        <i className="fas fa-play-circle me-2"></i>
-                        {isMyMeeting ? 'Host Meeting' : 'Join Stream'}
-                      </a>
+                        <i className="fas fa-external-link-alt me-2"></i>
+                        {isMyMeeting ? 'Host Meeting (New Tab)' : 'Join Stream (New Tab)'}
+                      </button>
                       
                       {isMyMeeting && (
                         <button 
@@ -470,7 +530,7 @@ const AdminCommunityTab = () => {
               </div>
             </div>
 
-            {/* 🆕 ENHANCED RESOURCES TABLE */}
+            {/* ENHANCED RESOURCES TABLE */}
             {isMyMeeting && (
               <div className="card mb-4">
                 <div className="card-header bg-info text-white">
@@ -486,7 +546,7 @@ const AdminCommunityTab = () => {
                   </div>
                 </div>
                 <div className="card-body">
-                  {/* 🆕 SEARCH AND FILTERS */}
+                  {/* SEARCH AND FILTERS */}
                   <div className="row mb-3">
                     <div className="col-md-6">
                       <div className="input-group">
@@ -531,7 +591,7 @@ const AdminCommunityTab = () => {
                     </div>
                   </div>
 
-                  {/* 🆕 RESOURCES TABLE */}
+                  {/* RESOURCES TABLE */}
                   {currentResources.length > 0 ? (
                     <>
                       <div className="table-responsive">
@@ -598,7 +658,6 @@ const AdminCommunityTab = () => {
                                 </td>
                                 <td>
                                   <div className="btn-group btn-group-sm">
-                                    {/* 🆕 UPDATED VIEW BUTTON - USE RESOURCEVIEWER */}
                                     <button
                                       className="btn btn-outline-primary"
                                       onClick={() => handleViewResource(resource)}
@@ -625,7 +684,7 @@ const AdminCommunityTab = () => {
                         </table>
                       </div>
 
-                      {/* 🆕 PAGINATION */}
+                      {/* PAGINATION */}
                       {totalPages > 1 && (
                         <nav className="mt-3">
                           <ul className="pagination justify-content-center">
@@ -917,7 +976,7 @@ const AdminCommunityTab = () => {
         onClose={() => setShowExtensionModal(false)}
       />
 
-      {/* 🆕 RESOURCE VIEWER MODAL */}
+      {/* RESOURCE VIEWER MODAL */}
       {viewingResource && (
         <ResourceViewer
           resource={viewingResource}

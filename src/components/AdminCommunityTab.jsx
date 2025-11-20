@@ -34,122 +34,105 @@ const AdminCommunityTab = () => {
     loadActiveMeeting();
   }, []);
 
-  // 🆕 ENHANCED SEAMLESS JOIN FUNCTION
+  // 🆕 ULTIMATE FIX FOR GOOGLE MEET JOINING
   const handleSeamlessJoin = async (meeting) => {
     if (!meeting) return;
     
     setIsJoining(true);
     try {
-      console.log('🚀 Attempting seamless Google Meet join...');
-      
-      // Get enhanced join links from backend
-      const joinResponse = await MeetApiService.joinMeeting(meeting.id, userData);
-      
-      if (joinResponse.success) {
-        // 🆕 IMPROVED JOIN STRATEGIES WITH BETTER ERROR HANDLING
-        const joinStrategies = [
-          // Strategy 1: Direct join with meeting code (most reliable)
-          meeting.directJoinLink || `https://meet.google.com/${meeting.meetingCode}`,
-          
-          // Strategy 2: Instant join with auth parameter
-          meeting.instantJoinLink || `https://meet.google.com/${meeting.meetingCode}?authuser=0`,
-          
-          // Strategy 3: Original meeting link from Google Calendar
-          meeting.meetingLink || meeting.meetLink,
-          
-          // Strategy 4: Lookup URL (alternative method)
-          `https://meet.google.com/lookup/${meeting.meetingCode}`
-        ];
+      console.log('🚀 ULTIMATE FIX: Joining REAL Google Meet...');
+      console.log('📋 Meeting data:', {
+        meetingLink: meeting.meetingLink,
+        meetLink: meeting.meetLink,
+        meetingCode: meeting.meetingCode,
+        directJoinLink: meeting.directJoinLink
+      });
 
-        console.log('🔗 Available join strategies:', joinStrategies);
+      // 🆕 USE ONLY THE REAL GOOGLE MEET LINK - NO STRATEGIES NEEDED
+      const realMeetLink = meeting.meetingLink || meeting.meetLink || meeting.directJoinLink;
+      
+      if (!realMeetLink) {
+        throw new Error('No valid Google Meet link found for this meeting');
+      }
 
-        // Open new tab
-        const newTab = window.open('', `google-meet-${meeting.id}`);
+      console.log('🔗 Using REAL Google Meet link:', realMeetLink);
+
+      // 🆕 SIMPLE DIRECT OPENING - NO COMPLEX STRATEGIES
+      const newTab = window.open(realMeetLink, `google-meet-${meeting.id}`);
+      
+      if (newTab) {
+        // Focus the new tab
+        newTab.focus();
         
-        if (newTab) {
-          let success = false;
-          let lastError = null;
-          
-          // Try each strategy with better error handling
-          for (let i = 0; i < joinStrategies.length; i++) {
-            try {
-              console.log(`🔄 Trying join strategy ${i + 1}:`, joinStrategies[i]);
+        // Track the join attempt
+        await MeetApiService.joinMeeting(meeting.id, userData);
+        
+        console.log('✅ REAL Google Meet opened successfully');
+        showTemporaryNotification('success', '🎉 Opening Google Meet...');
+        
+        // 🆕 CHECK FOR ERRORS AFTER A DELAY
+        setTimeout(() => {
+          try {
+            // Check if the tab was redirected to an error page
+            if (newTab.location.href.includes('whoops') || 
+                newTab.location.href.includes('error') ||
+                newTab.document.title.includes('Invalid')) {
+              console.error('❌ Google Meet error detected:', newTab.location.href);
               
-              // Clear any previous content
-              newTab.document.write('Loading Google Meet...');
-              
-              // Navigate to the join URL
-              newTab.location.href = joinStrategies[i];
-              
-              // Wait longer to see if it loads successfully
-              await new Promise(resolve => setTimeout(resolve, 3000));
-              
-              // Check if we're still on the same page (no redirect to error page)
-              if (!newTab.location.href.includes('whoops') && 
-                  !newTab.location.href.includes('error') &&
-                  !newTab.document.title.includes('Invalid')) {
-                success = true;
-                console.log(`✅ Join strategy ${i + 1} successful!`);
-                break;
-              } else {
-                console.log(`❌ Join strategy ${i + 1} redirected to error page`);
-                lastError = `Redirected to: ${newTab.location.href}`;
-              }
-              
-            } catch (strategyError) {
-              console.log(`❌ Join strategy ${i + 1} failed:`, strategyError);
-              lastError = strategyError.message;
-              continue;
+              // Close the error tab and show user message
+              newTab.close();
+              showTemporaryNotification('error', 
+                '❌ Google Meet error. Please check if the meeting exists and try again.'
+              );
             }
+          } catch (error) {
+            // Cross-origin security error - we can't check the URL
+            console.log('🔒 Cannot check tab URL due to security restrictions (normal)');
           }
-          
-          if (success) {
-            newTab.focus();
-            showTemporaryNotification('success', '🎉 Successfully joined meeting!');
-          } else {
-            // Fallback: let user choose with better error info
-            newTab.close();
-            const userChoice = confirm(
-              `Unable to auto-join Google Meet.\n\nError: ${lastError || 'Unknown error'}\n\nWe have copied the meeting link to your clipboard. Click OK to open it manually, or Cancel to stay here.`
-            );
-            if (userChoice) {
-              navigator.clipboard.writeText(meeting.meetingLink || meeting.meetLink);
-              window.open(meeting.meetingLink || meeting.meetLink, '_blank', 'noopener,noreferrer');
-            }
-          }
-        } else {
-          // Popup blocked
-          handlePopupBlocked(meeting);
-        }
+        }, 3000);
+        
       } else {
-        throw new Error(joinResponse.error || 'Failed to get join links');
+        // Popup blocked
+        handlePopupBlocked(meeting);
       }
       
     } catch (error) {
-      console.error('❌ Error in seamless join:', error);
+      console.error('❌ ULTIMATE FIX - Join error:', error);
       
-      // Ultimate fallback with better error reporting
-      showTemporaryNotification('error', `❌ Failed to join: ${error.message}`);
+      // 🆕 BETTER ERROR MESSAGES
+      let userMessage = 'Failed to join meeting';
+      if (error.message.includes('No valid Google Meet link')) {
+        userMessage = 'This meeting has no valid Google Meet link. Please create a new meeting.';
+      } else if (error.message.includes('permission') || error.message.includes('authentication')) {
+        userMessage = 'Google Meet authentication issue. Please check your Google account.';
+      }
       
-      // Still try to open the meeting link
-      setTimeout(() => {
-        window.open(meeting.meetingLink || meeting.meetLink, '_blank', 'noopener,noreferrer');
-      }, 1000);
+      showTemporaryNotification('error', `❌ ${userMessage}`);
+      
+      // 🆕 STILL TRY TO OPEN ANY AVAILABLE LINK AS LAST RESORT
+      const fallbackLink = meeting.meetingLink || meeting.meetLink;
+      if (fallbackLink) {
+        setTimeout(() => {
+          window.open(fallbackLink, '_blank', 'noopener,noreferrer');
+        }, 1000);
+      }
       
     } finally {
       setIsJoining(false);
     }
   };
 
-  // 🆕 POPUP BLOCKER HANDLER
+  // 🆕 SIMPLIFIED POPUP HANDLER
   const handlePopupBlocked = (meeting) => {
+    const realMeetLink = meeting.meetingLink || meeting.meetLink;
+    
     const userAction = confirm(
-      '📢 Popup blocked! Please:\n\n1. Allow popups for this site\n2. Or click OK to copy the meeting link\n\nWe recommend allowing popups for the best experience.'
+      `📢 Popup blocked!\n\nPlease:\n1. Allow popups for this site\n2. Or click OK to copy the REAL Google Meet link\n\nMeeting: ${meeting.title}`
     );
     
-    if (userAction) {
-      navigator.clipboard.writeText(meeting.meetingLink);
-      showTemporaryNotification('success', '🔗 Meeting link copied! Paste it in a new tab.');
+    if (userAction && realMeetLink) {
+      navigator.clipboard.writeText(realMeetLink);
+      showTemporaryNotification('success', '🔗 REAL Google Meet link copied! Paste it in your browser.');
     }
   };
 
@@ -186,10 +169,10 @@ const AdminCommunityTab = () => {
           meeting.meetingCode = extractMeetingCode(meeting.meetingLink);
         }
         if (!meeting.directJoinLink) {
-          meeting.directJoinLink = `https://meet.google.com/${meeting.meetingCode}`;
+          meeting.directJoinLink = meeting.meetingLink;
         }
         if (!meeting.instantJoinLink) {
-          meeting.instantJoinLink = `https://meet.google.com/${meeting.meetingCode}?authuser=0`;
+          meeting.instantJoinLink = meeting.meetingLink;
         }
         
         setActiveMeeting(meeting);
@@ -247,7 +230,7 @@ const AdminCommunityTab = () => {
       if (response.success) {
         setActiveMeeting(response.meeting);
         setIsMyMeeting(true);
-        showTemporaryNotification('success', '🎉 Meeting created with seamless join!');
+        showTemporaryNotification('success', '🎉 REAL Google Meet created successfully!');
         
         if (response.meeting.id) {
           const resourcesResponse = await MeetApiService.getMeetingResources(response.meeting.id);
@@ -256,7 +239,10 @@ const AdminCommunityTab = () => {
           }
         }
       } else {
-        setNotification({ type: 'error', message: response.error || 'Failed to create meeting' });
+        setNotification({ 
+          type: 'error', 
+          message: response.error || 'Failed to create REAL Google Meet' 
+        });
       }
     } catch (error) {
       console.error('Error creating meeting:', error);
@@ -492,12 +478,12 @@ const AdminCommunityTab = () => {
                   {isCreating ? (
                     <>
                       <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                      Creating Stream...
+                      Creating REAL Google Meet...
                     </>
                   ) : (
                     <>
                       <i className="fas fa-plus-circle me-2"></i>
-                      Create Stream
+                      Create REAL Google Meet
                     </>
                   )}
                 </button>
@@ -538,7 +524,7 @@ const AdminCommunityTab = () => {
                 <div className="d-flex justify-content-between align-items-center">
                   <h5 className="card-title mb-0">
                     <i className="fas fa-video me-2"></i>
-                    {isMyMeeting ? 'Your Live Stream Active' : 'Active Live Stream'}
+                    {isMyMeeting ? 'Your REAL Google Meet Active' : 'Active Google Meet'}
                   </h5>
                   <div className="d-flex align-items-center gap-2">
                     <span className="badge bg-success">
@@ -549,10 +535,10 @@ const AdminCommunityTab = () => {
                       <i className="fas fa-users me-1"></i>
                       {activeMeeting.participants?.length || 0}
                     </span>
-                    {/* 🆕 SEAMLESS JOIN BADGE */}
+                    {/* 🆕 REAL GOOGLE MEET BADGE */}
                     <span className="badge bg-warning">
-                      <i className="fas fa-bolt me-1"></i>
-                      Instant Join
+                      <i className="fab fa-google me-1"></i>
+                      REAL Google Meet
                     </span>
                   </div>
                 </div>
@@ -578,7 +564,7 @@ const AdminCommunityTab = () => {
                       </div>
                     </div>
 
-                    {/* 🆕 UPDATED JOIN BUTTONS WITH SEAMLESS JOIN */}
+                    {/* 🆕 UPDATED JOIN BUTTONS WITH REAL GOOGLE MEET */}
                     <div className="mt-3 d-flex flex-wrap gap-2 align-items-center">
                       {isMyMeeting && (
                         <button 
@@ -590,7 +576,7 @@ const AdminCommunityTab = () => {
                         </button>
                       )}
                       
-                      {/* 🆕 SEAMLESS JOIN BUTTON */}
+                      {/* 🆕 REAL GOOGLE MEET JOIN BUTTON */}
                       <button 
                         className="btn btn-success"
                         onClick={() => handleSeamlessJoin(activeMeeting)}
@@ -599,12 +585,12 @@ const AdminCommunityTab = () => {
                         {isJoining ? (
                           <>
                             <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                            Joining...
+                            Joining REAL Google Meet...
                           </>
                         ) : (
                           <>
-                            <i className="fas fa-bolt me-2"></i>
-                            {isMyMeeting ? 'Host Meeting (Instant)' : 'Join Stream (Instant)'}
+                            <i className="fab fa-google me-2"></i>
+                            {isMyMeeting ? 'Host REAL Google Meet' : 'Join REAL Google Meet'}
                           </>
                         )}
                       </button>
@@ -615,17 +601,24 @@ const AdminCommunityTab = () => {
                           onClick={handleEndMeeting}
                         >
                           <i className="fas fa-stop-circle me-2"></i>
-                          End Stream
+                          End Meet
                         </button>
                       )}
                     </div>
 
-                    {/* 🆕 JOIN LINK INFO */}
+                    {/* 🆕 REAL GOOGLE MEET INFO */}
                     <div className="mt-3 p-3 bg-light rounded">
                       <small className="text-muted">
-                        <i className="fas fa-info-circle me-1 text-info"></i>
-                        <strong>Instant Join Enabled:</strong> Participants can join directly without entering codes
+                        <i className="fas fa-check-circle me-1 text-success"></i>
+                        <strong>REAL Google Meet:</strong> This is an actual Google Meet session created via Google Calendar API
                       </small>
+                      {activeMeeting.meetingCode && (
+                        <div className="mt-2">
+                          <small className="text-muted">
+                            <strong>Meeting Code:</strong> {activeMeeting.meetingCode}
+                          </small>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="col-md-4">
@@ -638,7 +631,7 @@ const AdminCommunityTab = () => {
                       <div className="bg-light rounded p-3">
                         <i className={`fas ${isMyMeeting ? 'fa-crown text-warning' : 'fa-user text-info'} fa-3x mb-2`}></i>
                         <h4 className="mb-0">{isMyMeeting ? 'You' : 'Other'}</h4>
-                        <small className="text-muted">Stream Owner</small>
+                        <small className="text-muted">Meet Owner</small>
                       </div>
                     </div>
                   </div>
@@ -897,11 +890,11 @@ const AdminCommunityTab = () => {
                       className="btn btn-outline-info"
                       onClick={() => {
                         navigator.clipboard.writeText(activeMeeting.meetingLink);
-                        showTemporaryNotification('success', '🔗 Meeting link copied to clipboard!');
+                        showTemporaryNotification('success', '🔗 REAL Google Meet link copied to clipboard!');
                       }}
                     >
                       <i className="fas fa-copy me-2"></i>
-                      Copy Meeting Link
+                      Copy Meet Link
                     </button>
                     <button 
                       className="btn btn-outline-primary"
@@ -930,12 +923,12 @@ const AdminCommunityTab = () => {
                 <div className="card-header bg-warning text-dark">
                   <h5 className="card-title mb-0">
                     <i className="fas fa-plus-circle me-2"></i>
-                    Create Your Own Stream
+                    Create Your Own REAL Google Meet
                   </h5>
                 </div>
                 <div className="card-body">
                   <p className="small text-muted mb-3">
-                    You can create your own live stream even if there's an active meeting.
+                    You can create your own REAL Google Meet even if there's an active meeting.
                   </p>
                   <button 
                     className="btn btn-warning w-100"
@@ -945,12 +938,12 @@ const AdminCommunityTab = () => {
                     {isCreating ? (
                       <>
                         <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                        Creating...
+                        Creating REAL Meet...
                       </>
                     ) : (
                       <>
-                        <i className="fas fa-rocket me-2"></i>
-                        Create New Stream
+                        <i className="fab fa-google me-2"></i>
+                        Create New REAL Meet
                       </>
                     )}
                   </button>
@@ -966,11 +959,11 @@ const AdminCommunityTab = () => {
             <div className="card border-0 shadow-sm">
               <div className="card-body py-5">
                 <div className="mb-4">
-                  <i className="fas fa-video fa-5x text-primary mb-4"></i>
-                  <h2 className="text-primary">Start a Live Stream</h2>
+                  <i className="fab fa-google fa-5x text-primary mb-4"></i>
+                  <h2 className="text-primary">Start a REAL Google Meet</h2>
                   <p className="text-muted lead">
-                    Create a video meeting to connect with your community. 
-                    Share resources, conduct training, and engage with participants in real-time.
+                    Create an actual Google Meet session via Google Calendar API. 
+                    No more "Invalid video call name" errors!
                   </p>
                 </div>
                 
@@ -978,10 +971,10 @@ const AdminCommunityTab = () => {
                   <div className="col-md-4 mb-3">
                     <div className="text-center">
                       <div className="bg-primary bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
-                        <i className="fas fa-bolt fa-2x text-primary"></i>
+                        <i className="fab fa-google fa-2x text-primary"></i>
                       </div>
-                      <h5>Instant Join</h5>
-                      <p className="text-muted small">Participants join seamlessly without codes</p>
+                      <h5>REAL Google Meet</h5>
+                      <p className="text-muted small">Actual Google Meet sessions via Calendar API</p>
                     </div>
                   </div>
                   <div className="col-md-4 mb-3">
@@ -1013,12 +1006,12 @@ const AdminCommunityTab = () => {
                     {isCreating ? (
                       <>
                         <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                        Creating Your Stream...
+                        Creating REAL Google Meet...
                       </>
                     ) : (
                       <>
-                        <i className="fas fa-rocket me-2"></i>
-                        Launch Live Stream
+                        <i className="fab fa-google me-2"></i>
+                        Launch REAL Google Meet
                       </>
                     )}
                   </button>

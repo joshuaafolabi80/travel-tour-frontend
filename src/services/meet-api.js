@@ -307,9 +307,15 @@ class MeetApiService {
     }
   }
 
-  static async joinMeeting(meetingId, userId, userName) {
+  // 🆕 ENHANCED JOIN MEETING - PRESERVES EXISTING FUNCTIONALITY
+  static async joinMeeting(meetingId, userData) {
     try {
-      console.log('🎯 Joining meeting:', { meetingId, userId, userName });
+      console.log('🎯 Enhanced join meeting:', { meetingId, userData });
+      
+      // Handle both old format (userId, userName) and new format (userData object)
+      const userId = typeof userData === 'object' ? (userData?.id || userData?.userId) : userData;
+      const userName = typeof userData === 'object' ? (userData?.name || userData?.username || 'Participant') : 'Participant';
+      
       const response = await fetch(`${API_BASE_URL}/${meetingId}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -321,7 +327,7 @@ class MeetApiService {
       }
       
       const result = await response.json();
-      console.log('✅ Join meeting response:', result);
+      console.log('✅ Enhanced join meeting response:', result);
       return result;
     } catch (error) {
       console.error('❌ Meet API join meeting error:', error);

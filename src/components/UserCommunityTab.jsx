@@ -10,8 +10,11 @@ const UserCommunityTab = () => {
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewingResource, setViewingResource] = useState(null);
+  
+  // 🆕 SEAMLESS JOIN STATE
+  const [isJoining, setIsJoining] = useState(false);
 
-  // PAGINATION & SEARCH STATE
+  // 🆕 PAGINATION & SEARCH STATE
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,64 +28,119 @@ const UserCommunityTab = () => {
     loadActiveMeeting();
   }, []);
 
-  // 🆕 ADD NEW TAB FUNCTIONALITY
-  const handleJoinMeetingInNewTab = async (meeting) => {
+  // 🆕 ENHANCED SEAMLESS JOIN FUNCTION FOR USERS
+  const handleSeamlessJoin = async (meeting) => {
+    if (!meeting) return;
+    
+    setIsJoining(true);
     try {
-      console.log('🎯 User opening Google Meet in new tab...');
+      console.log('🚀 User attempting seamless Google Meet join...');
       
-      // OPEN GOOGLE MEET IN NEW TAB
-      const windowFeatures = [
-        'width=1200,height=800',
-        'left=100,top=100',
-        'scrollbars=yes',
-        'resizable=yes'
-      ].join(',');
+      // Get enhanced join links from backend
+      const joinResponse = await MeetApiService.joinMeeting(meeting.id, userData);
+      
+      if (joinResponse.success) {
+        // 🆕 TRY MULTIPLE JOIN STRATEGIES
+        const joinStrategies = [
+          meeting.directJoinLink || `https://meet.google.com/${meeting.meetingCode}`,
+          meeting.instantJoinLink || `https://meet.google.com/${meeting.meetingCode}?authuser=0`,
+          meeting.meetingLink,
+          `https://meet.google.com/lookup/${meeting.meetingCode}`
+        ];
 
-      const newTab = window.open(
-        meeting.meetingLink, 
-        `google-meet-${meeting.id}`,
-        windowFeatures
-      );
-      
-      if (newTab) {
-        // FOCUS ON THE NEW TAB
-        newTab.focus();
+        // Open new tab
+        const newTab = window.open('', `google-meet-${meeting.id}`);
         
-        // RECORD JOIN ATTEMPT IN DATABASE
-        await MeetApiService.joinMeeting(meeting.id, {
-          userId: userData?.id,
-          userName: userData?.name || userData?.username,
-          action: 'join-new-tab'
-        });
-        
-        console.log('✅ Google Meet opened in new tab for user');
-      } else {
-        // POPUP BLOCKER HANDLING
-        const userAction = confirm(
-          'Popup blocked! Please allow popups for this site and try again, or click OK to copy the meeting link.'
-        );
-        
-        if (userAction) {
+        if (newTab) {
+          let success = false;
+          
+          // Try each strategy
+          for (let i = 0; i < joinStrategies.length; i++) {
+            try {
+              console.log(`🔄 Trying join strategy ${i + 1} for user`);
+              newTab.location.href = joinStrategies[i];
+              
+              // Wait to see if it loads successfully
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              
+              success = true;
+              console.log(`✅ Join strategy ${i + 1} successful for user!`);
+              break;
+              
+            } catch (strategyError) {
+              console.log(`❌ Join strategy ${i + 1} failed for user:`, strategyError);
+              continue;
+            }
+          }
+          
+          if (success) {
+            newTab.focus();
+            console.log('✅ User successfully joined meeting');
+          } else {
+            // Fallback
+            newTab.close();
+            navigator.clipboard.writeText(meeting.meetingLink);
+            alert('🔗 Meeting link copied! Please paste it in a new tab to join.');
+          }
+        } else {
+          // Popup blocked
           navigator.clipboard.writeText(meeting.meetingLink);
-          alert('🔗 Meeting link copied to clipboard!');
+          alert('📢 Popup blocked! Meeting link copied to clipboard. Please paste it in a new tab.');
         }
+      } else {
+        throw new Error(joinResponse.error);
       }
+      
     } catch (error) {
-      console.error('❌ Error opening meeting in new tab:', error);
-      // Fallback
+      console.error('❌ Error in user seamless join:', error);
+      // Ultimate fallback
       window.open(meeting.meetingLink, '_blank', 'noopener,noreferrer');
+    } finally {
+      setIsJoining(false);
     }
+  };
+
+  // 🆕 HELPER FUNCTION TO EXTRACT MEETING CODE
+  const extractMeetingCode = (meetingLink) => {
+    if (!meetingLink) return '';
+    
+    const patterns = [
+      /meet\.google\.com\/([a-z]+-[a-z]+-[a-z]+)/i,
+      /meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})/i,
+      /meet\.google\.com\/([a-zA-Z0-9-]+)/
+    ];
+    
+    for (let pattern of patterns) {
+      const match = meetingLink.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    return '';
   };
 
   const loadActiveMeeting = async () => {
     try {
       setIsRefreshing(true);
       const response = await MeetApiService.getActiveMeeting();
-      console.log('🔍 User - Active meeting response:', response);
+      console.log('🔍 User - Enhanced active meeting response:', response);
       
       if (response.success && response.meeting) {
-        setActiveMeeting(response.meeting);
-        await loadMeetingResources(response.meeting.id);
+        const meeting = response.meeting;
+        
+        // 🆕 ENSURE MEETING HAS ALL REQUIRED LINKS
+        if (!meeting.meetingCode) {
+          meeting.meetingCode = extractMeetingCode(meeting.meetingLink);
+        }
+        if (!meeting.directJoinLink) {
+          meeting.directJoinLink = `https://meet.google.com/${meeting.meetingCode}`;
+        }
+        if (!meeting.instantJoinLink) {
+          meeting.instantJoinLink = `https://meet.google.com/${meeting.meetingCode}?authuser=0`;
+        }
+        
+        setActiveMeeting(meeting);
+        await loadMeetingResources(meeting.id);
       } else {
         setActiveMeeting(null);
         setResources([]);
@@ -110,26 +168,6 @@ const UserCommunityTab = () => {
     }
   };
 
-  const handleJoinMeeting = async () => {
-    if (!activeMeeting || !userData) return;
-
-    try {
-      const joinResponse = await MeetApiService.joinMeeting(
-        activeMeeting.id, 
-        userData.id, 
-        userData.name || userData.username
-      );
-      
-      if (joinResponse.success) {
-        console.log('✅ Successfully joined meeting in system');
-        window.open(activeMeeting.meetingLink, '_blank', 'noopener,noreferrer');
-      }
-    } catch (error) {
-      console.error('Error joining meeting:', error);
-      window.open(activeMeeting.meetingLink, '_blank', 'noopener,noreferrer');
-    }
-  };
-
   const handleViewResource = (resource) => {
     console.log('🔍 User viewing resource:', resource);
     
@@ -147,7 +185,7 @@ const UserCommunityTab = () => {
     await loadActiveMeeting();
   };
 
-  // PAGINATION & SEARCH FUNCTIONS
+  // 🆕 PAGINATION & SEARCH FUNCTIONS
   const filteredResources = resources.filter(resource => {
     const matchesSearch = searchTerm === '' || 
       resource.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -253,10 +291,17 @@ const UserCommunityTab = () => {
                     <i className="fas fa-broadcast-tower me-2"></i>
                     Live Stream Available!
                   </h5>
-                  <span className="badge bg-warning text-dark">
-                    <i className="fas fa-circle me-1"></i>
-                    LIVE NOW
-                  </span>
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="badge bg-warning text-dark">
+                      <i className="fas fa-circle me-1"></i>
+                      LIVE NOW
+                    </span>
+                    {/* 🆕 SEAMLESS JOIN BADGE */}
+                    <span className="badge bg-info">
+                      <i className="fas fa-bolt me-1"></i>
+                      Instant Join
+                    </span>
+                  </div>
                 </div>
               </div>
               <div className="card-body">
@@ -280,21 +325,39 @@ const UserCommunityTab = () => {
                       </span>
                     </div>
 
-                    {/* 🆕 UPDATED JOIN BUTTON - OPENS IN NEW TAB */}
+                    {/* 🆕 UPDATED JOIN BUTTON WITH SEAMLESS JOIN */}
                     <button 
-                      onClick={() => handleJoinMeetingInNewTab(activeMeeting)}
+                      onClick={() => handleSeamlessJoin(activeMeeting)}
                       className="btn btn-success btn-lg"
+                      disabled={isJoining}
                     >
-                      <i className="fas fa-external-link-alt me-2"></i>
-                      Join Live Stream (New Tab)
+                      {isJoining ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                          Joining Stream...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-bolt me-2"></i>
+                          Join Live Stream (Instant)
+                        </>
+                      )}
                     </button>
+
+                    {/* 🆕 JOIN INFO */}
+                    <div className="mt-3 p-3 bg-light rounded">
+                      <small className="text-muted">
+                        <i className="fas fa-info-circle me-1 text-info"></i>
+                        <strong>Instant Join:</strong> Click the button above to join directly without entering codes
+                      </small>
+                    </div>
                   </div>
                   <div className="col-md-4 text-center">
                     <div className="bg-success bg-opacity-10 rounded-circle p-4 d-inline-flex mb-3">
                       <i className="fas fa-video fa-3x text-success"></i>
                     </div>
                     <p className="text-muted small">
-                      Click the button to join the live training session
+                      Click the button to join the live training session instantly
                     </p>
                   </div>
                 </div>
@@ -349,7 +412,7 @@ const UserCommunityTab = () => {
           </div>
 
           <div className="col-lg-4">
-            {/* ENHANCED RESOURCES TABLE */}
+            {/* 🆕 ENHANCED RESOURCES TABLE */}
             <div className="card">
               <div className="card-header bg-primary text-white">
                 <div className="d-flex justify-content-between align-items-center">
@@ -372,7 +435,7 @@ const UserCommunityTab = () => {
                 </div>
               </div>
               <div className="card-body">
-                {/* RESOURCE INFO BANNER */}
+                {/* 🆕 RESOURCE INFO BANNER */}
                 <div className="alert alert-info mb-3">
                   <div className="d-flex align-items-center">
                     <i className="fas fa-info-circle me-2"></i>
@@ -382,7 +445,7 @@ const UserCommunityTab = () => {
                   </div>
                 </div>
 
-                {/* SEARCH AND FILTERS */}
+                {/* 🆕 SEARCH AND FILTERS */}
                 <div className="row mb-3">
                   <div className="col-md-6">
                     <div className="input-group">
@@ -420,7 +483,7 @@ const UserCommunityTab = () => {
                   </div>
                 </div>
 
-                {/* RESOURCES TABLE */}
+                {/* 🆕 RESOURCES TABLE */}
                 {currentResources.length > 0 ? (
                   <>
                     <div className="table-responsive">
@@ -499,7 +562,7 @@ const UserCommunityTab = () => {
                       </table>
                     </div>
 
-                    {/* PAGINATION */}
+                    {/* 🆕 PAGINATION */}
                     {totalPages > 1 && (
                       <nav className="mt-3">
                         <ul className="pagination justify-content-center pagination-sm">
@@ -697,7 +760,7 @@ const UserCommunityTab = () => {
         </div>
       )}
 
-      {/* RESOURCE VIEWER MODAL */}
+      {/* 🆕 RESOURCE VIEWER MODAL */}
       {viewingResource && (
         <ResourceViewer
           resource={viewingResource}

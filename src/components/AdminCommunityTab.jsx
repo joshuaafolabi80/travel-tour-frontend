@@ -17,7 +17,10 @@ const AdminCommunityTab = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewingResource, setViewingResource] = useState(null);
 
-  // PAGINATION & SEARCH STATE
+  // 🆕 SEAMLESS JOIN STATE
+  const [isJoining, setIsJoining] = useState(false);
+
+  // 🆕 PAGINATION & SEARCH STATE
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,80 +34,148 @@ const AdminCommunityTab = () => {
     loadActiveMeeting();
   }, []);
 
-  // 🆕 ADD NEW TAB FUNCTIONALITY
-  const handleJoinMeetingInNewTab = async (meeting) => {
+  // 🆕 ENHANCED SEAMLESS JOIN FUNCTION
+  const handleSeamlessJoin = async (meeting) => {
+    if (!meeting) return;
+    
+    setIsJoining(true);
     try {
-      console.log('🎯 Opening Google Meet in new tab...');
+      console.log('🚀 Attempting seamless Google Meet join...');
       
-      // OPEN GOOGLE MEET IN NEW TAB WITH ENHANCED FEATURES
-      const windowFeatures = [
-        'width=1200,height=800',
-        'left=100,top=100',
-        'scrollbars=yes',
-        'resizable=yes',
-        'toolbar=no',
-        'menubar=no',
-        'location=no',
-        'status=no'
-      ].join(',');
-
-      const newTab = window.open(
-        meeting.meetingLink, 
-        `google-meet-${meeting.id}`,
-        windowFeatures
-      );
+      // Get enhanced join links from backend
+      const joinResponse = await MeetApiService.joinMeeting(meeting.id, userData);
       
-      if (newTab) {
-        // FOCUS ON THE NEW TAB
-        newTab.focus();
-        
-        // RECORD JOIN ATTEMPT IN DATABASE
-        await MeetApiService.joinMeeting(meeting.id, {
-          userId: userData?.id,
-          userName: userData?.name || userData?.username,
-          action: 'join-new-tab'
-        });
-        
-        // SHOW USER-FRIENDLY MESSAGE
-        alert(`🎉 Google Meet opened in new tab! 
-        
-You can now:
-• Switch between Conclave and the meeting using Alt+Tab (Windows) or Cmd+Tab (Mac)
-• Share resources from Conclave while in the meeting
-• Manage participants and continue using all app features
+      if (joinResponse.success) {
+        // 🆕 TRY MULTIPLE JOIN STRATEGIES
+        const joinStrategies = [
+          // Strategy 1: Direct join (most likely to work)
+          meeting.directJoinLink || `https://meet.google.com/${meeting.meetingCode}`,
+          
+          // Strategy 2: Instant join with auth parameter
+          meeting.instantJoinLink || `https://meet.google.com/${meeting.meetingCode}?authuser=0`,
+          
+          // Strategy 3: Original meeting link
+          meeting.meetingLink,
+          
+          // Strategy 4: Lookup URL
+          `https://meet.google.com/lookup/${meeting.meetingCode}`
+        ];
 
-The meeting will continue running in the background.`);
-      } else {
-        // COMPREHENSIVE POPUP BLOCKER HANDLING
-        const userAction = confirm(
-          'Popup blocked! Please:\n\n1. Allow popups for this site\n2. Or click the link below to open manually\n\nClick OK to copy the meeting link to clipboard.'
-        );
+        // Open new tab
+        const newTab = window.open('', `google-meet-${meeting.id}`);
         
-        if (userAction) {
-          navigator.clipboard.writeText(meeting.meetingLink);
-          alert('🔗 Meeting link copied! Please paste it in a new tab to join.');
+        if (newTab) {
+          let success = false;
+          
+          // Try each strategy
+          for (let i = 0; i < joinStrategies.length; i++) {
+            try {
+              console.log(`🔄 Trying join strategy ${i + 1}:`, joinStrategies[i]);
+              newTab.location.href = joinStrategies[i];
+              
+              // Wait to see if it loads successfully
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              
+              // If we reach here without error, strategy worked
+              success = true;
+              console.log(`✅ Join strategy ${i + 1} successful!`);
+              break;
+              
+            } catch (strategyError) {
+              console.log(`❌ Join strategy ${i + 1} failed:`, strategyError);
+              continue;
+            }
+          }
+          
+          if (success) {
+            newTab.focus();
+            showTemporaryNotification('success', '🎉 Successfully joined meeting!');
+          } else {
+            // Fallback: let user choose
+            newTab.close();
+            const userChoice = confirm(
+              'Unable to auto-join. We have copied the meeting link to your clipboard. Click OK to open it manually.'
+            );
+            if (userChoice) {
+              navigator.clipboard.writeText(meeting.meetingLink);
+              window.open(meeting.meetingLink, '_blank', 'noopener,noreferrer');
+            }
+          }
+        } else {
+          // Popup blocked
+          handlePopupBlocked(meeting);
         }
+      } else {
+        throw new Error(joinResponse.error);
       }
+      
     } catch (error) {
-      console.error('❌ Error opening meeting in new tab:', error);
-      // Fallback: open in current tab
+      console.error('❌ Error in seamless join:', error);
+      // Ultimate fallback
       window.open(meeting.meetingLink, '_blank', 'noopener,noreferrer');
+      showTemporaryNotification('info', '🔗 Opening meeting link...');
+    } finally {
+      setIsJoining(false);
     }
+  };
+
+  // 🆕 POPUP BLOCKER HANDLER
+  const handlePopupBlocked = (meeting) => {
+    const userAction = confirm(
+      '📢 Popup blocked! Please:\n\n1. Allow popups for this site\n2. Or click OK to copy the meeting link\n\nWe recommend allowing popups for the best experience.'
+    );
+    
+    if (userAction) {
+      navigator.clipboard.writeText(meeting.meetingLink);
+      showTemporaryNotification('success', '🔗 Meeting link copied! Paste it in a new tab.');
+    }
+  };
+
+  // 🆕 HELPER FUNCTION TO EXTRACT MEETING CODE
+  const extractMeetingCode = (meetingLink) => {
+    if (!meetingLink) return '';
+    
+    const patterns = [
+      /meet\.google\.com\/([a-z]+-[a-z]+-[a-z]+)/i,
+      /meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})/i,
+      /meet\.google\.com\/([a-zA-Z0-9-]+)/
+    ];
+    
+    for (let pattern of patterns) {
+      const match = meetingLink.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    return '';
   };
 
   const loadActiveMeeting = async () => {
     try {
       setIsRefreshing(true);
       const response = await MeetApiService.getActiveMeeting();
-      console.log('🔍 Active meeting response:', response);
+      console.log('🔍 Enhanced active meeting response:', response);
       
       if (response.success && response.meeting) {
-        setActiveMeeting(response.meeting);
+        const meeting = response.meeting;
         
-        const isAdminMeeting = response.meeting.adminId === userData?.id;
+        // 🆕 ENSURE MEETING HAS ALL REQUIRED LINKS
+        if (!meeting.meetingCode) {
+          meeting.meetingCode = extractMeetingCode(meeting.meetingLink);
+        }
+        if (!meeting.directJoinLink) {
+          meeting.directJoinLink = `https://meet.google.com/${meeting.meetingCode}`;
+        }
+        if (!meeting.instantJoinLink) {
+          meeting.instantJoinLink = `https://meet.google.com/${meeting.meetingCode}?authuser=0`;
+        }
+        
+        setActiveMeeting(meeting);
+        
+        const isAdminMeeting = meeting.adminId === userData?.id;
         setIsMyMeeting(isAdminMeeting);
         
-        const resourcesResponse = await MeetApiService.getMeetingResources(response.meeting.id);
+        const resourcesResponse = await MeetApiService.getMeetingResources(meeting.id);
         if (resourcesResponse.success) {
           setResources(resourcesResponse.resources || []);
         }
@@ -131,7 +202,7 @@ The meeting will continue running in the background.`);
     setNotification({ type, message });
     setTimeout(() => {
       setNotification({ type: '', message: '' });
-    }, 3000);
+    }, 5000);
   };
 
   const createMeeting = async () => {
@@ -149,12 +220,12 @@ The meeting will continue running in the background.`);
         userData.name || userData.username
       );
 
-      console.log('🔍 Create meeting response:', response);
+      console.log('🔍 Enhanced create meeting response:', response);
 
       if (response.success) {
         setActiveMeeting(response.meeting);
         setIsMyMeeting(true);
-        showTemporaryNotification('success', '🎉 Meeting created successfully!');
+        showTemporaryNotification('success', '🎉 Meeting created with seamless join!');
         
         if (response.meeting.id) {
           const resourcesResponse = await MeetApiService.getMeetingResources(response.meeting.id);
@@ -275,7 +346,7 @@ The meeting will continue running in the background.`);
     setNotification({ type: '', message: '' });
   };
 
-  // PAGINATION & SEARCH FUNCTIONS
+  // 🆕 PAGINATION & SEARCH FUNCTIONS
   const filteredResources = resources.filter(resource => {
     const matchesSearch = searchTerm === '' || 
       resource.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -456,6 +527,11 @@ The meeting will continue running in the background.`);
                       <i className="fas fa-users me-1"></i>
                       {activeMeeting.participants?.length || 0}
                     </span>
+                    {/* 🆕 SEAMLESS JOIN BADGE */}
+                    <span className="badge bg-warning">
+                      <i className="fas fa-bolt me-1"></i>
+                      Instant Join
+                    </span>
                   </div>
                 </div>
               </div>
@@ -480,7 +556,7 @@ The meeting will continue running in the background.`);
                       </div>
                     </div>
 
-                    {/* 🆕 UPDATED JOIN BUTTONS SECTION */}
+                    {/* 🆕 UPDATED JOIN BUTTONS WITH SEAMLESS JOIN */}
                     <div className="mt-3 d-flex flex-wrap gap-2 align-items-center">
                       {isMyMeeting && (
                         <button 
@@ -492,13 +568,23 @@ The meeting will continue running in the background.`);
                         </button>
                       )}
                       
-                      {/* 🆕 UPDATED JOIN BUTTON - OPENS IN NEW TAB */}
+                      {/* 🆕 SEAMLESS JOIN BUTTON */}
                       <button 
                         className="btn btn-success"
-                        onClick={() => handleJoinMeetingInNewTab(activeMeeting)}
+                        onClick={() => handleSeamlessJoin(activeMeeting)}
+                        disabled={isJoining}
                       >
-                        <i className="fas fa-external-link-alt me-2"></i>
-                        {isMyMeeting ? 'Host Meeting (New Tab)' : 'Join Stream (New Tab)'}
+                        {isJoining ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                            Joining...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-bolt me-2"></i>
+                            {isMyMeeting ? 'Host Meeting (Instant)' : 'Join Stream (Instant)'}
+                          </>
+                        )}
                       </button>
                       
                       {isMyMeeting && (
@@ -510,6 +596,14 @@ The meeting will continue running in the background.`);
                           End Stream
                         </button>
                       )}
+                    </div>
+
+                    {/* 🆕 JOIN LINK INFO */}
+                    <div className="mt-3 p-3 bg-light rounded">
+                      <small className="text-muted">
+                        <i className="fas fa-info-circle me-1 text-info"></i>
+                        <strong>Instant Join Enabled:</strong> Participants can join directly without entering codes
+                      </small>
                     </div>
                   </div>
                   <div className="col-md-4">
@@ -530,7 +624,7 @@ The meeting will continue running in the background.`);
               </div>
             </div>
 
-            {/* ENHANCED RESOURCES TABLE */}
+            {/* 🆕 ENHANCED RESOURCES TABLE */}
             {isMyMeeting && (
               <div className="card mb-4">
                 <div className="card-header bg-info text-white">
@@ -546,7 +640,7 @@ The meeting will continue running in the background.`);
                   </div>
                 </div>
                 <div className="card-body">
-                  {/* SEARCH AND FILTERS */}
+                  {/* 🆕 SEARCH AND FILTERS */}
                   <div className="row mb-3">
                     <div className="col-md-6">
                       <div className="input-group">
@@ -591,7 +685,7 @@ The meeting will continue running in the background.`);
                     </div>
                   </div>
 
-                  {/* RESOURCES TABLE */}
+                  {/* 🆕 RESOURCES TABLE */}
                   {currentResources.length > 0 ? (
                     <>
                       <div className="table-responsive">
@@ -684,7 +778,7 @@ The meeting will continue running in the background.`);
                         </table>
                       </div>
 
-                      {/* PAGINATION */}
+                      {/* 🆕 PAGINATION */}
                       {totalPages > 1 && (
                         <nav className="mt-3">
                           <ul className="pagination justify-content-center">
@@ -862,10 +956,10 @@ The meeting will continue running in the background.`);
                   <div className="col-md-4 mb-3">
                     <div className="text-center">
                       <div className="bg-primary bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
-                        <i className="fas fa-link fa-2x text-primary"></i>
+                        <i className="fas fa-bolt fa-2x text-primary"></i>
                       </div>
-                      <h5>Instant Meeting</h5>
-                      <p className="text-muted small">Generate video meeting link instantly</p>
+                      <h5>Instant Join</h5>
+                      <p className="text-muted small">Participants join seamlessly without codes</p>
                     </div>
                   </div>
                   <div className="col-md-4 mb-3">
@@ -976,7 +1070,7 @@ The meeting will continue running in the background.`);
         onClose={() => setShowExtensionModal(false)}
       />
 
-      {/* RESOURCE VIEWER MODAL */}
+      {/* 🆕 RESOURCE VIEWER MODAL */}
       {viewingResource && (
         <ResourceViewer
           resource={viewingResource}

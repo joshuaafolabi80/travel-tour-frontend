@@ -46,43 +46,59 @@ const AdminCommunityTab = () => {
       const joinResponse = await MeetApiService.joinMeeting(meeting.id, userData);
       
       if (joinResponse.success) {
-        // 🆕 TRY MULTIPLE JOIN STRATEGIES
+        // 🆕 IMPROVED JOIN STRATEGIES WITH BETTER ERROR HANDLING
         const joinStrategies = [
-          // Strategy 1: Direct join (most likely to work)
+          // Strategy 1: Direct join with meeting code (most reliable)
           meeting.directJoinLink || `https://meet.google.com/${meeting.meetingCode}`,
           
           // Strategy 2: Instant join with auth parameter
           meeting.instantJoinLink || `https://meet.google.com/${meeting.meetingCode}?authuser=0`,
           
-          // Strategy 3: Original meeting link
-          meeting.meetingLink,
+          // Strategy 3: Original meeting link from Google Calendar
+          meeting.meetingLink || meeting.meetLink,
           
-          // Strategy 4: Lookup URL
+          // Strategy 4: Lookup URL (alternative method)
           `https://meet.google.com/lookup/${meeting.meetingCode}`
         ];
+
+        console.log('🔗 Available join strategies:', joinStrategies);
 
         // Open new tab
         const newTab = window.open('', `google-meet-${meeting.id}`);
         
         if (newTab) {
           let success = false;
+          let lastError = null;
           
-          // Try each strategy
+          // Try each strategy with better error handling
           for (let i = 0; i < joinStrategies.length; i++) {
             try {
               console.log(`🔄 Trying join strategy ${i + 1}:`, joinStrategies[i]);
+              
+              // Clear any previous content
+              newTab.document.write('Loading Google Meet...');
+              
+              // Navigate to the join URL
               newTab.location.href = joinStrategies[i];
               
-              // Wait to see if it loads successfully
-              await new Promise(resolve => setTimeout(resolve, 1500));
+              // Wait longer to see if it loads successfully
+              await new Promise(resolve => setTimeout(resolve, 3000));
               
-              // If we reach here without error, strategy worked
-              success = true;
-              console.log(`✅ Join strategy ${i + 1} successful!`);
-              break;
+              // Check if we're still on the same page (no redirect to error page)
+              if (!newTab.location.href.includes('whoops') && 
+                  !newTab.location.href.includes('error') &&
+                  !newTab.document.title.includes('Invalid')) {
+                success = true;
+                console.log(`✅ Join strategy ${i + 1} successful!`);
+                break;
+              } else {
+                console.log(`❌ Join strategy ${i + 1} redirected to error page`);
+                lastError = `Redirected to: ${newTab.location.href}`;
+              }
               
             } catch (strategyError) {
               console.log(`❌ Join strategy ${i + 1} failed:`, strategyError);
+              lastError = strategyError.message;
               continue;
             }
           }
@@ -91,14 +107,14 @@ const AdminCommunityTab = () => {
             newTab.focus();
             showTemporaryNotification('success', '🎉 Successfully joined meeting!');
           } else {
-            // Fallback: let user choose
+            // Fallback: let user choose with better error info
             newTab.close();
             const userChoice = confirm(
-              'Unable to auto-join. We have copied the meeting link to your clipboard. Click OK to open it manually.'
+              `Unable to auto-join Google Meet.\n\nError: ${lastError || 'Unknown error'}\n\nWe have copied the meeting link to your clipboard. Click OK to open it manually, or Cancel to stay here.`
             );
             if (userChoice) {
-              navigator.clipboard.writeText(meeting.meetingLink);
-              window.open(meeting.meetingLink, '_blank', 'noopener,noreferrer');
+              navigator.clipboard.writeText(meeting.meetingLink || meeting.meetLink);
+              window.open(meeting.meetingLink || meeting.meetLink, '_blank', 'noopener,noreferrer');
             }
           }
         } else {
@@ -106,14 +122,20 @@ const AdminCommunityTab = () => {
           handlePopupBlocked(meeting);
         }
       } else {
-        throw new Error(joinResponse.error);
+        throw new Error(joinResponse.error || 'Failed to get join links');
       }
       
     } catch (error) {
       console.error('❌ Error in seamless join:', error);
-      // Ultimate fallback
-      window.open(meeting.meetingLink, '_blank', 'noopener,noreferrer');
-      showTemporaryNotification('info', '🔗 Opening meeting link...');
+      
+      // Ultimate fallback with better error reporting
+      showTemporaryNotification('error', `❌ Failed to join: ${error.message}`);
+      
+      // Still try to open the meeting link
+      setTimeout(() => {
+        window.open(meeting.meetingLink || meeting.meetLink, '_blank', 'noopener,noreferrer');
+      }, 1000);
+      
     } finally {
       setIsJoining(false);
     }

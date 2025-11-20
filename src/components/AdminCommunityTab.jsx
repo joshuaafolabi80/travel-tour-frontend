@@ -17,6 +17,10 @@ const AdminCommunityTab = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewingResource, setViewingResource] = useState(null);
   const [isJoining, setIsJoining] = useState(false);
+  const [hostHasJoined, setHostHasJoined] = useState(false);
+
+  // 🎯 PERMANENT GOOGLE MEET LINK
+  const PERMANENT_MEET_LINK = "https://meet.google.com/moc-zgvj-jfn";
 
   // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
@@ -32,76 +36,81 @@ const AdminCommunityTab = () => {
     loadActiveMeeting();
   }, []);
 
-  // Join Live Stream
-  const handleJoinStream = async (meeting) => {
-    if (!meeting) return;
+  // 🎯 ADMIN JOINS FIRST - THEN USERS CAN JOIN
+  const handleAdminJoinFirst = async () => {
+    if (!activeMeeting) return;
     
     setIsJoining(true);
     try {
-      console.log('🎯 Joining live stream...');
+      console.log('🎯 Admin joining first...');
       
-      // Use the actual meeting link
-      const streamLink = meeting.meetingLink || meeting.meetLink || meeting.directJoinLink;
+      const streamLink = activeMeeting.meetingLink || activeMeeting.meetLink || PERMANENT_MEET_LINK;
       
       if (!streamLink) {
         throw new Error('No valid stream link found');
       }
 
-      console.log('🔗 Using stream link:', streamLink);
+      console.log('🔗 Admin using stream link:', streamLink);
 
       // Open in new tab
-      const newTab = window.open(streamLink, `conclave-stream-${meeting.id}`);
+      const newTab = window.open(streamLink, `conclave-admin-stream`);
       
       if (newTab) {
         newTab.focus();
         
-        // Track join attempt
-        await MeetApiService.joinMeeting(meeting.id, userData);
+        // Track admin join
+        await MeetApiService.joinMeeting(activeMeeting.id, userData);
         
-        console.log('✅ Stream opened successfully');
-        showTemporaryNotification('success', '🎉 Opening live stream...');
+        console.log('✅ Admin joined successfully');
+        setHostHasJoined(true);
+        showTemporaryNotification('success', '✅ You have joined as host! Users can now join the meeting.');
         
-        // Check for errors after delay
-        setTimeout(() => {
-          try {
-            if (newTab.location.href.includes('whoops') || 
-                newTab.location.href.includes('error') ||
-                newTab.document.title.includes('Invalid')) {
-              console.error('❌ Stream error detected');
-              newTab.close();
-              showTemporaryNotification('error', '❌ Stream error. Please try again.');
-            }
-          } catch (error) {
-            console.log('🔒 Cannot check tab URL (normal)');
-          }
-        }, 3000);
-        
+        // Update meeting status to show host has joined
+        if (activeMeeting.id) {
+          await MeetApiService.updateMeetingStatus(activeMeeting.id, 'host_joined');
+        }
+
       } else {
         // Popup blocked
         const userAction = confirm(
-          `📢 Popup blocked!\n\nPlease:\n1. Allow popups for this site\n2. Or click OK to copy the stream link\n\nStream: ${meeting.title}`
+          `📢 Popup blocked!\n\nPlease:\n1. Allow popups for this site\n2. Or click OK to copy the stream link`
         );
         
         if (userAction && streamLink) {
           navigator.clipboard.writeText(streamLink);
-          showTemporaryNotification('success', '🔗 Stream link copied! Paste it in your browser.');
+          showTemporaryNotification('success', '🔗 Stream link copied! Paste it in your browser to join as host.');
         }
       }
       
     } catch (error) {
-      console.error('❌ Join error:', error);
-      showTemporaryNotification('error', `❌ Failed to join stream: ${error.message}`);
-      
-      // Fallback
-      const fallbackLink = meeting.meetingLink || meeting.meetLink;
-      if (fallbackLink) {
-        setTimeout(() => {
-          window.open(fallbackLink, '_blank', 'noopener,noreferrer');
-        }, 1000);
-      }
-      
+      console.error('❌ Admin join error:', error);
+      showTemporaryNotification('error', `❌ Failed to join: ${error.message}`);
     } finally {
       setIsJoining(false);
+    }
+  };
+
+  // Join Webinar Room (for users after host has joined)
+  const handleJoinWebinarRoom = () => {
+    console.log('🎯 Joining Webinar Room:', PERMANENT_MEET_LINK);
+    
+    // Directly open the permanent Google Meet link
+    const newTab = window.open(PERMANENT_MEET_LINK, 'conclave-webinar-room');
+    
+    if (newTab) {
+      newTab.focus();
+      console.log('✅ Webinar Room opened successfully');
+      showTemporaryNotification('info', '🌐 Opening webinar room...');
+    } else {
+      // Popup blocked - fallback
+      const userAction = confirm(
+        '📢 Popup blocked!\n\nPlease click OK to copy the meeting link, then paste it in your browser.'
+      );
+      
+      if (userAction) {
+        navigator.clipboard.writeText(PERMANENT_MEET_LINK);
+        showTemporaryNotification('success', '🔗 Meeting link copied! Paste it in your browser.');
+      }
     }
   };
 
@@ -145,6 +154,9 @@ const AdminCommunityTab = () => {
         const isAdminMeeting = meeting.adminId === userData?.id;
         setIsMyMeeting(isAdminMeeting);
         
+        // Check if host has joined
+        setHostHasJoined(meeting.status === 'host_joined');
+        
         const resourcesResponse = await MeetApiService.getMeetingResources(meeting.id);
         if (resourcesResponse.success) {
           setResources(resourcesResponse.resources || []);
@@ -153,6 +165,7 @@ const AdminCommunityTab = () => {
         setActiveMeeting(null);
         setResources([]);
         setIsMyMeeting(false);
+        setHostHasJoined(false);
       }
     } catch (error) {
       console.error('Error loading active meeting:', error);
@@ -185,8 +198,8 @@ const AdminCommunityTab = () => {
     try {
       const response = await MeetApiService.createMeeting(
         userData.id, 
-        'The Conclave Academy Live Stream',
-        'Join our community training session',
+        'The Conclave Academy - Webinar Room',
+        'Join our dedicated webinar room for live training sessions',
         userData.name || userData.username
       );
 
@@ -195,7 +208,8 @@ const AdminCommunityTab = () => {
       if (response.success) {
         setActiveMeeting(response.meeting);
         setIsMyMeeting(true);
-        showTemporaryNotification('success', '🎉 Live stream created successfully!');
+        setHostHasJoined(false); // Host hasn't joined yet
+        showTemporaryNotification('success', '🎉 Webinar room created! Click "Join as Host" to start the session.');
         
         if (response.meeting.id) {
           const resourcesResponse = await MeetApiService.getMeetingResources(response.meeting.id);
@@ -206,7 +220,7 @@ const AdminCommunityTab = () => {
       } else {
         setNotification({ 
           type: 'error', 
-          message: response.error || 'Failed to create live stream' 
+          message: response.error || 'Failed to create webinar room' 
         });
       }
     } catch (error) {
@@ -246,36 +260,14 @@ const AdminCommunityTab = () => {
         setActiveMeeting(null);
         setResources([]);
         setIsMyMeeting(false);
-        showTemporaryNotification('success', '🛑 Meeting ended successfully!');
+        setHostHasJoined(false);
+        showTemporaryNotification('success', '🛑 Webinar session ended successfully!');
       } else {
         setNotification({ type: 'error', message: response.error || 'Failed to end meeting' });
       }
     } catch (error) {
       console.error('Error ending meeting:', error);
       setNotification({ type: 'error', message: 'Failed to end meeting' });
-    }
-  };
-
-  const handleClearMeeting = async () => {
-    try {
-      console.log('🧹 Clearing meetings...');
-      
-      const response = await MeetApiService.clearAllMeetings();
-      
-      if (response.success) {
-        setActiveMeeting(null);
-        setResources([]);
-        setIsMyMeeting(false);
-        showTemporaryNotification('success', '🧹 All meetings cleared successfully!');
-      } else {
-        setNotification({ type: 'error', message: response.error || 'Failed to clear meetings' });
-      }
-    } catch (error) {
-      console.error('❌ Error clearing meetings:', error);
-      setNotification({ 
-        type: 'error', 
-        message: `Failed to clear meetings: ${error.message}` 
-      });
     }
   };
 
@@ -442,12 +434,12 @@ const AdminCommunityTab = () => {
                   {isCreating ? (
                     <>
                       <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                      Creating Live Stream...
+                      Creating Webinar Room...
                     </>
                   ) : (
                     <>
                       <i className="fas fa-plus-circle me-2"></i>
-                      Start Live Stream
+                      Create Webinar Room
                     </>
                   )}
                 </button>
@@ -457,520 +449,368 @@ const AdminCommunityTab = () => {
         </div>
       </div>
 
-      {/* Active Meeting Section */}
-      {activeMeeting ? (
-        <div className="row">
-          <div className="col-12">
-            {!isMyMeeting && (
-              <div className="alert alert-warning mb-4">
-                <div className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <i className="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Notice:</strong> There's already an active stream created by another admin.
-                  </div>
-                  <button 
-                    className="btn btn-outline-danger btn-sm"
-                    onClick={handleClearMeeting}
-                    title="Clear all active meetings"
-                  >
-                    <i className="fas fa-times me-1"></i>
-                    Clear Stream
-                  </button>
+      {/* PERMANENT WEBINAR ROOM SECTION */}
+      <div className="row mb-4">
+        <div className="col-12">
+          <div className="card border-success">
+            <div className="card-header bg-success text-white">
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="card-title mb-0">
+                  <i className="fas fa-video me-2"></i>
+                  The Conclave Academy - Webinar Room
+                </h5>
+                <div className="d-flex align-items-center gap-2">
+                  <span className="badge bg-warning text-dark">
+                    <i className="fas fa-home me-1"></i>
+                    PERMANENT ROOM
+                  </span>
+                  {hostHasJoined && (
+                    <span className="badge bg-info">
+                      <i className="fas fa-check-circle me-1"></i>
+                      HOST JOINED
+                    </span>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
-
-          <div className="col-lg-8">
-            {/* Meeting Info Card */}
-            <div className="card mb-4">
-              <div className="card-header bg-primary text-white">
-                <div className="d-flex justify-content-between align-items-center">
-                  <h5 className="card-title mb-0">
-                    <i className="fas fa-video me-2"></i>
-                    {isMyMeeting ? 'Your Live Stream Active' : 'Active Live Stream'}
-                  </h5>
-                  <div className="d-flex align-items-center gap-2">
-                    <span className="badge bg-success">
-                      <i className="fas fa-circle me-1"></i>
-                      LIVE
+            </div>
+            <div className="card-body">
+              <div className="row align-items-center">
+                <div className="col-md-8">
+                  <h3 className="text-success mb-3">Webinar Room Control Panel</h3>
+                  <p className="text-muted mb-3">
+                    Manage your dedicated webinar room for live training sessions. 
+                    As host, you must join first before participants can enter.
+                  </p>
+                  
+                  <div className="d-flex flex-wrap gap-2 mb-3">
+                    <span className="badge bg-primary">
+                      <i className="fas fa-user-shield me-1"></i>
+                      Host Control
                     </span>
                     <span className="badge bg-info">
+                      <i className="fas fa-clock me-1"></i>
+                      Open 24/7
+                    </span>
+                    <span className="badge bg-secondary">
                       <i className="fas fa-users me-1"></i>
-                      {activeMeeting.participants?.length || 0}
+                      Secure Access
                     </span>
                   </div>
-                </div>
-              </div>
-              <div className="card-body">
-                <div className="row">
-                  <div className="col-md-8">
-                    <h4 className="text-primary">{activeMeeting.title}</h4>
-                    <p className="text-muted">{activeMeeting.description}</p>
-                    
-                    <div className="row mt-3">
-                      <div className="col-sm-6">
-                        <small className="text-muted">Started</small>
-                        <p className="mb-0 fw-semibold">
-                          {new Date(activeMeeting.startTime).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="col-sm-6">
-                        <small className="text-muted">Host</small>
-                        <p className="mb-0 fw-semibold">
-                          {activeMeeting.adminName || 'Admin'}
-                        </p>
-                      </div>
-                    </div>
 
-                    {/* Join Buttons */}
-                    <div className="mt-3 d-flex flex-wrap gap-2 align-items-center">
-                      {isMyMeeting && (
-                        <button 
-                          className="btn btn-info"
-                          onClick={() => setShowShareModal(true)}
-                        >
-                          <i className="fas fa-share-alt me-2"></i>
-                          Share Resources
-                        </button>
-                      )}
-                      
+                  {/* Host Join Button */}
+                  {activeMeeting && isMyMeeting && !hostHasJoined && (
+                    <div className="mb-3">
                       <button 
-                        className="btn btn-success"
-                        onClick={() => handleJoinStream(activeMeeting)}
+                        onClick={handleAdminJoinFirst}
+                        className="btn btn-success btn-lg"
                         disabled={isJoining}
                       >
                         {isJoining ? (
                           <>
                             <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                            Joining Stream...
+                            Joining as Host...
                           </>
                         ) : (
                           <>
-                            <i className="fas fa-play-circle me-2"></i>
-                            {isMyMeeting ? 'Host Stream' : 'Join Live Stream'}
+                            <i className="fas fa-crown me-2"></i>
+                            Join as Host First
                           </>
                         )}
                       </button>
-                      
-                      {isMyMeeting && (
-                        <button 
-                          className="btn btn-outline-danger"
-                          onClick={handleEndMeeting}
-                        >
-                          <i className="fas fa-stop-circle me-2"></i>
-                          End Stream
-                        </button>
-                      )}
+                      <div className="mt-2">
+                        <small className="text-muted">
+                          <i className="fas fa-info-circle me-1 text-info"></i>
+                          You must join first before participants can enter the meeting
+                        </small>
+                      </div>
                     </div>
+                  )}
 
-                    {/* Stream Info */}
-                    <div className="mt-3 p-3 bg-light rounded">
-                      <small className="text-muted">
-                        <i className="fas fa-info-circle me-1 text-info"></i>
-                        Participants can join directly without entering codes
-                      </small>
-                    </div>
-                  </div>
-                  <div className="col-md-4">
-                    <div className="text-center">
-                      <div className="bg-light rounded p-3 mb-3">
-                        <i className="fas fa-users fa-3x text-primary mb-2"></i>
-                        <h4 className="mb-0">{activeMeeting.participants?.length || 0}</h4>
-                        <small className="text-muted">Participants</small>
+                  {hostHasJoined && (
+                    <div className="mb-3">
+                      <div className="alert alert-success mb-3">
+                        <i className="fas fa-check-circle me-2"></i>
+                        <strong>You're in the meeting!</strong> Participants can now join the webinar room.
                       </div>
-                      <div className="bg-light rounded p-3">
-                        <i className={`fas ${isMyMeeting ? 'fa-crown text-warning' : 'fa-user text-info'} fa-3x mb-2`}></i>
-                        <h4 className="mb-0">{isMyMeeting ? 'You' : 'Other'}</h4>
-                        <small className="text-muted">Stream Host</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Resources Table */}
-            {isMyMeeting && (
-              <div className="card mb-4">
-                <div className="card-header bg-info text-white">
-                  <div className="d-flex justify-content-between align-items-center">
-                    <h5 className="card-title mb-0">
-                      <i className="fas fa-share-alt me-2"></i>
-                      Shared Resources ({resources.length})
-                    </h5>
-                    <span className="badge bg-light text-info">
-                      <i className="fas fa-database me-1"></i>
-                      Permanent Storage
-                    </span>
-                  </div>
-                </div>
-                <div className="card-body">
-                  {/* Search and Filters */}
-                  <div className="row mb-3">
-                    <div className="col-md-6">
-                      <div className="input-group">
-                        <span className="input-group-text">
-                          <i className="fas fa-search"></i>
-                        </span>
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Search by name, description, or uploader..."
-                          value={searchTerm}
-                          onChange={(e) => {
-                            setSearchTerm(e.target.value);
-                            setCurrentPage(1);
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div className="col-md-3">
-                      <select
-                        className="form-select"
-                        value={searchType}
-                        onChange={(e) => {
-                          setSearchType(e.target.value);
-                          setCurrentPage(1);
-                        }}
+                      <button 
+                        onClick={handleJoinWebinarRoom}
+                        className="btn btn-outline-success me-2"
                       >
-                        <option value="all">All Types</option>
-                        <option value="text">Text</option>
-                        <option value="link">Link</option>
-                        <option value="document">Document</option>
-                        <option value="pdf">PDF</option>
-                        <option value="image">Image</option>
-                      </select>
+                        <i className="fas fa-door-open me-2"></i>
+                        Re-join Webinar Room
+                      </button>
+                      <button 
+                        className="btn btn-outline-primary me-2"
+                        onClick={() => setShowShareModal(true)}
+                      >
+                        <i className="fas fa-share-alt me-2"></i>
+                        Share Resources
+                      </button>
                     </div>
-                    <div className="col-md-3">
-                      <div className="d-flex gap-2">
-                        <span className="text-muted small align-self-center">
-                          {sortedResources.length} items
-                        </span>
-                      </div>
-                    </div>
+                  )}
+
+                  {/* Meeting Info */}
+                  <div className="mt-3 p-3 bg-light rounded">
+                    <small className="text-muted">
+                      <i className="fas fa-info-circle me-1 text-info"></i>
+                      Video call link: <strong>{PERMANENT_MEET_LINK}</strong>
+                    </small>
                   </div>
-
-                  {/* Resources Table */}
-                  {currentResources.length > 0 ? (
-                    <>
-                      <div className="table-responsive">
-                        <table className="table table-hover">
-                          <thead className="table-light">
-                            <tr>
-                              <th 
-                                style={{ cursor: 'pointer', width: '35%' }}
-                                onClick={() => handleSort('title')}
-                              >
-                                Resource
-                                {sortField === 'title' && (
-                                  <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                                )}
-                              </th>
-                              <th style={{ width: '15%' }}>Type</th>
-                              <th style={{ width: '25%' }}>Details</th>
-                              <th style={{ width: '15%' }}>Date</th>
-                              <th style={{ width: '10%' }}>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {currentResources.map((resource) => (
-                              <tr key={resource.id}>
-                                <td>
-                                  <div className="d-flex align-items-center">
-                                    <i className={`${getResourceIcon(resource.resourceType || resource.type)} me-2`}></i>
-                                    <div>
-                                      <div className="fw-semibold text-primary">
-                                        {resource.title}
-                                      </div>
-                                      <small className="text-muted">
-                                        by {resource.uploadedByName || 'Unknown'}
-                                      </small>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td>
-                                  <span className={`badge ${
-                                    (resource.resourceType || resource.type) === 'link' ? 'bg-primary' :
-                                    (resource.resourceType || resource.type) === 'document' ? 'bg-info' :
-                                    (resource.resourceType || resource.type) === 'pdf' ? 'bg-danger' :
-                                    (resource.resourceType || resource.type) === 'image' ? 'bg-success' : 'bg-secondary'
-                                  }`}>
-                                    {resource.resourceType || resource.type}
-                                  </span>
-                                </td>
-                                <td>
-                                  <div className="small text-muted">
-                                    {resource.description || resource.content?.substring(0, 50)}
-                                    {resource.content && resource.content.length > 50 && '...'}
-                                    {resource.fileSize && (
-                                      <div className="mt-1">
-                                        <i className="fas fa-hdd me-1"></i>
-                                        {formatFileSize(resource.fileSize)}
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                                <td>
-                                  <small className="text-muted">
-                                    {formatDate(resource.createdAt || resource.sharedAt)}
-                                  </small>
-                                </td>
-                                <td>
-                                  <div className="btn-group btn-group-sm">
-                                    <button
-                                      className="btn btn-outline-primary"
-                                      onClick={() => handleViewResource(resource)}
-                                      title="View Resource"
-                                    >
-                                      <i className="fas fa-eye"></i>
-                                    </button>
-                                    <button
-                                      className="btn btn-outline-danger"
-                                      onClick={() => {
-                                        if (window.confirm('Are you sure you want to delete this resource? This action cannot be undone.')) {
-                                          handleDeleteResource(resource.id);
-                                        }
-                                      }}
-                                      title="Delete Resource"
-                                    >
-                                      <i className="fas fa-trash"></i>
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Pagination */}
-                      {totalPages > 1 && (
-                        <nav className="mt-3">
-                          <ul className="pagination justify-content-center">
-                            <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                              <button 
-                                className="page-link" 
-                                onClick={() => paginate(currentPage - 1)}
-                                disabled={currentPage === 1}
-                              >
-                                <i className="fas fa-chevron-left"></i>
-                              </button>
-                            </li>
-                            
-                            {[...Array(totalPages)].map((_, index) => {
-                              const pageNumber = index + 1;
-                              if (
-                                pageNumber === 1 ||
-                                pageNumber === totalPages ||
-                                (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
-                              ) {
-                                return (
-                                  <li 
-                                    key={pageNumber} 
-                                    className={`page-item ${currentPage === pageNumber ? 'active' : ''}`}
-                                  >
-                                    <button 
-                                      className="page-link" 
-                                      onClick={() => paginate(pageNumber)}
-                                    >
-                                      {pageNumber}
-                                    </button>
-                                  </li>
-                                );
-                              } else if (
-                                pageNumber === currentPage - 2 ||
-                                pageNumber === currentPage + 2
-                              ) {
-                                return (
-                                  <li key={pageNumber} className="page-item disabled">
-                                    <span className="page-link">...</span>
-                                  </li>
-                                );
-                              }
-                              return null;
-                            })}
-                            
-                            <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                              <button 
-                                className="page-link" 
-                                onClick={() => paginate(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                              >
-                                <i className="fas fa-chevron-right"></i>
-                              </button>
-                            </li>
-                          </ul>
-                        </nav>
-                      )}
-                    </>
-                  ) : (
-                    <div className="text-center py-5">
-                      <i className="fas fa-folder-open fa-3x text-muted mb-3"></i>
-                      <p className="text-muted mb-0">No resources found</p>
-                      <small className="text-muted">
-                        {searchTerm || searchType !== 'all' ? 'Try adjusting your search filters' : 'Share resources using the button above'}
-                      </small>
+                </div>
+                <div className="col-md-4 text-center">
+                  <div className="bg-success bg-opacity-10 rounded-circle p-4 d-inline-flex mb-3">
+                    <i className="fas fa-user-shield fa-3x text-success"></i>
+                  </div>
+                  <p className="text-muted small">
+                    Host-controlled webinar room with secure participant access
+                  </p>
+                  
+                  {activeMeeting && isMyMeeting && (
+                    <div className="mt-3">
+                      <button 
+                        className="btn btn-outline-danger btn-sm"
+                        onClick={handleEndMeeting}
+                      >
+                        <i className="fas fa-stop-circle me-2"></i>
+                        End Webinar Session
+                      </button>
                     </div>
                   )}
                 </div>
               </div>
-            )}
-          </div>
-
-          <div className="col-lg-4">
-            {/* Quick Actions */}
-            {isMyMeeting && (
-              <div className="card">
-                <div className="card-header">
-                  <h5 className="card-title mb-0">
-                    <i className="fas fa-bolt me-2"></i>
-                    Quick Actions
-                  </h5>
-                </div>
-                <div className="card-body">
-                  <div className="d-grid gap-2">
-                    <button 
-                      className="btn btn-outline-warning"
-                      onClick={() => setShowExtensionModal(true)}
-                    >
-                      <i className="fas fa-clock me-2"></i>
-                      Extend Stream
-                    </button>
-                    <button 
-                      className="btn btn-outline-info"
-                      onClick={() => {
-                        navigator.clipboard.writeText(activeMeeting.meetingLink);
-                        showTemporaryNotification('success', '🔗 Stream link copied to clipboard!');
-                      }}
-                    >
-                      <i className="fas fa-copy me-2"></i>
-                      Copy Stream Link
-                    </button>
-                    <button 
-                      className="btn btn-outline-primary"
-                      onClick={handleManualRefresh}
-                      disabled={isRefreshing}
-                    >
-                      {isRefreshing ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                          Refreshing...
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-sync-alt me-2"></i>
-                          Refresh Data
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!isMyMeeting && activeMeeting && (
-              <div className="card border-warning">
-                <div className="card-header bg-warning text-dark">
-                  <h5 className="card-title mb-0">
-                    <i className="fas fa-plus-circle me-2"></i>
-                    Start Your Own Stream
-                  </h5>
-                </div>
-                <div className="card-body">
-                  <p className="small text-muted mb-3">
-                    You can start your own live stream even if there's an active stream.
-                  </p>
-                  <button 
-                    className="btn btn-warning w-100"
-                    onClick={createMeeting}
-                    disabled={isCreating}
-                  >
-                    {isCreating ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                        Creating Stream...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-rocket me-2"></i>
-                        Start New Stream
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* No Active Meeting */
-        <div className="row justify-content-center">
-          <div className="col-md-8 text-center">
-            <div className="card border-0 shadow-sm">
-              <div className="card-body py-5">
-                <div className="mb-4">
-                  <i className="fas fa-video fa-5x text-primary mb-4"></i>
-                  <h2 className="text-primary">Start a Live Stream</h2>
-                  <p className="text-muted lead">
-                    Create professional training sessions and webinars for The Conclave Academy community.
-                  </p>
-                </div>
-                
-                <div className="row mt-5">
-                  <div className="col-md-4 mb-3">
-                    <div className="text-center">
-                      <div className="bg-primary bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
-                        <i className="fas fa-play-circle fa-2x text-primary"></i>
-                      </div>
-                      <h5>Live Streaming</h5>
-                      <p className="text-muted small">Professional video sessions</p>
-                    </div>
-                  </div>
-                  <div className="col-md-4 mb-3">
-                    <div className="text-center">
-                      <div className="bg-success bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
-                        <i className="fas fa-share-alt fa-2x text-success"></i>
-                      </div>
-                      <h5>Resource Sharing</h5>
-                      <p className="text-muted small">Share files and links with participants</p>
-                    </div>
-                  </div>
-                  <div className="col-md-4 mb-3">
-                    <div className="text-center">
-                      <div className="bg-warning bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
-                        <i className="fas fa-database fa-2x text-warning"></i>
-                      </div>
-                      <h5>Permanent Storage</h5>
-                      <p className="text-muted small">Resources saved permanently</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <button 
-                    className="btn btn-primary btn-lg px-5"
-                    onClick={createMeeting}
-                    disabled={isCreating}
-                  >
-                    {isCreating ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                        Creating Your Stream...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-rocket me-2"></i>
-                        Launch Live Stream
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Resources Section */}
+      <div className="row">
+        <div className="col-12">
+          <div className="card">
+            <div className="card-header bg-info text-white">
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="card-title mb-0">
+                  <i className="fas fa-share-alt me-2"></i>
+                  Training Resources ({resources.length})
+                </h5>
+                <span className="badge bg-light text-info">
+                  <i className="fas fa-database me-1"></i>
+                  Permanent Storage
+                </span>
+              </div>
+            </div>
+            <div className="card-body">
+              {/* Search and Filters */}
+              <div className="row mb-3">
+                <div className="col-md-6">
+                  <div className="input-group">
+                    <span className="input-group-text">
+                      <i className="fas fa-search"></i>
+                    </span>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Search by name, description, or uploader..."
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="col-md-3">
+                  <select
+                    className="form-select"
+                    value={searchType}
+                    onChange={(e) => {
+                      setSearchType(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value="all">All Types</option>
+                    <option value="text">Text</option>
+                    <option value="link">Link</option>
+                    <option value="document">Document</option>
+                    <option value="pdf">PDF</option>
+                    <option value="image">Image</option>
+                  </select>
+                </div>
+                <div className="col-md-3">
+                  <div className="d-flex gap-2">
+                    <span className="text-muted small align-self-center">
+                      {sortedResources.length} items
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Resources Table */}
+              {currentResources.length > 0 ? (
+                <>
+                  <div className="table-responsive">
+                    <table className="table table-hover">
+                      <thead className="table-light">
+                        <tr>
+                          <th 
+                            style={{ cursor: 'pointer', width: '35%' }}
+                            onClick={() => handleSort('title')}
+                          >
+                            Resource
+                            {sortField === 'title' && (
+                              <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                            )}
+                          </th>
+                          <th style={{ width: '15%' }}>Type</th>
+                          <th style={{ width: '25%' }}>Details</th>
+                          <th style={{ width: '15%' }}>Date</th>
+                          <th style={{ width: '10%' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentResources.map((resource) => (
+                          <tr key={resource.id}>
+                            <td>
+                              <div className="d-flex align-items-center">
+                                <i className={`${getResourceIcon(resource.resourceType || resource.type)} me-2`}></i>
+                                <div>
+                                  <div className="fw-semibold text-primary">
+                                    {resource.title}
+                                  </div>
+                                  <small className="text-muted">
+                                    by {resource.uploadedByName || 'Unknown'}
+                                  </small>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span className={`badge ${
+                                (resource.resourceType || resource.type) === 'link' ? 'bg-primary' :
+                                (resource.resourceType || resource.type) === 'document' ? 'bg-info' :
+                                (resource.resourceType || resource.type) === 'pdf' ? 'bg-danger' :
+                                (resource.resourceType || resource.type) === 'image' ? 'bg-success' : 'bg-secondary'
+                              }`}>
+                                {resource.resourceType || resource.type}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="small text-muted">
+                                {resource.description || resource.content?.substring(0, 50)}
+                                {resource.content && resource.content.length > 50 && '...'}
+                                {resource.fileSize && (
+                                  <div className="mt-1">
+                                    <i className="fas fa-hdd me-1"></i>
+                                    {formatFileSize(resource.fileSize)}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              <small className="text-muted">
+                                {formatDate(resource.createdAt || resource.sharedAt)}
+                              </small>
+                            </td>
+                            <td>
+                              <div className="btn-group btn-group-sm">
+                                <button
+                                  className="btn btn-outline-primary"
+                                  onClick={() => handleViewResource(resource)}
+                                  title="View Resource"
+                                >
+                                  <i className="fas fa-eye"></i>
+                                </button>
+                                <button
+                                  className="btn btn-outline-danger"
+                                  onClick={() => {
+                                    if (window.confirm('Are you sure you want to delete this resource? This action cannot be undone.')) {
+                                      handleDeleteResource(resource.id);
+                                    }
+                                  }}
+                                  title="Delete Resource"
+                                >
+                                  <i className="fas fa-trash"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <nav className="mt-3">
+                      <ul className="pagination justify-content-center">
+                        <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                          <button 
+                            className="page-link" 
+                            onClick={() => paginate(currentPage - 1)}
+                            disabled={currentPage === 1}
+                          >
+                            <i className="fas fa-chevron-left"></i>
+                          </button>
+                        </li>
+                        
+                        {[...Array(totalPages)].map((_, index) => {
+                          const pageNumber = index + 1;
+                          if (
+                            pageNumber === 1 ||
+                            pageNumber === totalPages ||
+                            (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                          ) {
+                            return (
+                              <li 
+                                key={pageNumber} 
+                                className={`page-item ${currentPage === pageNumber ? 'active' : ''}`}
+                              >
+                                <button 
+                                  className="page-link" 
+                                  onClick={() => paginate(pageNumber)}
+                                >
+                                  {pageNumber}
+                                </button>
+                              </li>
+                            );
+                          } else if (
+                            pageNumber === currentPage - 2 ||
+                            pageNumber === currentPage + 2
+                          ) {
+                            return (
+                              <li key={pageNumber} className="page-item disabled">
+                                <span className="page-link">...</span>
+                              </li>
+                            );
+                          }
+                          return null;
+                        })}
+                        
+                        <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                          <button 
+                            className="page-link" 
+                            onClick={() => paginate(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                          >
+                            <i className="fas fa-chevron-right"></i>
+                          </button>
+                        </li>
+                      </ul>
+                    </nav>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-5">
+                  <i className="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                  <p className="text-muted mb-0">No resources found</p>
+                  <small className="text-muted">
+                    {searchTerm || searchType !== 'all' ? 'Try adjusting your search filters' : 'Share resources using the button above'}
+                  </small>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Share Resources Modal */}
       {showShareModal && (
@@ -995,12 +835,11 @@ const AdminCommunityTab = () => {
                     <div>
                       <h6 className="alert-heading mb-2">Resource Sharing Guide</h6>
                       <p className="mb-2">
-                        <strong>Resources shared here are permanently saved</strong> and will be available to users during and after the live call.
+                        <strong>Resources shared here are permanently saved</strong> and will be available to users during and after the webinar.
                       </p>
                       <p className="mb-0 small">
                         <i className="fas fa-lightbulb me-1 text-warning"></i>
-                        <strong>Tip:</strong> Share documents, links, and files here for participants to access anytime. 
-                        Video files are not supported to save storage space. However, you can use the "Video Resources" tab strictly dedicated for uploading and managing your videos.
+                        <strong>Tip:</strong> Share documents, links, and files here for participants to access anytime.
                       </p>
                     </div>
                   </div>

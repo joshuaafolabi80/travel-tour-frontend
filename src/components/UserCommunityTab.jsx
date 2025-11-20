@@ -12,6 +12,9 @@ const UserCommunityTab = () => {
   const [viewingResource, setViewingResource] = useState(null);
   const [isJoining, setIsJoining] = useState(false);
 
+  // 🎯 PERMANENT GOOGLE MEET LINK
+  const PERMANENT_MEET_LINK = "https://meet.google.com/moc-zgvj-jfn";
+
   // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -26,13 +29,46 @@ const UserCommunityTab = () => {
     loadActiveMeeting();
   }, []);
 
-  // Join Live Stream
+  // 🎯 SIMPLE PERMANENT JOIN FUNCTION
+  const handleJoinPermanentMeet = () => {
+    console.log('🎯 Joining Google Meet:', PERMANENT_MEET_LINK);
+    setIsJoining(true);
+    
+    // Directly open the permanent Google Meet link
+    const newTab = window.open(PERMANENT_MEET_LINK, 'conclave-webinar-room');
+    
+    if (newTab) {
+      newTab.focus();
+      console.log('✅ Google Meet opened successfully');
+      
+      // Track join attempt if user data exists
+      if (userData && activeMeeting) {
+        MeetApiService.joinMeeting(activeMeeting.id, userData)
+          .then(() => console.log('✅ Join tracked'))
+          .catch(error => console.error('❌ Join tracking error:', error));
+      }
+    } else {
+      // Popup blocked - fallback
+      const userAction = confirm(
+        '📢 Popup blocked!\n\nPlease click OK to copy the meeting link, then paste it in your browser.'
+      );
+      
+      if (userAction) {
+        navigator.clipboard.writeText(PERMANENT_MEET_LINK);
+        alert('🔗 Meeting link copied! Paste it in your browser.');
+      }
+    }
+    
+    setIsJoining(false);
+  };
+
+  // Join Live Stream (for active meetings)
   const handleJoinStream = async (meeting) => {
     if (!meeting) return;
     
     setIsJoining(true);
     try {
-      console.log('🎯 User joining live stream...');
+      console.log('🎯 Joining live stream...');
       
       // Use the actual meeting link
       const streamLink = meeting.meetingLink || meeting.meetLink || meeting.directJoinLink;
@@ -41,7 +77,7 @@ const UserCommunityTab = () => {
         throw new Error('No valid stream link found');
       }
 
-      console.log('🔗 User using stream link:', streamLink);
+      console.log('🔗 Using stream link:', streamLink);
 
       // Open in new tab
       const newTab = window.open(streamLink, `conclave-stream-${meeting.id}`);
@@ -52,7 +88,7 @@ const UserCommunityTab = () => {
         // Track join attempt
         await MeetApiService.joinMeeting(meeting.id, userData);
         
-        console.log('✅ User successfully opened stream');
+        console.log('✅ Stream opened successfully');
         
         // Check for errors after delay
         setTimeout(() => {
@@ -60,7 +96,7 @@ const UserCommunityTab = () => {
             if (newTab.location.href.includes('whoops') || 
                 newTab.location.href.includes('error') ||
                 newTab.document.title.includes('Invalid')) {
-              console.error('❌ Stream error detected for user');
+              console.error('❌ Stream error detected');
               newTab.close();
               alert('❌ Stream error. Please try again.');
             }
@@ -82,7 +118,7 @@ const UserCommunityTab = () => {
       }
       
     } catch (error) {
-      console.error('❌ User join error:', error);
+      console.error('❌ Join error:', error);
       alert(`❌ Failed to join stream: ${error.message}`);
       
       // Fallback
@@ -273,481 +309,423 @@ const UserCommunityTab = () => {
         </div>
       </div>
 
-      {/* Active Meeting Section */}
-      {activeMeeting ? (
-        <div className="row">
-          <div className="col-lg-8">
-            {/* Meeting Info Card */}
-            <div className="card mb-4 border-success">
-              <div className="card-header bg-success text-white">
-                <div className="d-flex justify-content-between align-items-center">
-                  <h5 className="card-title mb-0">
-                    <i className="fas fa-broadcast-tower me-2"></i>
-                    Live Stream Available!
-                  </h5>
-                  <div className="d-flex align-items-center gap-2">
-                    <span className="badge bg-warning text-dark">
-                      <i className="fas fa-circle me-1"></i>
-                      LIVE NOW
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="card-body">
-                <div className="row align-items-center">
-                  <div className="col-md-8">
-                    <h3 className="text-success">{activeMeeting.title}</h3>
-                    <p className="text-muted mb-3">{activeMeeting.description}</p>
-                    
-                    <div className="d-flex flex-wrap gap-2 mb-3">
-                      <span className="badge bg-primary">
-                        <i className="fas fa-user-tie me-1"></i>
-                        Host: {activeMeeting.adminName || 'Admin'}
-                      </span>
-                      <span className="badge bg-secondary">
-                        <i className="fas fa-clock me-1"></i>
-                        Started: {new Date(activeMeeting.startTime).toLocaleTimeString()}
-                      </span>
-                      <span className="badge bg-info">
-                        <i className="fas fa-users me-1"></i>
-                        {activeMeeting.participants?.length || 0} participants
-                      </span>
-                    </div>
-
-                    {/* Join Button */}
-                    <button 
-                      onClick={() => handleJoinStream(activeMeeting)}
-                      className="btn btn-success btn-lg"
-                      disabled={isJoining}
-                    >
-                      {isJoining ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                          Joining Stream...
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-play-circle me-2"></i>
-                          Join Live Stream
-                        </>
-                      )}
-                    </button>
-
-                    {/* Stream Info */}
-                    <div className="mt-3 p-3 bg-light rounded">
-                      <small className="text-muted">
-                        <i className="fas fa-info-circle me-1 text-info"></i>
-                        Click the button above to join the stream directly - No code required!
-                      </small>
-                    </div>
-                  </div>
-                  <div className="col-md-4 text-center">
-                    <div className="bg-success bg-opacity-10 rounded-circle p-4 d-inline-flex mb-3">
-                      <i className="fas fa-video fa-3x text-success"></i>
-                    </div>
-                    <p className="text-muted small">
-                      Click the button to join the live training session directly
-                    </p>
-                  </div>
+      {/* PERMANENT WEBINAR ROOM SECTION - ALWAYS AVAILABLE */}
+      <div className="row">
+        <div className="col-lg-8">
+          {/* Permanent Webinar Room Card */}
+          <div className="card mb-4 border-success">
+            <div className="card-header bg-success text-white">
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="card-title mb-0">
+                  <i className="fas fa-video me-2"></i>
+                  The Conclave Academy - Webinar Room
+                </h5>
+                <div className="d-flex align-items-center gap-2">
+                  <span className="badge bg-warning text-dark">
+                    <i className="fas fa-home me-1"></i>
+                    ALWAYS AVAILABLE
+                  </span>
                 </div>
               </div>
             </div>
+            <div className="card-body">
+              <div className="row align-items-center">
+                <div className="col-md-8">
+                  <h3 className="text-success mb-3">Welcome to The Conclave Academy Webinar Room</h3>
+                  <p className="text-muted mb-3">
+                    Join our dedicated webinar room for live training sessions, Q&A, and community discussions. 
+                    Available 24/7 for all Conclave Academy members.
+                  </p>
+                  
+                  <div className="d-flex flex-wrap gap-2 mb-3">
+                    <span className="badge bg-primary">
+                      <i className="fas fa-clock me-1"></i>
+                      Open 24/7
+                    </span>
+                    <span className="badge bg-info">
+                      <i className="fas fa-users me-1"></i>
+                      Community Access
+                    </span>
+                    <span className="badge bg-secondary">
+                      <i className="fas fa-video me-1"></i>
+                      Direct Join
+                    </span>
+                  </div>
 
-            {/* Quick Tips */}
-            <div className="card mb-4">
-              <div className="card-header">
-                <h5 className="card-title mb-0">
-                  <i className="fas fa-lightbulb me-2"></i>
-                  Quick Tips for Better Experience
-                </h5>
-              </div>
-              <div className="card-body">
-                <div className="row">
-                  <div className="col-md-6">
-                    <ul className="list-unstyled">
-                      <li className="mb-2">
-                        <i className="fas fa-check-circle text-success me-2"></i>
-                        Use headphones for better audio
-                      </li>
-                      <li className="mb-2">
-                        <i className="fas fa-check-circle text-success me-2"></i>
-                        Join 5 minutes early to test your setup
-                      </li>
-                      <li className="mb-2">
-                        <i className="fas fa-check-circle text-success me-2"></i>
-                        Mute your microphone when not speaking
-                      </li>
-                    </ul>
+                  {/* 🎯 PERMANENT JOIN BUTTON */}
+                  <button 
+                    onClick={handleJoinPermanentMeet}
+                    className="btn btn-success btn-lg"
+                    disabled={isJoining}
+                  >
+                    {isJoining ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Joining Webinar Room...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-play-circle me-2"></i>
+                        Join Webinar Room
+                      </>
+                    )}
+                  </button>
+
+                  {/* Meeting Info */}
+                  <div className="mt-3 p-3 bg-light rounded">
+                    <small className="text-muted">
+                      <i className="fas fa-info-circle me-1 text-info"></i>
+                      Video call link: <strong>{PERMANENT_MEET_LINK}</strong>
+                    </small>
                   </div>
-                  <div className="col-md-6">
-                    <ul className="list-unstyled">
-                      <li className="mb-2">
-                        <i className="fas fa-check-circle text-success me-2"></i>
-                        Use the chat for questions
-                      </li>
-                      <li className="mb-2">
-                        <i className="fas fa-check-circle text-success me-2"></i>
-                        Take notes during the session
-                      </li>
-                      <li className="mb-2">
-                        <i className="fas fa-check-circle text-success me-2"></i>
-                        Stay engaged and participate actively
-                      </li>
-                    </ul>
+                </div>
+                <div className="col-md-4 text-center">
+                  <div className="bg-success bg-opacity-10 rounded-circle p-4 d-inline-flex mb-3">
+                    <i className="fas fa-home fa-3x text-success"></i>
                   </div>
+                  <p className="text-muted small">
+                    Your dedicated webinar space for Travel, Tours, Hotels & Tourism education
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="col-lg-4">
-            {/* Resources Table */}
-            <div className="card">
+          {/* Active Meeting Section (Optional - keep if you want both) */}
+          {activeMeeting && (
+            <div className="card mb-4 border-primary">
               <div className="card-header bg-primary text-white">
-                <div className="d-flex justify-content-between align-items-center">
-                  <h5 className="card-title mb-0">
-                    <i className="fas fa-file-alt me-2"></i>
-                    Training Resources ({resources.length})
-                  </h5>
-                  <button 
-                    className="btn btn-sm btn-light"
-                    onClick={handleManualRefresh}
-                    disabled={resourcesLoading || isRefreshing}
-                    title="Refresh resources"
-                  >
-                    {resourcesLoading || isRefreshing ? (
-                      <span className="spinner-border spinner-border-sm" role="status"></span>
-                    ) : (
-                      <i className="fas fa-sync-alt"></i>
-                    )}
-                  </button>
-                </div>
-              </div>
-              <div className="card-body">
-                {/* Resource Info Banner */}
-                <div className="alert alert-info mb-3">
-                  <div className="d-flex align-items-center">
-                    <i className="fas fa-info-circle me-2"></i>
-                    <small>
-                      <strong>All resources are permanently saved</strong> and will remain available even after the meeting ends.
-                    </small>
-                  </div>
-                </div>
-
-                {/* Search and Filters */}
-                <div className="row mb-3">
-                  <div className="col-md-6">
-                    <div className="input-group">
-                      <span className="input-group-text">
-                        <i className="fas fa-search"></i>
-                      </span>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Search resources..."
-                        value={searchTerm}
-                        onChange={(e) => {
-                          setSearchTerm(e.target.value);
-                          setCurrentPage(1);
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-md-6">
-                    <select
-                      className="form-select"
-                      value={searchType}
-                      onChange={(e) => {
-                        setSearchType(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                    >
-                      <option value="all">All Types</option>
-                      <option value="text">Text</option>
-                      <option value="link">Link</option>
-                      <option value="document">Document</option>
-                      <option value="pdf">PDF</option>
-                      <option value="image">Image</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Resources Table */}
-                {currentResources.length > 0 ? (
-                  <>
-                    <div className="table-responsive">
-                      <table className="table table-hover">
-                        <thead className="table-light">
-                          <tr>
-                            <th 
-                              style={{ cursor: 'pointer', width: '40%' }}
-                              onClick={() => handleSort('title')}
-                            >
-                              Resource
-                              {sortField === 'title' && (
-                                <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'} ms-1`}></i>
-                              )}
-                            </th>
-                            <th style={{ width: '15%' }}>Type</th>
-                            <th style={{ width: '30%' }}>Details</th>
-                            <th style={{ width: '15%' }}>View</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {currentResources.map((resource) => (
-                            <tr key={resource.id}>
-                              <td>
-                                <div className="d-flex align-items-center">
-                                  <i className={`${getResourceIcon(resource.resourceType || resource.type)} me-2`}></i>
-                                  <div>
-                                    <div className="fw-semibold text-primary">
-                                      {resource.title}
-                                    </div>
-                                    <small className="text-muted">
-                                      by {resource.uploadedByName || 'Unknown'}
-                                    </small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>
-                                <span className={`badge ${
-                                  (resource.resourceType || resource.type) === 'link' ? 'bg-primary' :
-                                  (resource.resourceType || resource.type) === 'document' ? 'bg-info' :
-                                  (resource.resourceType || resource.type) === 'pdf' ? 'bg-danger' :
-                                  (resource.resourceType || resource.type) === 'image' ? 'bg-success' : 'bg-secondary'
-                                }`}>
-                                  {resource.resourceType || resource.type}
-                                </span>
-                              </td>
-                              <td>
-                                <div className="small text-muted">
-                                  {resource.description || resource.content?.substring(0, 60)}
-                                  {resource.content && resource.content.length > 60 && '...'}
-                                  {resource.fileSize && (
-                                    <div className="mt-1">
-                                      <i className="fas fa-hdd me-1"></i>
-                                      {formatFileSize(resource.fileSize)}
-                                    </div>
-                                  )}
-                                  <div className="mt-1">
-                                    <i className="fas fa-calendar me-1"></i>
-                                    {formatDate(resource.createdAt || resource.sharedAt)}
-                                  </div>
-                                </div>
-                              </td>
-                              <td>
-                                <button
-                                  className="btn btn-outline-primary btn-sm"
-                                  onClick={() => handleViewResource(resource)}
-                                  title="View Resource"
-                                >
-                                  <i className="fas fa-eye me-1"></i>
-                                  View
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                      <nav className="mt-3">
-                        <ul className="pagination justify-content-center pagination-sm">
-                          <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                            <button 
-                              className="page-link" 
-                              onClick={() => paginate(currentPage - 1)}
-                              disabled={currentPage === 1}
-                            >
-                              <i className="fas fa-chevron-left"></i>
-                            </button>
-                          </li>
-                          
-                          {[...Array(totalPages)].map((_, index) => {
-                            const pageNumber = index + 1;
-                            if (
-                              pageNumber === 1 ||
-                              pageNumber === totalPages ||
-                              (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
-                            ) {
-                              return (
-                                <li 
-                                  key={pageNumber} 
-                                  className={`page-item ${currentPage === pageNumber ? 'active' : ''}`}
-                                >
-                                  <button 
-                                    className="page-link" 
-                                    onClick={() => paginate(pageNumber)}
-                                  >
-                                    {pageNumber}
-                                  </button>
-                                </li>
-                              );
-                            } else if (
-                              pageNumber === currentPage - 2 ||
-                              pageNumber === currentPage + 2
-                            ) {
-                              return (
-                                <li key={pageNumber} className="page-item disabled">
-                                  <span className="page-link">...</span>
-                                </li>
-                              );
-                            }
-                            return null;
-                          })}
-                          
-                          <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                            <button 
-                              className="page-link" 
-                              onClick={() => paginate(currentPage + 1)}
-                              disabled={currentPage === totalPages}
-                            >
-                              <i className="fas fa-chevron-right"></i>
-                            </button>
-                          </li>
-                        </ul>
-                      </nav>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-center py-4">
-                    <i className="fas fa-folder-open fa-2x text-muted mb-3"></i>
-                    <p className="text-muted mb-0">No resources found</p>
-                    <small className="text-muted">
-                      {searchTerm || searchType !== 'all' ? 'Try adjusting your search filters' : 'No resources have been shared yet'}
-                    </small>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Meeting Information */}
-            <div className="card mt-4">
-              <div className="card-header">
                 <h5 className="card-title mb-0">
-                  <i className="fas fa-info-circle me-2"></i>
-                  Stream Information
+                  <i className="fas fa-star me-2"></i>
+                  Special Live Event
                 </h5>
               </div>
               <div className="card-body">
-                <div className="mb-2">
-                  <small className="text-muted">Host</small>
-                  <p className="mb-0 fw-semibold">{activeMeeting.adminName || 'Admin'}</p>
-                </div>
-                <div className="mb-2">
-                  <small className="text-muted">Started</small>
-                  <p className="mb-0 fw-semibold">
+                <h4 className="text-primary">{activeMeeting.title}</h4>
+                <p className="text-muted">{activeMeeting.description}</p>
+                <div className="d-flex gap-2">
+                  <span className="badge bg-info">
+                    <i className="fas fa-user-tie me-1"></i>
+                    Host: {activeMeeting.adminName}
+                  </span>
+                  <span className="badge bg-secondary">
+                    <i className="fas fa-clock me-1"></i>
                     {new Date(activeMeeting.startTime).toLocaleString()}
-                  </p>
+                  </span>
                 </div>
-                <div className="mb-2">
-                  <small className="text-muted">Participants</small>
-                  <p className="mb-0 fw-semibold">
-                    {activeMeeting.participants?.length || 0} joined
-                  </p>
-                </div>
+                <button 
+                  onClick={() => handleJoinStream(activeMeeting)}
+                  className="btn btn-primary mt-3"
+                  disabled={isJoining}
+                >
+                  {isJoining ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                      Joining Stream...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-play-circle me-2"></i>
+                      Join Special Event
+                    </>
+                  )}
+                </button>
               </div>
             </div>
+          )}
 
-            {/* Support Info */}
-            <div className="card mt-4">
-              <div className="card-header">
-                <h5 className="card-title mb-0">
-                  <i className="fas fa-headset me-2"></i>
-                  Need Help?
-                </h5>
-              </div>
-              <div className="card-body">
-                <p className="small text-muted mb-2">
-                  If you're having trouble joining the stream:
-                </p>
-                <ul className="small text-muted ps-3">
-                  <li>Check your internet connection</li>
-                  <li>Allow camera and microphone permissions</li>
-                  <li>Try using Google Chrome browser</li>
-                  <li>Contact support if issues persist</li>
-                </ul>
-                
-                <div className="mt-3 pt-3 border-top">
-                  <p className="small text-muted mb-2">
-                    <strong>Resource Access:</strong>
-                  </p>
-                  <ul className="small text-muted ps-3 mb-0">
-                    <li>Click "View" to access resources</li>
-                    <li>All resources are saved permanently</li>
-                    <li>Refresh to see new shared resources</li>
+          {/* Quick Tips */}
+          <div className="card mb-4">
+            <div className="card-header">
+              <h5 className="card-title mb-0">
+                <i className="fas fa-lightbulb me-2"></i>
+                Quick Tips for Better Experience
+              </h5>
+            </div>
+            <div className="card-body">
+              <div className="row">
+                <div className="col-md-6">
+                  <ul className="list-unstyled">
+                    <li className="mb-2">
+                      <i className="fas fa-check-circle text-success me-2"></i>
+                      Use headphones for better audio
+                    </li>
+                    <li className="mb-2">
+                      <i className="fas fa-check-circle text-success me-2"></i>
+                      Join 5 minutes early to test your setup
+                    </li>
+                    <li className="mb-2">
+                      <i className="fas fa-check-circle text-success me-2"></i>
+                      Mute your microphone when not speaking
+                    </li>
+                  </ul>
+                </div>
+                <div className="col-md-6">
+                  <ul className="list-unstyled">
+                    <li className="mb-2">
+                      <i className="fas fa-check-circle text-success me-2"></i>
+                      Use the chat for questions
+                    </li>
+                    <li className="mb-2">
+                      <i className="fas fa-check-circle text-success me-2"></i>
+                      Take notes during the session
+                    </li>
+                    <li className="mb-2">
+                      <i className="fas fa-check-circle text-success me-2"></i>
+                      Stay engaged and participate actively
+                    </li>
                   </ul>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      ) : (
-        /* No Active Meeting */
-        <div className="row justify-content-center">
-          <div className="col-md-8">
-            <div className="card border-0 shadow-sm">
-              <div className="card-body text-center py-5">
-                <div className="mb-4">
-                  <i className="fas fa-video-slash fa-5x text-muted mb-4"></i>
-                  <h2 className="text-muted">No Active Streams</h2>
-                  <p className="text-muted lead">
-                    There are no live streams happening right now. 
-                    Check back later for upcoming training sessions and community events.
-                  </p>
-                </div>
-                
-                <div className="row mt-4">
-                  <div className="col-md-6 mb-3">
-                    <div className="card border-0 bg-light">
-                      <div className="card-body">
-                        <i className="fas fa-bell fa-2x text-primary mb-3"></i>
-                        <h5>Get Notified</h5>
-                        <p className="text-muted small">
-                          You'll receive a notification when the next stream starts
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-md-6 mb-3">
-                    <div className="card border-0 bg-light">
-                      <div className="card-body">
-                        <i className="fas fa-book fa-2x text-success mb-3"></i>
-                        <h5>Continue Learning</h5>
-                        <p className="text-muted small">
-                          Explore courses and materials while you wait
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="mt-4">
-                  <button 
-                    className="btn btn-outline-primary"
-                    onClick={handleManualRefresh}
-                    disabled={isRefreshing}
-                  >
-                    {isRefreshing ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                        Checking...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-sync-alt me-2"></i>
-                        Check Again
-                      </>
-                    )}
-                  </button>
+        <div className="col-lg-4">
+          {/* Resources Table */}
+          <div className="card">
+            <div className="card-header bg-primary text-white">
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="card-title mb-0">
+                  <i className="fas fa-file-alt me-2"></i>
+                  Training Resources ({resources.length})
+                </h5>
+                <button 
+                  className="btn btn-sm btn-light"
+                  onClick={handleManualRefresh}
+                  disabled={resourcesLoading || isRefreshing}
+                  title="Refresh resources"
+                >
+                  {resourcesLoading || isRefreshing ? (
+                    <span className="spinner-border spinner-border-sm" role="status"></span>
+                  ) : (
+                    <i className="fas fa-sync-alt"></i>
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="card-body">
+              {/* Resource Info Banner */}
+              <div className="alert alert-info mb-3">
+                <div className="d-flex align-items-center">
+                  <i className="fas fa-info-circle me-2"></i>
+                  <small>
+                    <strong>All resources are permanently saved</strong> and will remain available.
+                  </small>
                 </div>
               </div>
+
+              {/* Search and Filters */}
+              <div className="row mb-3">
+                <div className="col-md-6">
+                  <div className="input-group">
+                    <span className="input-group-text">
+                      <i className="fas fa-search"></i>
+                    </span>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Search resources..."
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <select
+                    className="form-select"
+                    value={searchType}
+                    onChange={(e) => {
+                      setSearchType(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value="all">All Types</option>
+                    <option value="text">Text</option>
+                    <option value="link">Link</option>
+                    <option value="document">Document</option>
+                    <option value="pdf">PDF</option>
+                    <option value="image">Image</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Resources Table */}
+              {currentResources.length > 0 ? (
+                <>
+                  <div className="table-responsive">
+                    <table className="table table-hover">
+                      <thead className="table-light">
+                        <tr>
+                          <th 
+                            style={{ cursor: 'pointer', width: '40%' }}
+                            onClick={() => handleSort('title')}
+                          >
+                            Resource
+                            {sortField === 'title' && (
+                              <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                            )}
+                          </th>
+                          <th style={{ width: '15%' }}>Type</th>
+                          <th style={{ width: '30%' }}>Details</th>
+                          <th style={{ width: '15%' }}>View</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentResources.map((resource) => (
+                          <tr key={resource.id}>
+                            <td>
+                              <div className="d-flex align-items-center">
+                                <i className={`${getResourceIcon(resource.resourceType || resource.type)} me-2`}></i>
+                                <div>
+                                  <div className="fw-semibold text-primary">
+                                    {resource.title}
+                                  </div>
+                                  <small className="text-muted">
+                                    by {resource.uploadedByName || 'Unknown'}
+                                  </small>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span className={`badge ${
+                                (resource.resourceType || resource.type) === 'link' ? 'bg-primary' :
+                                (resource.resourceType || resource.type) === 'document' ? 'bg-info' :
+                                (resource.resourceType || resource.type) === 'pdf' ? 'bg-danger' :
+                                (resource.resourceType || resource.type) === 'image' ? 'bg-success' : 'bg-secondary'
+                              }`}>
+                                {resource.resourceType || resource.type}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="small text-muted">
+                                {resource.description || resource.content?.substring(0, 60)}
+                                {resource.content && resource.content.length > 60 && '...'}
+                                {resource.fileSize && (
+                                  <div className="mt-1">
+                                    <i className="fas fa-hdd me-1"></i>
+                                    {formatFileSize(resource.fileSize)}
+                                  </div>
+                                )}
+                                <div className="mt-1">
+                                  <i className="fas fa-calendar me-1"></i>
+                                  {formatDate(resource.createdAt || resource.sharedAt)}
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <button
+                                className="btn btn-outline-primary btn-sm"
+                                onClick={() => handleViewResource(resource)}
+                                title="View Resource"
+                              >
+                                <i className="fas fa-eye me-1"></i>
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <nav className="mt-3">
+                      <ul className="pagination justify-content-center pagination-sm">
+                        <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                          <button 
+                            className="page-link" 
+                            onClick={() => paginate(currentPage - 1)}
+                            disabled={currentPage === 1}
+                          >
+                            <i className="fas fa-chevron-left"></i>
+                          </button>
+                        </li>
+                        
+                        {[...Array(totalPages)].map((_, index) => {
+                          const pageNumber = index + 1;
+                          if (
+                            pageNumber === 1 ||
+                            pageNumber === totalPages ||
+                            (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                          ) {
+                            return (
+                              <li 
+                                key={pageNumber} 
+                                className={`page-item ${currentPage === pageNumber ? 'active' : ''}`}
+                              >
+                                <button 
+                                  className="page-link" 
+                                  onClick={() => paginate(pageNumber)}
+                                >
+                                  {pageNumber}
+                                </button>
+                              </li>
+                            );
+                          } else if (
+                            pageNumber === currentPage - 2 ||
+                            pageNumber === currentPage + 2
+                          ) {
+                            return (
+                              <li key={pageNumber} className="page-item disabled">
+                                <span className="page-link">...</span>
+                              </li>
+                            );
+                          }
+                          return null;
+                        })}
+                        
+                        <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                          <button 
+                            className="page-link" 
+                            onClick={() => paginate(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                          >
+                            <i className="fas fa-chevron-right"></i>
+                          </button>
+                        </li>
+                      </ul>
+                    </nav>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <i className="fas fa-folder-open fa-2x text-muted mb-3"></i>
+                  <p className="text-muted mb-0">No resources found</p>
+                  <small className="text-muted">
+                    {searchTerm || searchType !== 'all' ? 'Try adjusting your search filters' : 'No resources have been shared yet'}
+                  </small>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Support Info */}
+          <div className="card mt-4">
+            <div className="card-header">
+              <h5 className="card-title mb-0">
+                <i className="fas fa-headset me-2"></i>
+                Need Help?
+              </h5>
+            </div>
+            <div className="card-body">
+              <p className="small text-muted mb-2">
+                If you're having trouble joining:
+              </p>
+              <ul className="small text-muted ps-3">
+                <li>Check your internet connection</li>
+                <li>Allow camera and microphone permissions</li>
+                <li>Try using Google Chrome browser</li>
+                <li>Contact support if issues persist</li>
+              </ul>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Resource Viewer Modal */}
       {viewingResource && (

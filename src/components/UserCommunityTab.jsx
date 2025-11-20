@@ -28,73 +28,92 @@ const UserCommunityTab = () => {
     loadActiveMeeting();
   }, []);
 
-  // 🆕 ENHANCED SEAMLESS JOIN FUNCTION FOR USERS
+  // 🆕 ULTIMATE FIX FOR GOOGLE MEET JOINING - SIMPLIFIED VERSION FOR USERS
   const handleSeamlessJoin = async (meeting) => {
     if (!meeting) return;
     
     setIsJoining(true);
     try {
-      console.log('🚀 User attempting seamless Google Meet join...');
-      
-      // Get enhanced join links from backend
-      const joinResponse = await MeetApiService.joinMeeting(meeting.id, userData);
-      
-      if (joinResponse.success) {
-        // 🆕 TRY MULTIPLE JOIN STRATEGIES
-        const joinStrategies = [
-          meeting.directJoinLink || `https://meet.google.com/${meeting.meetingCode}`,
-          meeting.instantJoinLink || `https://meet.google.com/${meeting.meetingCode}?authuser=0`,
-          meeting.meetingLink,
-          `https://meet.google.com/lookup/${meeting.meetingCode}`
-        ];
+      console.log('🚀 User joining REAL Google Meet...');
+      console.log('📋 Meeting data for user:', {
+        meetingLink: meeting.meetingLink,
+        meetLink: meeting.meetLink,
+        meetingCode: meeting.meetingCode,
+        directJoinLink: meeting.directJoinLink
+      });
 
-        // Open new tab
-        const newTab = window.open('', `google-meet-${meeting.id}`);
+      // 🆕 USE ONLY THE REAL GOOGLE MEET LINK - NO STRATEGIES NEEDED
+      const realMeetLink = meeting.meetingLink || meeting.meetLink || meeting.directJoinLink;
+      
+      if (!realMeetLink) {
+        throw new Error('No valid Google Meet link found for this meeting');
+      }
+
+      console.log('🔗 User using REAL Google Meet link:', realMeetLink);
+
+      // 🆕 SIMPLE DIRECT OPENING - NO COMPLEX STRATEGIES
+      const newTab = window.open(realMeetLink, `google-meet-${meeting.id}`);
+      
+      if (newTab) {
+        // Focus the new tab
+        newTab.focus();
         
-        if (newTab) {
-          let success = false;
-          
-          // Try each strategy
-          for (let i = 0; i < joinStrategies.length; i++) {
-            try {
-              console.log(`🔄 Trying join strategy ${i + 1} for user`);
-              newTab.location.href = joinStrategies[i];
+        // Track the join attempt
+        await MeetApiService.joinMeeting(meeting.id, userData);
+        
+        console.log('✅ User successfully opened Google Meet');
+        
+        // 🆕 CHECK FOR ERRORS AFTER A DELAY
+        setTimeout(() => {
+          try {
+            // Check if the tab was redirected to an error page
+            if (newTab.location.href.includes('whoops') || 
+                newTab.location.href.includes('error') ||
+                newTab.document.title.includes('Invalid')) {
+              console.error('❌ Google Meet error detected for user:', newTab.location.href);
               
-              // Wait to see if it loads successfully
-              await new Promise(resolve => setTimeout(resolve, 1500));
-              
-              success = true;
-              console.log(`✅ Join strategy ${i + 1} successful for user!`);
-              break;
-              
-            } catch (strategyError) {
-              console.log(`❌ Join strategy ${i + 1} failed for user:`, strategyError);
-              continue;
+              // Close the error tab and show user message
+              newTab.close();
+              alert('❌ Google Meet error. Please check if the meeting exists and try again.');
             }
+          } catch (error) {
+            // Cross-origin security error - we can't check the URL
+            console.log('🔒 Cannot check tab URL due to security restrictions (normal)');
           }
-          
-          if (success) {
-            newTab.focus();
-            console.log('✅ User successfully joined meeting');
-          } else {
-            // Fallback
-            newTab.close();
-            navigator.clipboard.writeText(meeting.meetingLink);
-            alert('🔗 Meeting link copied! Please paste it in a new tab to join.');
-          }
-        } else {
-          // Popup blocked
-          navigator.clipboard.writeText(meeting.meetingLink);
-          alert('📢 Popup blocked! Meeting link copied to clipboard. Please paste it in a new tab.');
-        }
+        }, 3000);
+        
       } else {
-        throw new Error(joinResponse.error);
+        // Popup blocked - simplified user experience
+        const realMeetLink = meeting.meetingLink || meeting.meetLink;
+        const userAction = confirm(
+          `📢 Popup blocked!\n\nPlease:\n1. Allow popups for this site\n2. Or click OK to copy the Google Meet link\n\nMeeting: ${meeting.title}`
+        );
+        
+        if (userAction && realMeetLink) {
+          navigator.clipboard.writeText(realMeetLink);
+          alert('🔗 Google Meet link copied! Paste it in your browser to join.');
+        }
       }
       
     } catch (error) {
-      console.error('❌ Error in user seamless join:', error);
-      // Ultimate fallback
-      window.open(meeting.meetingLink, '_blank', 'noopener,noreferrer');
+      console.error('❌ User join error:', error);
+      
+      // 🆕 BETTER ERROR MESSAGES FOR USERS
+      let userMessage = 'Failed to join meeting';
+      if (error.message.includes('No valid Google Meet link')) {
+        userMessage = 'This meeting has no valid Google Meet link. Please contact the host.';
+      }
+      
+      alert(`❌ ${userMessage}`);
+      
+      // 🆕 STILL TRY TO OPEN ANY AVAILABLE LINK AS LAST RESORT
+      const fallbackLink = meeting.meetingLink || meeting.meetLink;
+      if (fallbackLink) {
+        setTimeout(() => {
+          window.open(fallbackLink, '_blank', 'noopener,noreferrer');
+        }, 1000);
+      }
+      
     } finally {
       setIsJoining(false);
     }
@@ -133,10 +152,10 @@ const UserCommunityTab = () => {
           meeting.meetingCode = extractMeetingCode(meeting.meetingLink);
         }
         if (!meeting.directJoinLink) {
-          meeting.directJoinLink = `https://meet.google.com/${meeting.meetingCode}`;
+          meeting.directJoinLink = meeting.meetingLink;
         }
         if (!meeting.instantJoinLink) {
-          meeting.instantJoinLink = `https://meet.google.com/${meeting.meetingCode}?authuser=0`;
+          meeting.instantJoinLink = meeting.meetingLink;
         }
         
         setActiveMeeting(meeting);
@@ -296,10 +315,10 @@ const UserCommunityTab = () => {
                       <i className="fas fa-circle me-1"></i>
                       LIVE NOW
                     </span>
-                    {/* 🆕 SEAMLESS JOIN BADGE */}
+                    {/* 🆕 REAL GOOGLE MEET BADGE */}
                     <span className="badge bg-info">
-                      <i className="fas fa-bolt me-1"></i>
-                      Instant Join
+                      <i className="fab fa-google me-1"></i>
+                      Google Meet
                     </span>
                   </div>
                 </div>
@@ -325,7 +344,7 @@ const UserCommunityTab = () => {
                       </span>
                     </div>
 
-                    {/* 🆕 UPDATED JOIN BUTTON WITH SEAMLESS JOIN */}
+                    {/* 🆕 UPDATED JOIN BUTTON WITH SIMPLIFIED JOIN */}
                     <button 
                       onClick={() => handleSeamlessJoin(activeMeeting)}
                       className="btn btn-success btn-lg"
@@ -334,12 +353,12 @@ const UserCommunityTab = () => {
                       {isJoining ? (
                         <>
                           <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                          Joining Stream...
+                          Joining Google Meet...
                         </>
                       ) : (
                         <>
-                          <i className="fas fa-bolt me-2"></i>
-                          Join Live Stream (Instant)
+                          <i className="fab fa-google me-2"></i>
+                          Join Google Meet
                         </>
                       )}
                     </button>
@@ -347,17 +366,24 @@ const UserCommunityTab = () => {
                     {/* 🆕 JOIN INFO */}
                     <div className="mt-3 p-3 bg-light rounded">
                       <small className="text-muted">
-                        <i className="fas fa-info-circle me-1 text-info"></i>
-                        <strong>Instant Join:</strong> Click the button above to join directly without entering codes
+                        <i className="fas fa-check-circle me-1 text-success"></i>
+                        <strong>Direct Join:</strong> Click the button above to join the Google Meet directly
                       </small>
+                      {activeMeeting.meetingCode && (
+                        <div className="mt-2">
+                          <small className="text-muted">
+                            <strong>Meeting Code:</strong> {activeMeeting.meetingCode}
+                          </small>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="col-md-4 text-center">
                     <div className="bg-success bg-opacity-10 rounded-circle p-4 d-inline-flex mb-3">
-                      <i className="fas fa-video fa-3x text-success"></i>
+                      <i className="fab fa-google fa-3x text-success"></i>
                     </div>
                     <p className="text-muted small">
-                      Click the button to join the live training session instantly
+                      Click the button to join the Google Meet session directly
                     </p>
                   </div>
                 </div>

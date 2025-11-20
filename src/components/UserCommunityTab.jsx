@@ -28,7 +28,7 @@ const UserCommunityTab = () => {
     loadActiveMeeting();
   }, []);
 
-  // 🆕 ULTIMATE FIX FOR GOOGLE MEET JOINING - SIMPLIFIED VERSION FOR USERS
+  // 🆕 ULTIMATE FIX FOR DIRECT GOOGLE MEET JOINING
   const handleSeamlessJoin = async (meeting) => {
     if (!meeting) return;
     
@@ -42,16 +42,16 @@ const UserCommunityTab = () => {
         directJoinLink: meeting.directJoinLink
       });
 
-      // 🆕 USE ONLY THE REAL GOOGLE MEET LINK - NO STRATEGIES NEEDED
+      // 🆕 CRITICAL FIX: USE THE EXACT SAME MEETING LINK AS ADMIN
       const realMeetLink = meeting.meetingLink || meeting.meetLink || meeting.directJoinLink;
       
       if (!realMeetLink) {
         throw new Error('No valid Google Meet link found for this meeting');
       }
 
-      console.log('🔗 User using REAL Google Meet link:', realMeetLink);
+      console.log('🔗 User using EXACT Google Meet link:', realMeetLink);
 
-      // 🆕 SIMPLE DIRECT OPENING - NO COMPLEX STRATEGIES
+      // 🆕 DIRECT OPENING - NO CODE NEEDED
       const newTab = window.open(realMeetLink, `google-meet-${meeting.id}`);
       
       if (newTab) {
@@ -61,7 +61,7 @@ const UserCommunityTab = () => {
         // Track the join attempt
         await MeetApiService.joinMeeting(meeting.id, userData);
         
-        console.log('✅ User successfully opened Google Meet');
+        console.log('✅ User successfully opened Google Meet directly');
         
         // 🆕 CHECK FOR ERRORS AFTER A DELAY
         setTimeout(() => {
@@ -158,6 +158,7 @@ const UserCommunityTab = () => {
           meeting.instantJoinLink = meeting.meetingLink;
         }
         
+        console.log('✅ User loaded meeting with link:', meeting.meetingLink);
         setActiveMeeting(meeting);
         await loadMeetingResources(meeting.id);
       } else {
@@ -344,7 +345,7 @@ const UserCommunityTab = () => {
                       </span>
                     </div>
 
-                    {/* 🆕 UPDATED JOIN BUTTON WITH SIMPLIFIED JOIN */}
+                    {/* 🆕 UPDATED JOIN BUTTON - NOW USES EXACT MEETING LINK */}
                     <button 
                       onClick={() => handleSeamlessJoin(activeMeeting)}
                       className="btn btn-success btn-lg"
@@ -367,7 +368,7 @@ const UserCommunityTab = () => {
                     <div className="mt-3 p-3 bg-light rounded">
                       <small className="text-muted">
                         <i className="fas fa-check-circle me-1 text-success"></i>
-                        <strong>Direct Join:</strong> Click the button above to join the Google Meet directly
+                        <strong>Direct Join:</strong> Click the button above to join the Google Meet directly - NO CODE NEEDED!
                       </small>
                       {activeMeeting.meetingCode && (
                         <div className="mt-2">
@@ -383,7 +384,7 @@ const UserCommunityTab = () => {
                       <i className="fab fa-google fa-3x text-success"></i>
                     </div>
                     <p className="text-muted small">
-                      Click the button to join the Google Meet session directly
+                      Click the button to join the Google Meet session directly - No code required!
                     </p>
                   </div>
                 </div>

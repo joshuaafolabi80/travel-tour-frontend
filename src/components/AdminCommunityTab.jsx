@@ -19,7 +19,7 @@ const AdminCommunityTab = () => {
   const [isJoining, setIsJoining] = useState(false);
   const [hostHasJoined, setHostHasJoined] = useState(false);
 
-  // 🎯 PERMANENT GOOGLE MEET LINK
+  // 🎯 PERMANENT GOOGLE MEET LINK (This is the Master Link - Everyone uses this)
   const PERMANENT_MEET_LINK = "https://meet.google.com/moc-zgvj-jfn";
 
   // Pagination & Search State
@@ -36,7 +36,7 @@ const AdminCommunityTab = () => {
     loadActiveMeeting();
   }, []);
 
-  // 🎯 ADMIN JOINS FIRST - THEN USERS CAN JOIN
+  // 🛠️ FIXED: Admin joins the PERMANENT link (not random DB links)
   const handleAdminJoinFirst = async () => {
     if (!activeMeeting) return;
     
@@ -44,13 +44,10 @@ const AdminCommunityTab = () => {
     try {
       console.log('🎯 Admin joining first...');
       
-      const streamLink = activeMeeting.meetingLink || activeMeeting.meetLink || PERMANENT_MEET_LINK;
-      
-      if (!streamLink) {
-        throw new Error('No valid stream link found');
-      }
+      // 🔴 FIXED: Force the PERMANENT link - ignore any DB-generated links
+      const streamLink = PERMANENT_MEET_LINK;
 
-      console.log('🔗 Admin using stream link:', streamLink);
+      console.log('🔗 Admin using permanent stream link:', streamLink);
 
       // Open in new tab
       const newTab = window.open(streamLink, `conclave-admin-stream`);
@@ -58,10 +55,10 @@ const AdminCommunityTab = () => {
       if (newTab) {
         newTab.focus();
         
-        // Track admin join
+        // Track admin join in DB (so users know host is in)
         await MeetApiService.joinMeeting(activeMeeting.id, userData);
         
-        console.log('✅ Admin joined successfully');
+        console.log('✅ Admin joined permanent room successfully');
         setHostHasJoined(true);
         showTemporaryNotification('success', '✅ You have joined as host! Users can now join the meeting.');
         
@@ -73,12 +70,12 @@ const AdminCommunityTab = () => {
       } else {
         // Popup blocked
         const userAction = confirm(
-          `📢 Popup blocked!\n\nPlease:\n1. Allow popups for this site\n2. Or click OK to copy the stream link`
+          `📢 Popup blocked!\n\nPlease click OK to copy the meeting link, then paste it in your browser.`
         );
         
-        if (userAction && streamLink) {
+        if (userAction) {
           navigator.clipboard.writeText(streamLink);
-          showTemporaryNotification('success', '🔗 Stream link copied! Paste it in your browser to join as host.');
+          showTemporaryNotification('success', '🔗 Meeting link copied! Paste it in your browser to join as host.');
         }
       }
       
@@ -90,7 +87,7 @@ const AdminCommunityTab = () => {
     }
   };
 
-  // Join Webinar Room (for users after host has joined)
+  // Join Webinar Room (for re-joining after host has joined)
   const handleJoinWebinarRoom = () => {
     console.log('🎯 Joining Webinar Room:', PERMANENT_MEET_LINK);
     
@@ -141,12 +138,13 @@ const AdminCommunityTab = () => {
       if (response.success && response.meeting) {
         const meeting = response.meeting;
         
-        // Ensure meeting has all required links
+        // 🔴 FIXED: Override any DB links with our permanent link
+        meeting.meetingLink = PERMANENT_MEET_LINK;
+        meeting.directJoinLink = PERMANENT_MEET_LINK;
+        
+        // Ensure meeting has all required codes
         if (!meeting.meetingCode) {
-          meeting.meetingCode = extractMeetingCode(meeting.meetingLink);
-        }
-        if (!meeting.directJoinLink) {
-          meeting.directJoinLink = meeting.meetingLink;
+          meeting.meetingCode = extractMeetingCode(PERMANENT_MEET_LINK);
         }
         
         setActiveMeeting(meeting);
@@ -188,6 +186,7 @@ const AdminCommunityTab = () => {
     }, 5000);
   };
 
+  // 🛠️ FIXED: Create meeting but use permanent link
   const createMeeting = async () => {
     if (!userData) {
       setNotification({ type: 'error', message: 'User data not found' });
@@ -206,7 +205,15 @@ const AdminCommunityTab = () => {
       console.log('🔍 Create meeting response:', response);
 
       if (response.success) {
-        setActiveMeeting(response.meeting);
+        // 🔴 FIXED: Override the DB-generated link with our permanent link
+        const meetingWithPermanentLink = {
+          ...response.meeting,
+          meetingLink: PERMANENT_MEET_LINK,
+          directJoinLink: PERMANENT_MEET_LINK,
+          meetingCode: extractMeetingCode(PERMANENT_MEET_LINK)
+        };
+        
+        setActiveMeeting(meetingWithPermanentLink);
         setIsMyMeeting(true);
         setHostHasJoined(false); // Host hasn't joined yet
         showTemporaryNotification('success', '🎉 Webinar room created! Click "Join as Host" to start the session.');

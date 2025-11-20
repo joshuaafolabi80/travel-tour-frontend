@@ -16,11 +16,9 @@ const AdminCommunityTab = () => {
   const [isMyMeeting, setIsMyMeeting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewingResource, setViewingResource] = useState(null);
-
-  // 🆕 SEAMLESS JOIN STATE
   const [isJoining, setIsJoining] = useState(false);
 
-  // 🆕 PAGINATION & SEARCH STATE
+  // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,82 +32,67 @@ const AdminCommunityTab = () => {
     loadActiveMeeting();
   }, []);
 
-  // 🆕 ULTIMATE FIX FOR GOOGLE MEET JOINING
-  const handleSeamlessJoin = async (meeting) => {
+  // Join Live Stream
+  const handleJoinStream = async (meeting) => {
     if (!meeting) return;
     
     setIsJoining(true);
     try {
-      console.log('🚀 ULTIMATE FIX: Joining REAL Google Meet...');
-      console.log('📋 Meeting data:', {
-        meetingLink: meeting.meetingLink,
-        meetLink: meeting.meetLink,
-        meetingCode: meeting.meetingCode,
-        directJoinLink: meeting.directJoinLink
-      });
-
-      // 🆕 USE ONLY THE REAL GOOGLE MEET LINK - NO STRATEGIES NEEDED
-      const realMeetLink = meeting.meetingLink || meeting.meetLink || meeting.directJoinLink;
+      console.log('🎯 Joining live stream...');
       
-      if (!realMeetLink) {
-        throw new Error('No valid Google Meet link found for this meeting');
+      // Use the actual meeting link
+      const streamLink = meeting.meetingLink || meeting.meetLink || meeting.directJoinLink;
+      
+      if (!streamLink) {
+        throw new Error('No valid stream link found');
       }
 
-      console.log('🔗 Using REAL Google Meet link:', realMeetLink);
+      console.log('🔗 Using stream link:', streamLink);
 
-      // 🆕 SIMPLE DIRECT OPENING - NO COMPLEX STRATEGIES
-      const newTab = window.open(realMeetLink, `google-meet-${meeting.id}`);
+      // Open in new tab
+      const newTab = window.open(streamLink, `conclave-stream-${meeting.id}`);
       
       if (newTab) {
-        // Focus the new tab
         newTab.focus();
         
-        // Track the join attempt
+        // Track join attempt
         await MeetApiService.joinMeeting(meeting.id, userData);
         
-        console.log('✅ REAL Google Meet opened successfully');
-        showTemporaryNotification('success', '🎉 Opening Google Meet...');
+        console.log('✅ Stream opened successfully');
+        showTemporaryNotification('success', '🎉 Opening live stream...');
         
-        // 🆕 CHECK FOR ERRORS AFTER A DELAY
+        // Check for errors after delay
         setTimeout(() => {
           try {
-            // Check if the tab was redirected to an error page
             if (newTab.location.href.includes('whoops') || 
                 newTab.location.href.includes('error') ||
                 newTab.document.title.includes('Invalid')) {
-              console.error('❌ Google Meet error detected:', newTab.location.href);
-              
-              // Close the error tab and show user message
+              console.error('❌ Stream error detected');
               newTab.close();
-              showTemporaryNotification('error', 
-                '❌ Google Meet error. Please check if the meeting exists and try again.'
-              );
+              showTemporaryNotification('error', '❌ Stream error. Please try again.');
             }
           } catch (error) {
-            // Cross-origin security error - we can't check the URL
-            console.log('🔒 Cannot check tab URL due to security restrictions (normal)');
+            console.log('🔒 Cannot check tab URL (normal)');
           }
         }, 3000);
         
       } else {
         // Popup blocked
-        handlePopupBlocked(meeting);
+        const userAction = confirm(
+          `📢 Popup blocked!\n\nPlease:\n1. Allow popups for this site\n2. Or click OK to copy the stream link\n\nStream: ${meeting.title}`
+        );
+        
+        if (userAction && streamLink) {
+          navigator.clipboard.writeText(streamLink);
+          showTemporaryNotification('success', '🔗 Stream link copied! Paste it in your browser.');
+        }
       }
       
     } catch (error) {
-      console.error('❌ ULTIMATE FIX - Join error:', error);
+      console.error('❌ Join error:', error);
+      showTemporaryNotification('error', `❌ Failed to join stream: ${error.message}`);
       
-      // 🆕 BETTER ERROR MESSAGES
-      let userMessage = 'Failed to join meeting';
-      if (error.message.includes('No valid Google Meet link')) {
-        userMessage = 'This meeting has no valid Google Meet link. Please create a new meeting.';
-      } else if (error.message.includes('permission') || error.message.includes('authentication')) {
-        userMessage = 'Google Meet authentication issue. Please check your Google account.';
-      }
-      
-      showTemporaryNotification('error', `❌ ${userMessage}`);
-      
-      // 🆕 STILL TRY TO OPEN ANY AVAILABLE LINK AS LAST RESORT
+      // Fallback
       const fallbackLink = meeting.meetingLink || meeting.meetLink;
       if (fallbackLink) {
         setTimeout(() => {
@@ -122,21 +105,6 @@ const AdminCommunityTab = () => {
     }
   };
 
-  // 🆕 SIMPLIFIED POPUP HANDLER
-  const handlePopupBlocked = (meeting) => {
-    const realMeetLink = meeting.meetingLink || meeting.meetLink;
-    
-    const userAction = confirm(
-      `📢 Popup blocked!\n\nPlease:\n1. Allow popups for this site\n2. Or click OK to copy the REAL Google Meet link\n\nMeeting: ${meeting.title}`
-    );
-    
-    if (userAction && realMeetLink) {
-      navigator.clipboard.writeText(realMeetLink);
-      showTemporaryNotification('success', '🔗 REAL Google Meet link copied! Paste it in your browser.');
-    }
-  };
-
-  // 🆕 HELPER FUNCTION TO EXTRACT MEETING CODE
   const extractMeetingCode = (meetingLink) => {
     if (!meetingLink) return '';
     
@@ -159,20 +127,17 @@ const AdminCommunityTab = () => {
     try {
       setIsRefreshing(true);
       const response = await MeetApiService.getActiveMeeting();
-      console.log('🔍 Enhanced active meeting response:', response);
+      console.log('🔍 Active meeting response:', response);
       
       if (response.success && response.meeting) {
         const meeting = response.meeting;
         
-        // 🆕 ENSURE MEETING HAS ALL REQUIRED LINKS
+        // Ensure meeting has all required links
         if (!meeting.meetingCode) {
           meeting.meetingCode = extractMeetingCode(meeting.meetingLink);
         }
         if (!meeting.directJoinLink) {
           meeting.directJoinLink = meeting.meetingLink;
-        }
-        if (!meeting.instantJoinLink) {
-          meeting.instantJoinLink = meeting.meetingLink;
         }
         
         setActiveMeeting(meeting);
@@ -225,12 +190,12 @@ const AdminCommunityTab = () => {
         userData.name || userData.username
       );
 
-      console.log('🔍 Enhanced create meeting response:', response);
+      console.log('🔍 Create meeting response:', response);
 
       if (response.success) {
         setActiveMeeting(response.meeting);
         setIsMyMeeting(true);
-        showTemporaryNotification('success', '🎉 REAL Google Meet created successfully!');
+        showTemporaryNotification('success', '🎉 Live stream created successfully!');
         
         if (response.meeting.id) {
           const resourcesResponse = await MeetApiService.getMeetingResources(response.meeting.id);
@@ -241,7 +206,7 @@ const AdminCommunityTab = () => {
       } else {
         setNotification({ 
           type: 'error', 
-          message: response.error || 'Failed to create REAL Google Meet' 
+          message: response.error || 'Failed to create live stream' 
         });
       }
     } catch (error) {
@@ -293,7 +258,7 @@ const AdminCommunityTab = () => {
 
   const handleClearMeeting = async () => {
     try {
-      console.log('🧹 Attempting to clear meetings...');
+      console.log('🧹 Clearing meetings...');
       
       const response = await MeetApiService.clearAllMeetings();
       
@@ -322,7 +287,7 @@ const AdminCommunityTab = () => {
 
   const handleDeleteResource = async (resourceId) => {
     try {
-      console.log('💀 Deleting resource:', resourceId);
+      console.log('🗑️ Deleting resource:', resourceId);
       const response = await MeetApiService.deleteResource(resourceId);
       
       if (response.success) {
@@ -340,7 +305,6 @@ const AdminCommunityTab = () => {
   const handleViewResource = (resource) => {
     console.log('🔍 Viewing resource:', resource);
     
-    // Track resource access
     if (userData) {
       MeetApiService.recordResourceAccess(resource.id, userData.id, 'view')
         .then(result => console.log('✅ Resource access tracked:', result))
@@ -354,7 +318,7 @@ const AdminCommunityTab = () => {
     setNotification({ type: '', message: '' });
   };
 
-  // 🆕 PAGINATION & SEARCH FUNCTIONS
+  // Pagination & Search Functions
   const filteredResources = resources.filter(resource => {
     const matchesSearch = searchTerm === '' || 
       resource.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -451,8 +415,8 @@ const AdminCommunityTab = () => {
         <div className="col-12">
           <div className="d-flex justify-content-between align-items-center">
             <div>
-              <h1 className="h3 mb-1">Welcome to The Conclave Streams</h1>
-              <p className="text-muted mb-0">Manage your community live streams, webinars and training sessions</p>
+              <h1 className="h3 mb-1">The Conclave Academy Streams</h1>
+              <p className="text-muted mb-0">Travel, Tours, Hotels & Tourism Training Platform</p>
             </div>
             <div className="d-flex gap-2">
               <button 
@@ -478,12 +442,12 @@ const AdminCommunityTab = () => {
                   {isCreating ? (
                     <>
                       <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                      Creating REAL Google Meet...
+                      Creating Live Stream...
                     </>
                   ) : (
                     <>
                       <i className="fas fa-plus-circle me-2"></i>
-                      Create REAL Google Meet
+                      Start Live Stream
                     </>
                   )}
                 </button>
@@ -502,7 +466,7 @@ const AdminCommunityTab = () => {
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
                     <i className="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Notice:</strong> There's already an active meeting created by another admin.
+                    <strong>Notice:</strong> There's already an active stream created by another admin.
                   </div>
                   <button 
                     className="btn btn-outline-danger btn-sm"
@@ -510,7 +474,7 @@ const AdminCommunityTab = () => {
                     title="Clear all active meetings"
                   >
                     <i className="fas fa-times me-1"></i>
-                    Clear Meeting
+                    Clear Stream
                   </button>
                 </div>
               </div>
@@ -524,7 +488,7 @@ const AdminCommunityTab = () => {
                 <div className="d-flex justify-content-between align-items-center">
                   <h5 className="card-title mb-0">
                     <i className="fas fa-video me-2"></i>
-                    {isMyMeeting ? 'Your REAL Google Meet Active' : 'Active Google Meet'}
+                    {isMyMeeting ? 'Your Live Stream Active' : 'Active Live Stream'}
                   </h5>
                   <div className="d-flex align-items-center gap-2">
                     <span className="badge bg-success">
@@ -534,11 +498,6 @@ const AdminCommunityTab = () => {
                     <span className="badge bg-info">
                       <i className="fas fa-users me-1"></i>
                       {activeMeeting.participants?.length || 0}
-                    </span>
-                    {/* 🆕 REAL GOOGLE MEET BADGE */}
-                    <span className="badge bg-warning">
-                      <i className="fab fa-google me-1"></i>
-                      REAL Google Meet
                     </span>
                   </div>
                 </div>
@@ -564,7 +523,7 @@ const AdminCommunityTab = () => {
                       </div>
                     </div>
 
-                    {/* 🆕 UPDATED JOIN BUTTONS WITH REAL GOOGLE MEET */}
+                    {/* Join Buttons */}
                     <div className="mt-3 d-flex flex-wrap gap-2 align-items-center">
                       {isMyMeeting && (
                         <button 
@@ -576,21 +535,20 @@ const AdminCommunityTab = () => {
                         </button>
                       )}
                       
-                      {/* 🆕 REAL GOOGLE MEET JOIN BUTTON */}
                       <button 
                         className="btn btn-success"
-                        onClick={() => handleSeamlessJoin(activeMeeting)}
+                        onClick={() => handleJoinStream(activeMeeting)}
                         disabled={isJoining}
                       >
                         {isJoining ? (
                           <>
                             <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                            Joining REAL Google Meet...
+                            Joining Stream...
                           </>
                         ) : (
                           <>
-                            <i className="fab fa-google me-2"></i>
-                            {isMyMeeting ? 'Host REAL Google Meet' : 'Join REAL Google Meet'}
+                            <i className="fas fa-play-circle me-2"></i>
+                            {isMyMeeting ? 'Host Stream' : 'Join Live Stream'}
                           </>
                         )}
                       </button>
@@ -601,24 +559,17 @@ const AdminCommunityTab = () => {
                           onClick={handleEndMeeting}
                         >
                           <i className="fas fa-stop-circle me-2"></i>
-                          End Meet
+                          End Stream
                         </button>
                       )}
                     </div>
 
-                    {/* 🆕 REAL GOOGLE MEET INFO */}
+                    {/* Stream Info */}
                     <div className="mt-3 p-3 bg-light rounded">
                       <small className="text-muted">
-                        <i className="fas fa-check-circle me-1 text-success"></i>
-                        <strong>REAL Google Meet:</strong> This is an actual Google Meet session created via Google Calendar API
+                        <i className="fas fa-info-circle me-1 text-info"></i>
+                        Participants can join directly without entering codes
                       </small>
-                      {activeMeeting.meetingCode && (
-                        <div className="mt-2">
-                          <small className="text-muted">
-                            <strong>Meeting Code:</strong> {activeMeeting.meetingCode}
-                          </small>
-                        </div>
-                      )}
                     </div>
                   </div>
                   <div className="col-md-4">
@@ -631,7 +582,7 @@ const AdminCommunityTab = () => {
                       <div className="bg-light rounded p-3">
                         <i className={`fas ${isMyMeeting ? 'fa-crown text-warning' : 'fa-user text-info'} fa-3x mb-2`}></i>
                         <h4 className="mb-0">{isMyMeeting ? 'You' : 'Other'}</h4>
-                        <small className="text-muted">Meet Owner</small>
+                        <small className="text-muted">Stream Host</small>
                       </div>
                     </div>
                   </div>
@@ -639,7 +590,7 @@ const AdminCommunityTab = () => {
               </div>
             </div>
 
-            {/* 🆕 ENHANCED RESOURCES TABLE */}
+            {/* Resources Table */}
             {isMyMeeting && (
               <div className="card mb-4">
                 <div className="card-header bg-info text-white">
@@ -655,7 +606,7 @@ const AdminCommunityTab = () => {
                   </div>
                 </div>
                 <div className="card-body">
-                  {/* 🆕 SEARCH AND FILTERS */}
+                  {/* Search and Filters */}
                   <div className="row mb-3">
                     <div className="col-md-6">
                       <div className="input-group">
@@ -700,7 +651,7 @@ const AdminCommunityTab = () => {
                     </div>
                   </div>
 
-                  {/* 🆕 RESOURCES TABLE */}
+                  {/* Resources Table */}
                   {currentResources.length > 0 ? (
                     <>
                       <div className="table-responsive">
@@ -793,7 +744,7 @@ const AdminCommunityTab = () => {
                         </table>
                       </div>
 
-                      {/* 🆕 PAGINATION */}
+                      {/* Pagination */}
                       {totalPages > 1 && (
                         <nav className="mt-3">
                           <ul className="pagination justify-content-center">
@@ -884,17 +835,17 @@ const AdminCommunityTab = () => {
                       onClick={() => setShowExtensionModal(true)}
                     >
                       <i className="fas fa-clock me-2"></i>
-                      Extend Meeting
+                      Extend Stream
                     </button>
                     <button 
                       className="btn btn-outline-info"
                       onClick={() => {
                         navigator.clipboard.writeText(activeMeeting.meetingLink);
-                        showTemporaryNotification('success', '🔗 REAL Google Meet link copied to clipboard!');
+                        showTemporaryNotification('success', '🔗 Stream link copied to clipboard!');
                       }}
                     >
                       <i className="fas fa-copy me-2"></i>
-                      Copy Meet Link
+                      Copy Stream Link
                     </button>
                     <button 
                       className="btn btn-outline-primary"
@@ -923,12 +874,12 @@ const AdminCommunityTab = () => {
                 <div className="card-header bg-warning text-dark">
                   <h5 className="card-title mb-0">
                     <i className="fas fa-plus-circle me-2"></i>
-                    Create Your Own REAL Google Meet
+                    Start Your Own Stream
                   </h5>
                 </div>
                 <div className="card-body">
                   <p className="small text-muted mb-3">
-                    You can create your own REAL Google Meet even if there's an active meeting.
+                    You can start your own live stream even if there's an active stream.
                   </p>
                   <button 
                     className="btn btn-warning w-100"
@@ -938,12 +889,12 @@ const AdminCommunityTab = () => {
                     {isCreating ? (
                       <>
                         <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                        Creating REAL Meet...
+                        Creating Stream...
                       </>
                     ) : (
                       <>
-                        <i className="fab fa-google me-2"></i>
-                        Create New REAL Meet
+                        <i className="fas fa-rocket me-2"></i>
+                        Start New Stream
                       </>
                     )}
                   </button>
@@ -959,11 +910,10 @@ const AdminCommunityTab = () => {
             <div className="card border-0 shadow-sm">
               <div className="card-body py-5">
                 <div className="mb-4">
-                  <i className="fab fa-google fa-5x text-primary mb-4"></i>
-                  <h2 className="text-primary">Start a REAL Google Meet</h2>
+                  <i className="fas fa-video fa-5x text-primary mb-4"></i>
+                  <h2 className="text-primary">Start a Live Stream</h2>
                   <p className="text-muted lead">
-                    Create an actual Google Meet session via Google Calendar API. 
-                    No more "Invalid video call name" errors!
+                    Create professional training sessions and webinars for The Conclave Academy community.
                   </p>
                 </div>
                 
@@ -971,10 +921,10 @@ const AdminCommunityTab = () => {
                   <div className="col-md-4 mb-3">
                     <div className="text-center">
                       <div className="bg-primary bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
-                        <i className="fab fa-google fa-2x text-primary"></i>
+                        <i className="fas fa-play-circle fa-2x text-primary"></i>
                       </div>
-                      <h5>REAL Google Meet</h5>
-                      <p className="text-muted small">Actual Google Meet sessions via Calendar API</p>
+                      <h5>Live Streaming</h5>
+                      <p className="text-muted small">Professional video sessions</p>
                     </div>
                   </div>
                   <div className="col-md-4 mb-3">
@@ -992,7 +942,7 @@ const AdminCommunityTab = () => {
                         <i className="fas fa-database fa-2x text-warning"></i>
                       </div>
                       <h5>Permanent Storage</h5>
-                      <p className="text-muted small">Resources saved permanently in database</p>
+                      <p className="text-muted small">Resources saved permanently</p>
                     </div>
                   </div>
                 </div>
@@ -1006,12 +956,12 @@ const AdminCommunityTab = () => {
                     {isCreating ? (
                       <>
                         <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                        Creating REAL Google Meet...
+                        Creating Your Stream...
                       </>
                     ) : (
                       <>
-                        <i className="fab fa-google me-2"></i>
-                        Launch REAL Google Meet
+                        <i className="fas fa-rocket me-2"></i>
+                        Launch Live Stream
                       </>
                     )}
                   </button>
@@ -1085,7 +1035,7 @@ const AdminCommunityTab = () => {
         onClose={() => setShowExtensionModal(false)}
       />
 
-      {/* 🆕 RESOURCE VIEWER MODAL */}
+      {/* Resource Viewer Modal */}
       {viewingResource && (
         <ResourceViewer
           resource={viewingResource}

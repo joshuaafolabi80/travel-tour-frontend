@@ -10,11 +10,9 @@ const UserCommunityTab = () => {
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewingResource, setViewingResource] = useState(null);
-  
-  // 🆕 SEAMLESS JOIN STATE
   const [isJoining, setIsJoining] = useState(false);
 
-  // 🆕 PAGINATION & SEARCH STATE
+  // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,85 +26,66 @@ const UserCommunityTab = () => {
     loadActiveMeeting();
   }, []);
 
-  // 🆕 ULTIMATE FIX FOR DIRECT GOOGLE MEET JOINING
-  const handleSeamlessJoin = async (meeting) => {
+  // Join Live Stream
+  const handleJoinStream = async (meeting) => {
     if (!meeting) return;
     
     setIsJoining(true);
     try {
-      console.log('🚀 User joining REAL Google Meet...');
-      console.log('📋 Meeting data for user:', {
-        meetingLink: meeting.meetingLink,
-        meetLink: meeting.meetLink,
-        meetingCode: meeting.meetingCode,
-        directJoinLink: meeting.directJoinLink
-      });
-
-      // 🆕 CRITICAL FIX: USE THE EXACT SAME MEETING LINK AS ADMIN
-      const realMeetLink = meeting.meetingLink || meeting.meetLink || meeting.directJoinLink;
+      console.log('🎯 User joining live stream...');
       
-      if (!realMeetLink) {
-        throw new Error('No valid Google Meet link found for this meeting');
+      // Use the actual meeting link
+      const streamLink = meeting.meetingLink || meeting.meetLink || meeting.directJoinLink;
+      
+      if (!streamLink) {
+        throw new Error('No valid stream link found');
       }
 
-      console.log('🔗 User using EXACT Google Meet link:', realMeetLink);
+      console.log('🔗 User using stream link:', streamLink);
 
-      // 🆕 DIRECT OPENING - NO CODE NEEDED
-      const newTab = window.open(realMeetLink, `google-meet-${meeting.id}`);
+      // Open in new tab
+      const newTab = window.open(streamLink, `conclave-stream-${meeting.id}`);
       
       if (newTab) {
-        // Focus the new tab
         newTab.focus();
         
-        // Track the join attempt
+        // Track join attempt
         await MeetApiService.joinMeeting(meeting.id, userData);
         
-        console.log('✅ User successfully opened Google Meet directly');
+        console.log('✅ User successfully opened stream');
         
-        // 🆕 CHECK FOR ERRORS AFTER A DELAY
+        // Check for errors after delay
         setTimeout(() => {
           try {
-            // Check if the tab was redirected to an error page
             if (newTab.location.href.includes('whoops') || 
                 newTab.location.href.includes('error') ||
                 newTab.document.title.includes('Invalid')) {
-              console.error('❌ Google Meet error detected for user:', newTab.location.href);
-              
-              // Close the error tab and show user message
+              console.error('❌ Stream error detected for user');
               newTab.close();
-              alert('❌ Google Meet error. Please check if the meeting exists and try again.');
+              alert('❌ Stream error. Please try again.');
             }
           } catch (error) {
-            // Cross-origin security error - we can't check the URL
-            console.log('🔒 Cannot check tab URL due to security restrictions (normal)');
+            console.log('🔒 Cannot check tab URL (normal)');
           }
         }, 3000);
         
       } else {
-        // Popup blocked - simplified user experience
-        const realMeetLink = meeting.meetingLink || meeting.meetLink;
+        // Popup blocked
         const userAction = confirm(
-          `📢 Popup blocked!\n\nPlease:\n1. Allow popups for this site\n2. Or click OK to copy the Google Meet link\n\nMeeting: ${meeting.title}`
+          `📢 Popup blocked!\n\nPlease:\n1. Allow popups for this site\n2. Or click OK to copy the stream link\n\nStream: ${meeting.title}`
         );
         
-        if (userAction && realMeetLink) {
-          navigator.clipboard.writeText(realMeetLink);
-          alert('🔗 Google Meet link copied! Paste it in your browser to join.');
+        if (userAction && streamLink) {
+          navigator.clipboard.writeText(streamLink);
+          alert('🔗 Stream link copied! Paste it in your browser to join.');
         }
       }
       
     } catch (error) {
       console.error('❌ User join error:', error);
+      alert(`❌ Failed to join stream: ${error.message}`);
       
-      // 🆕 BETTER ERROR MESSAGES FOR USERS
-      let userMessage = 'Failed to join meeting';
-      if (error.message.includes('No valid Google Meet link')) {
-        userMessage = 'This meeting has no valid Google Meet link. Please contact the host.';
-      }
-      
-      alert(`❌ ${userMessage}`);
-      
-      // 🆕 STILL TRY TO OPEN ANY AVAILABLE LINK AS LAST RESORT
+      // Fallback
       const fallbackLink = meeting.meetingLink || meeting.meetLink;
       if (fallbackLink) {
         setTimeout(() => {
@@ -119,7 +98,6 @@ const UserCommunityTab = () => {
     }
   };
 
-  // 🆕 HELPER FUNCTION TO EXTRACT MEETING CODE
   const extractMeetingCode = (meetingLink) => {
     if (!meetingLink) return '';
     
@@ -142,20 +120,17 @@ const UserCommunityTab = () => {
     try {
       setIsRefreshing(true);
       const response = await MeetApiService.getActiveMeeting();
-      console.log('🔍 User - Enhanced active meeting response:', response);
+      console.log('🔍 User - Active meeting response:', response);
       
       if (response.success && response.meeting) {
         const meeting = response.meeting;
         
-        // 🆕 ENSURE MEETING HAS ALL REQUIRED LINKS
+        // Ensure meeting has all required links
         if (!meeting.meetingCode) {
           meeting.meetingCode = extractMeetingCode(meeting.meetingLink);
         }
         if (!meeting.directJoinLink) {
           meeting.directJoinLink = meeting.meetingLink;
-        }
-        if (!meeting.instantJoinLink) {
-          meeting.instantJoinLink = meeting.meetingLink;
         }
         
         console.log('✅ User loaded meeting with link:', meeting.meetingLink);
@@ -191,7 +166,6 @@ const UserCommunityTab = () => {
   const handleViewResource = (resource) => {
     console.log('🔍 User viewing resource:', resource);
     
-    // Track resource access
     if (userData) {
       MeetApiService.recordResourceAccess(resource.id, userData.id, 'view')
         .then(result => console.log('✅ Resource access tracked:', result))
@@ -205,7 +179,7 @@ const UserCommunityTab = () => {
     await loadActiveMeeting();
   };
 
-  // 🆕 PAGINATION & SEARCH FUNCTIONS
+  // Pagination & Search Functions
   const filteredResources = resources.filter(resource => {
     const matchesSearch = searchTerm === '' || 
       resource.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -293,8 +267,8 @@ const UserCommunityTab = () => {
       <div className="row mb-4">
         <div className="col-12">
           <div className="text-center">
-            <h1 className="h3 mb-1">Welcome to The Conclave Streams</h1>
-            <p className="text-muted mb-0">Join our webinars, live training sessions and access shared resources</p>
+            <h1 className="h3 mb-1">The Conclave Academy Streams</h1>
+            <p className="text-muted mb-0">Travel, Tours, Hotels & Tourism Training Platform</p>
           </div>
         </div>
       </div>
@@ -315,11 +289,6 @@ const UserCommunityTab = () => {
                     <span className="badge bg-warning text-dark">
                       <i className="fas fa-circle me-1"></i>
                       LIVE NOW
-                    </span>
-                    {/* 🆕 REAL GOOGLE MEET BADGE */}
-                    <span className="badge bg-info">
-                      <i className="fab fa-google me-1"></i>
-                      Google Meet
                     </span>
                   </div>
                 </div>
@@ -345,46 +314,39 @@ const UserCommunityTab = () => {
                       </span>
                     </div>
 
-                    {/* 🆕 UPDATED JOIN BUTTON - NOW USES EXACT MEETING LINK */}
+                    {/* Join Button */}
                     <button 
-                      onClick={() => handleSeamlessJoin(activeMeeting)}
+                      onClick={() => handleJoinStream(activeMeeting)}
                       className="btn btn-success btn-lg"
                       disabled={isJoining}
                     >
                       {isJoining ? (
                         <>
                           <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                          Joining Google Meet...
+                          Joining Stream...
                         </>
                       ) : (
                         <>
-                          <i className="fab fa-google me-2"></i>
-                          Join Google Meet
+                          <i className="fas fa-play-circle me-2"></i>
+                          Join Live Stream
                         </>
                       )}
                     </button>
 
-                    {/* 🆕 JOIN INFO */}
+                    {/* Stream Info */}
                     <div className="mt-3 p-3 bg-light rounded">
                       <small className="text-muted">
-                        <i className="fas fa-check-circle me-1 text-success"></i>
-                        <strong>Direct Join:</strong> Click the button above to join the Google Meet directly - NO CODE NEEDED!
+                        <i className="fas fa-info-circle me-1 text-info"></i>
+                        Click the button above to join the stream directly - No code required!
                       </small>
-                      {activeMeeting.meetingCode && (
-                        <div className="mt-2">
-                          <small className="text-muted">
-                            <strong>Meeting Code:</strong> {activeMeeting.meetingCode}
-                          </small>
-                        </div>
-                      )}
                     </div>
                   </div>
                   <div className="col-md-4 text-center">
                     <div className="bg-success bg-opacity-10 rounded-circle p-4 d-inline-flex mb-3">
-                      <i className="fab fa-google fa-3x text-success"></i>
+                      <i className="fas fa-video fa-3x text-success"></i>
                     </div>
                     <p className="text-muted small">
-                      Click the button to join the Google Meet session directly - No code required!
+                      Click the button to join the live training session directly
                     </p>
                   </div>
                 </div>
@@ -439,7 +401,7 @@ const UserCommunityTab = () => {
           </div>
 
           <div className="col-lg-4">
-            {/* 🆕 ENHANCED RESOURCES TABLE */}
+            {/* Resources Table */}
             <div className="card">
               <div className="card-header bg-primary text-white">
                 <div className="d-flex justify-content-between align-items-center">
@@ -462,7 +424,7 @@ const UserCommunityTab = () => {
                 </div>
               </div>
               <div className="card-body">
-                {/* 🆕 RESOURCE INFO BANNER */}
+                {/* Resource Info Banner */}
                 <div className="alert alert-info mb-3">
                   <div className="d-flex align-items-center">
                     <i className="fas fa-info-circle me-2"></i>
@@ -472,7 +434,7 @@ const UserCommunityTab = () => {
                   </div>
                 </div>
 
-                {/* 🆕 SEARCH AND FILTERS */}
+                {/* Search and Filters */}
                 <div className="row mb-3">
                   <div className="col-md-6">
                     <div className="input-group">
@@ -510,7 +472,7 @@ const UserCommunityTab = () => {
                   </div>
                 </div>
 
-                {/* 🆕 RESOURCES TABLE */}
+                {/* Resources Table */}
                 {currentResources.length > 0 ? (
                   <>
                     <div className="table-responsive">
@@ -589,7 +551,7 @@ const UserCommunityTab = () => {
                       </table>
                     </div>
 
-                    {/* 🆕 PAGINATION */}
+                    {/* Pagination */}
                     {totalPages > 1 && (
                       <nav className="mt-3">
                         <ul className="pagination justify-content-center pagination-sm">
@@ -666,7 +628,7 @@ const UserCommunityTab = () => {
               <div className="card-header">
                 <h5 className="card-title mb-0">
                   <i className="fas fa-info-circle me-2"></i>
-                  Meeting Information
+                  Stream Information
                 </h5>
               </div>
               <div className="card-body">
@@ -699,7 +661,7 @@ const UserCommunityTab = () => {
               </div>
               <div className="card-body">
                 <p className="small text-muted mb-2">
-                  If you're having trouble joining the meeting:
+                  If you're having trouble joining the stream:
                 </p>
                 <ul className="small text-muted ps-3">
                   <li>Check your internet connection</li>
@@ -787,7 +749,7 @@ const UserCommunityTab = () => {
         </div>
       )}
 
-      {/* 🆕 RESOURCE VIEWER MODAL */}
+      {/* Resource Viewer Modal */}
       {viewingResource && (
         <ResourceViewer
           resource={viewingResource}

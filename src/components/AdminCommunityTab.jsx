@@ -62,10 +62,8 @@ const AdminCommunityTab = () => {
         setHostHasJoined(true);
         showTemporaryNotification('success', '✅ You have joined as host! Users can now join the meeting.');
         
-        // Update meeting status to show host has joined
-        if (activeMeeting.id) {
-          await MeetApiService.updateMeetingStatus(activeMeeting.id, 'host_joined');
-        }
+        // 🆕 FIXED: Use the new status update function
+        await MeetApiService.updateMeetingStatus(activeMeeting.id, 'host_joined');
 
       } else {
         // Popup blocked

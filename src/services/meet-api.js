@@ -7,6 +7,105 @@ const API_BASE_URL = MEET_API_BASE_URL || process.env.REACT_APP_MEET_API_BASE_UR
 console.log('🔗 Meet API Base URL:', API_BASE_URL);
 
 class MeetApiService {
+  // 🆕 ADD MISSING BASE URL PROPERTY
+  static baseUrl = API_BASE_URL;
+
+  // 🆕 ADD MISSING updateMeetingStatus FUNCTION
+  static async updateMeetingStatus(meetingId, status) {
+    try {
+      console.log('🔄 Updating meeting status:', { meetingId, status });
+      
+      const response = await fetch(`${this.baseUrl}/${meetingId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status })
+      });
+
+      if (!response.ok) {
+        console.warn('⚠️ Meeting status update failed, but continuing...');
+        return { success: false, error: 'Status update not supported' };
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.warn('⚠️ Meeting status update error (non-critical):', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 🆕 FIXED uploadFileResource FUNCTION
+  static async uploadFileResource(meetingId, file, title, description, userData) {
+    try {
+      console.log('📤 Uploading actual file via service:', file.name);
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('meetingId', meetingId);
+      formData.append('resourceType', 'document'); // Changed from 'type'
+      formData.append('title', title || file.name);
+      formData.append('content', description || `File: ${file.name}`);
+      formData.append('fileName', file.name);
+      formData.append('uploadedBy', userData?.id || 'admin'); // Changed from 'sharedBy'
+      formData.append('uploadedByName', userData?.name || userData?.username || 'Admin'); // Changed from 'sharedByName'
+      formData.append('createdAt', new Date().toISOString());
+
+      console.log('📤 Uploading file resource with FormData...');
+      
+      const response = await fetch(`${this.baseUrl}/resources/share`, {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header for FormData - browser will set it automatically
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Server response error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ File upload response:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Meet API upload file resource error:', error);
+      throw error;
+    }
+  }
+
+  // 🆕 KEEP EXISTING uploadFileResource AS ALIAS FOR COMPATIBILITY
+  static async uploadFileResourceOld(formData) {
+    try {
+      console.log('📤 Uploading file resource with FormData...');
+      
+      const response = await fetch(`${this.baseUrl}/resources/share`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Server response error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ File upload response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Meet API upload file resource error:', error);
+      return { 
+        success: false, 
+        error: 'Failed to upload file',
+        details: error.message 
+      };
+    }
+  }
+
+  // KEEP ALL YOUR EXISTING FUNCTIONS EXACTLY AS THEY ARE
   static async createMeeting(adminId, title, description = '', adminName = '') {
     try {
       console.log('🎯 Creating meeting with:', { adminId, title, description, adminName });
@@ -155,36 +254,6 @@ class MeetApiService {
     }
   }
 
-  // 🆕 ADD FILE UPLOAD METHOD USING FormData
-  static async uploadFileResource(formData) {
-    try {
-      console.log('📤 Uploading file resource with FormData...');
-      
-      const response = await fetch(`${API_BASE_URL}/resources/share`, {
-        method: 'POST',
-        body: formData,
-        // Don't set Content-Type header - let browser set it with boundary
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Server response error:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      console.log('✅ File upload response:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ Meet API upload file resource error:', error);
-      return { 
-        success: false, 
-        error: 'Failed to upload file',
-        details: error.message 
-      };
-    }
-  }
-
   static async uploadFile(formData) {
     try {
       console.log('🎯 Uploading file...');
@@ -236,7 +305,6 @@ class MeetApiService {
     }
   }
 
-  // 🆕 ADD THIS MISSING METHOD
   static async recordResourceAccess(resourceId, userId, action = 'view') {
     try {
       console.log('🎯 Recording resource access:', { resourceId, userId, action });
@@ -307,12 +375,10 @@ class MeetApiService {
     }
   }
 
-  // 🆕 ENHANCED JOIN MEETING - PRESERVES EXISTING FUNCTIONALITY
   static async joinMeeting(meetingId, userData) {
     try {
       console.log('🎯 Enhanced join meeting:', { meetingId, userData });
       
-      // Handle both old format (userId, userName) and new format (userData object)
       const userId = typeof userData === 'object' ? (userData?.id || userData?.userId) : userData;
       const userName = typeof userData === 'object' ? (userData?.name || userData?.username || 'Participant') : 'Participant';
       
@@ -387,7 +453,6 @@ class MeetApiService {
     }
   }
 
-  // 🆕 ADDED: Clear all meetings function
   static async clearAllMeetings() {
     try {
       console.log('🧹 Clearing all meetings...');
@@ -413,7 +478,6 @@ class MeetApiService {
     }
   }
 
-  // 🆕 ADDED: Get all meetings for debugging
   static async getAllMeetings() {
     try {
       console.log('🎯 Fetching all meetings for debugging...');
@@ -436,7 +500,6 @@ class MeetApiService {
     }
   }
 
-  // 🆕 ADDED: Get all resources for a meeting (even after it ends)
   static async getAllMeetingResources(meetingId) {
     try {
       console.log('🎯 Fetching ALL resources for meeting:', meetingId);
@@ -459,7 +522,6 @@ class MeetApiService {
     }
   }
 
-  // 🆕 ADDED: Delete resource function - HARD DELETE
   static async deleteResource(resourceId, adminId) {
     try {
       console.log('🗑️ API: Deleting resource with admin ID:', resourceId, adminId);
@@ -469,7 +531,7 @@ class MeetApiService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ adminId }) // Include adminId in request body
+        body: JSON.stringify({ adminId })
       });
 
       const data = await response.json();

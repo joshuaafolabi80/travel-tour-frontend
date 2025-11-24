@@ -36,72 +36,73 @@ class MeetApiService {
     }
   }
 
-  // 🆕 FIXED uploadFileResource FUNCTION
-  static async uploadFileResource(meetingId, file, title, description, userData) {
+  // 🆕 FIXED uploadFileResource FUNCTION - HANDLES BOTH OLD AND NEW CALLING PATTERNS
+  static async uploadFileResource(...args) {
     try {
-      console.log('📤 Uploading actual file via service:', file.name);
-      
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('meetingId', meetingId);
-      formData.append('resourceType', 'document'); // Changed from 'type'
-      formData.append('title', title || file.name);
-      formData.append('content', description || `File: ${file.name}`);
-      formData.append('fileName', file.name);
-      formData.append('uploadedBy', userData?.id || 'admin'); // Changed from 'sharedBy'
-      formData.append('uploadedByName', userData?.name || userData?.username || 'Admin'); // Changed from 'sharedByName'
-      formData.append('createdAt', new Date().toISOString());
+      // 🆕 DETECT CALLING PATTERN
+      if (args[0] instanceof FormData) {
+        // OLD PATTERN: uploadFileResource(formData)
+        console.log('📤 Using OLD upload pattern with FormData');
+        const formData = args[0];
+        
+        const response = await fetch(`${this.baseUrl}/resources/share`, {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Server response error:', errorText);
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('✅ File upload response:', result);
+        return result;
+        
+      } else {
+        // NEW PATTERN: uploadFileResource(meetingId, file, title, description, userData)
+        console.log('📤 Using NEW upload pattern with parameters');
+        const [meetingId, file, title, description, userData] = args;
+        
+        console.log('📤 Uploading actual file via service:', file?.name);
+        
+        if (!file) {
+          throw new Error('File parameter is required but was undefined');
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('meetingId', meetingId);
+        formData.append('resourceType', 'document');
+        formData.append('title', title || file.name);
+        formData.append('content', description || `File: ${file.name}`);
+        formData.append('fileName', file.name);
+        formData.append('uploadedBy', userData?.id || 'admin');
+        formData.append('uploadedByName', userData?.name || userData?.username || 'Admin');
+        formData.append('createdAt', new Date().toISOString());
 
-      console.log('📤 Uploading file resource with FormData...');
-      
-      const response = await fetch(`${this.baseUrl}/resources/share`, {
-        method: 'POST',
-        body: formData,
-        // Don't set Content-Type header for FormData - browser will set it automatically
-      });
+        console.log('📤 Uploading file resource with FormData...');
+        
+        const response = await fetch(`${this.baseUrl}/resources/share`, {
+          method: 'POST',
+          body: formData,
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Server response error:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Server response error:', errorText);
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('✅ File upload response:', data);
+        return data;
       }
-
-      const data = await response.json();
-      console.log('✅ File upload response:', data);
       
-      return data;
     } catch (error) {
       console.error('❌ Meet API upload file resource error:', error);
       throw error;
-    }
-  }
-
-  // 🆕 KEEP EXISTING uploadFileResource AS ALIAS FOR COMPATIBILITY
-  static async uploadFileResourceOld(formData) {
-    try {
-      console.log('📤 Uploading file resource with FormData...');
-      
-      const response = await fetch(`${this.baseUrl}/resources/share`, {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Server response error:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      console.log('✅ File upload response:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ Meet API upload file resource error:', error);
-      return { 
-        success: false, 
-        error: 'Failed to upload file',
-        details: error.message 
-      };
     }
   }
 

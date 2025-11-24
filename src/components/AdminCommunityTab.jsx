@@ -159,9 +159,10 @@ const AdminCommunityTab = () => {
         }
       } else {
         setActiveMeeting(null);
-        setResources([]);
         setIsMyMeeting(false);
         setHostHasJoined(false);
+        // 🆕 FIXED: DON'T CLEAR RESOURCES - Keep them visible from previous state
+        console.log('📚 No active meeting - keeping existing resources in archive view');
       }
     } catch (error) {
       console.error('Error loading active meeting:', error);
@@ -255,6 +256,7 @@ const AdminCommunityTab = () => {
     }
   };
 
+  // 🆕 FIXED: End meeting without clearing resources
   const handleEndMeeting = async () => {
     if (!activeMeeting || !userData) return;
 
@@ -263,7 +265,7 @@ const AdminCommunityTab = () => {
       
       if (response.success) {
         setActiveMeeting(null);
-        // setResources([]);
+        // 🆕 FIXED: DON'T CLEAR RESOURCES - Keep them visible in archive
         setIsMyMeeting(false);
         setHostHasJoined(false);
         showTemporaryNotification('success', '🛑 Webinar session ended successfully! All shared resources remain available in the archive.');

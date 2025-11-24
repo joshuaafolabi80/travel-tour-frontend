@@ -263,10 +263,10 @@ const AdminCommunityTab = () => {
       
       if (response.success) {
         setActiveMeeting(null);
-        setResources([]);
+        // setResources([]);
         setIsMyMeeting(false);
         setHostHasJoined(false);
-        showTemporaryNotification('success', '🛑 Webinar session ended successfully!');
+        showTemporaryNotification('success', '🛑 Webinar session ended successfully! All shared resources remain available in the archive.');
       } else {
         setNotification({ type: 'error', message: response.error || 'Failed to end meeting' });
       }

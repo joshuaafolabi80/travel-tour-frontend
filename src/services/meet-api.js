@@ -460,28 +460,25 @@ class MeetApiService {
   }
 
   // 🆕 ADDED: Delete resource function - HARD DELETE
-  static async deleteResource(resourceId) {
+  static async deleteResource(resourceId, adminId) {
     try {
-      console.log('💀 HARD DELETING resource:', resourceId);
-      const response = await fetch(`${API_BASE_URL}/resources/${resourceId}`, {
+      console.log('🗑️ API: Deleting resource with admin ID:', resourceId, adminId);
+      
+      const response = await fetch(`${this.baseUrl}/resources/${resourceId}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ adminId }) // Include adminId in request body
       });
+
+      const data = await response.json();
+      console.log('🗑️ API Delete response:', data);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      console.log('✅ Resource HARD DELETE response:', result);
-      return result;
+      return data;
     } catch (error) {
-      console.error('❌ Meet API delete resource error:', error);
-      return { 
-        success: false, 
-        error: 'Meet service unavailable',
-        details: error.message 
-      };
+      console.error('❌ API Error deleting resource:', error);
+      return { success: false, error: error.message };
     }
   }
 }

@@ -287,7 +287,16 @@ const AdminCommunityTab = () => {
   const handleDeleteResource = async (resourceId) => {
     try {
       console.log('🗑️ Deleting resource:', resourceId);
-      const response = await MeetApiService.deleteResource(resourceId);
+      
+      // Get admin ID from user data
+      const adminId = userData?.id;
+      
+      if (!adminId) {
+        setNotification({ type: 'error', message: 'Admin ID not found. Please log in again.' });
+        return;
+      }
+      
+      const response = await MeetApiService.deleteResource(resourceId, adminId); // Pass adminId
       
       if (response.success) {
         setResources(prev => prev.filter(r => r.id !== resourceId));

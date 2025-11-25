@@ -545,10 +545,23 @@ class MeetApiService {
     }
   }
 
+  // 🆕 ENHANCED DELETE RESOURCE FUNCTION WITH BETTER ERROR HANDLING
   static async deleteResource(resourceId, adminId) {
     try {
-      console.log('🗑️ API: Deleting resource with admin ID:', resourceId, adminId);
+      console.log('🗑️ API: Deleting resource with admin ID:', { resourceId, adminId });
       
+      // 🆕 FIRST, TRY TO DEBUG THE RESOURCE ID
+      console.log('🔍 Debugging resource ID before deletion...');
+      try {
+        const debugResponse = await fetch(`${this.baseUrl}/debug/resources/${resourceId}`);
+        if (debugResponse.ok) {
+          const debugData = await debugResponse.json();
+          console.log('🔍 Resource debug info:', debugData);
+        }
+      } catch (debugError) {
+        console.warn('⚠️ Debug endpoint not available, continuing with deletion...');
+      }
+
       const response = await fetch(`${this.baseUrl}/resources/${resourceId}`, {
         method: 'DELETE',
         headers: {
@@ -560,10 +573,74 @@ class MeetApiService {
       const data = await response.json();
       console.log('🗑️ API Delete response:', data);
       
+      if (!data.success) {
+        console.error('❌ Delete failed with response:', data);
+        
+        // 🆕 PROVIDE BETTER ERROR MESSAGES
+        if (data.error === 'Resource not found' || data.error === 'Resource not found in database') {
+          return { 
+            success: false, 
+            error: 'Resource not found in database. It may have been already deleted or the ID is incorrect.' 
+          };
+        }
+      }
+      
       return data;
     } catch (error) {
       console.error('❌ API Error deleting resource:', error);
-      return { success: false, error: error.message };
+      return { 
+        success: false, 
+        error: `Network error: ${error.message}. Please check your connection and try again.` 
+      };
+    }
+  }
+
+  // 🆕 ADD DEBUG FUNCTION TO CHECK RESOURCE IDS
+  static async debugResource(resourceId) {
+    try {
+      console.log('🔍 Debugging resource:', resourceId);
+      const response = await fetch(`${this.baseUrl}/debug/resources/${resourceId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('🔍 Resource debug response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Meet API debug resource error:', error);
+      return { 
+        success: false, 
+        error: 'Failed to debug resource',
+        details: error.message 
+      };
+    }
+  }
+
+  // 🆕 ADD RESET FUNCTION FOR EMERGENCIES
+  static async resetAllResources() {
+    try {
+      console.log('🔄 Resetting all resources...');
+      const response = await fetch(`${this.baseUrl}/admin/reset-resources`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Reset resources response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Meet API reset resources error:', error);
+      return { 
+        success: false, 
+        error: 'Failed to reset resources',
+        details: error.message 
+      };
     }
   }
 }

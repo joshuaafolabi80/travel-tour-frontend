@@ -39,6 +39,90 @@ const AdminCommunityTab = () => {
     loadActiveMeeting();
   }, []);
 
+  // 🆕 ADD SEPARATE FUNCTION FOR ARCHIVED RESOURCES
+  const loadArchivedResources = async () => {
+    try {
+      console.log('📚 Loading archived resources...');
+      const archivedResponse = await MeetApiService.getArchivedResources();
+      
+      if (archivedResponse.success) {
+        setResources(archivedResponse.resources || []);
+        console.log('✅ Loaded archived resources:', archivedResponse.resources.length);
+      } else {
+        console.log('❌ Could not load archived resources');
+        // Keep existing resources or set empty array
+        if (resources.length === 0) {
+          setResources([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading archived resources:', error);
+    }
+  };
+
+  // 🆕 ENHANCED LOAD ACTIVE MEETING WITH FORCE REFRESH
+  const loadActiveMeeting = async (forceRefresh = false) => {
+    try {
+      setIsRefreshing(true);
+      
+      if (forceRefresh) {
+        // 🆕 CLEAR CACHE AND FORCE RELOAD
+        setResources([]);
+        console.log('🔄 Force refreshing all data...');
+      }
+
+      const response = await MeetApiService.getActiveMeeting();
+      console.log('🔍 Active meeting response:', response);
+      
+      if (response.success && response.meeting) {
+        const meeting = response.meeting;
+        
+        // 🔴 FIXED: Override any DB links with our permanent link
+        meeting.meetingLink = PERMANENT_MEET_LINK;
+        meeting.directJoinLink = PERMANENT_MEET_LINK;
+        
+        setActiveMeeting(meeting);
+        
+        const isAdminMeeting = meeting.adminId === userData?.id;
+        setIsMyMeeting(isAdminMeeting);
+        setHostHasJoined(meeting.status === 'host_joined');
+        
+        // 🆕 FORCE REFRESH RESOURCES WITH CACHE BUSTING
+        const resourcesResponse = await MeetApiService.getMeetingResources(meeting.id);
+        if (resourcesResponse.success) {
+          console.log('✅ Loaded FRESH resources:', resourcesResponse.resources.length);
+          setResources(resourcesResponse.resources || []);
+        } else {
+          console.log('⚠️ Could not load meeting resources, trying archived...');
+          // Fallback to archived resources
+          await loadArchivedResources();
+        }
+      } else {
+        setActiveMeeting(null);
+        setIsMyMeeting(false);
+        setHostHasJoined(false);
+        
+        // 🆕 LOAD ARCHIVED RESOURCES
+        await loadArchivedResources();
+      }
+    } catch (error) {
+      console.error('Error loading active meeting:', error);
+      setNotification({ type: 'error', message: 'Failed to load meeting data' });
+      
+      // 🆕 TRY TO LOAD ARCHIVED RESOURCES ON ERROR TOO
+      await loadArchivedResources();
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  // 🆕 ENHANCED MANUAL REFRESH
+  const handleManualRefresh = async () => {
+    await loadActiveMeeting(true); // 🆕 PASS true FOR FORCE REFRESH
+    showTemporaryNotification('info', '📊 Data forcefully refreshed from server!');
+  };
+
   // 🛠️ FIXED: Admin joins the PERMANENT link (not random DB links)
   const handleAdminJoinFirst = async () => {
     if (!activeMeeting) return;
@@ -128,70 +212,6 @@ const AdminCommunityTab = () => {
       }
     }
     return '';
-  };
-
-  // 🆕 COMPLETELY FIXED: Load active meeting with archive support
-  const loadActiveMeeting = async () => {
-    try {
-      setIsRefreshing(true);
-      const response = await MeetApiService.getActiveMeeting();
-      console.log('🔍 Active meeting response:', response);
-      
-      if (response.success && response.meeting) {
-        const meeting = response.meeting;
-        
-        // 🔴 FIXED: Override any DB links with our permanent link
-        meeting.meetingLink = PERMANENT_MEET_LINK;
-        meeting.directJoinLink = PERMANENT_MEET_LINK;
-        
-        // Ensure meeting has all required codes
-        if (!meeting.meetingCode) {
-          meeting.meetingCode = extractMeetingCode(PERMANENT_MEET_LINK);
-        }
-        
-        setActiveMeeting(meeting);
-        
-        const isAdminMeeting = meeting.adminId === userData?.id;
-        setIsMyMeeting(isAdminMeeting);
-        
-        // Check if host has joined
-        setHostHasJoined(meeting.status === 'host_joined');
-        
-        // 🆕 FETCH RESOURCES FOR ACTIVE MEETING
-        const resourcesResponse = await MeetApiService.getMeetingResources(meeting.id);
-        if (resourcesResponse.success) {
-          setResources(resourcesResponse.resources || []);
-          console.log('✅ Loaded active meeting resources:', resourcesResponse.resources.length);
-        }
-      } else {
-        setActiveMeeting(null);
-        setIsMyMeeting(false);
-        setHostHasJoined(false);
-        
-        // 🆕 CRITICAL FIX: LOAD ARCHIVED RESOURCES WHEN NO ACTIVE MEETING
-        console.log('📚 No active meeting - loading archived resources...');
-        const archivedResponse = await MeetApiService.getArchivedResources();
-        
-        if (archivedResponse.success) {
-          setResources(archivedResponse.resources || []);
-          console.log('✅ Loaded archived resources:', archivedResponse.resources.length);
-        } else {
-          console.log('📚 Could not load archived resources, keeping current state');
-          // Don't clear resources - keep whatever we have
-        }
-      }
-    } catch (error) {
-      console.error('Error loading active meeting:', error);
-      setNotification({ type: 'error', message: 'Failed to load meeting data' });
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  const handleManualRefresh = async () => {
-    await loadActiveMeeting();
-    showTemporaryNotification('info', '📊 Data refreshed successfully!');
   };
 
   const showTemporaryNotification = (type, message) => {
@@ -300,10 +320,13 @@ const AdminCommunityTab = () => {
     showTemporaryNotification('success', '📁 Resource shared successfully!');
   };
 
-  // 🆕 UPDATED DELETE FUNCTION WITH AUTO-DISMISS
+  // 🆕 ENHANCED DELETE FUNCTION WITH INSTANT UI UPDATE
   const handleDeleteResource = async (resourceId, resourceTitle) => {
     try {
       console.log('🗑️ Attempting to delete resource:', resourceId);
+      
+      // 🆕 IMMEDIATE UI UPDATE - OPTIMISTIC DELETE
+      setResources(prev => prev.filter(r => r.id !== resourceId && r.resourceId !== resourceId));
       
       // Show deleting notification
       setDeleteNotification({ 
@@ -321,40 +344,38 @@ const AdminCommunityTab = () => {
           type: 'error' 
         });
         setTimeout(() => setDeleteNotification({ show: false, message: '', type: '' }), 4000);
+        
+        // 🆕 RESTORE THE RESOURCE IF DELETE FAILS
+        setTimeout(() => loadActiveMeeting(true), 2000);
         return;
       }
       
       const result = await MeetApiService.deleteResource(resourceId, adminId);
       
       if (result.success) {
-        // Show success notification
         setDeleteNotification({ 
           show: true, 
           message: `✅ "${resourceTitle}" deleted successfully!`, 
           type: 'success' 
         });
         
-        // Refresh resources after successful deletion
-        setResources(prev => prev.filter(r => r.id !== resourceId));
-        
-        // Auto-dismiss after 3 seconds
-        setTimeout(() => {
-          setDeleteNotification({ show: false, message: '', type: '' });
-        }, 3000);
+        // 🆕 CONFIRM SYNC WITH SERVER
+        setTimeout(() => loadActiveMeeting(true), 1000);
         
       } else {
-        // Show error notification
+        // 🆕 RESTORE DATA FROM SERVER ON FAILURE
         setDeleteNotification({ 
           show: true, 
           message: `❌ Failed to delete: ${result.error}`, 
           type: 'error' 
         });
-        
-        // Auto-dismiss error after 4 seconds
-        setTimeout(() => {
-          setDeleteNotification({ show: false, message: '', type: '' });
-        }, 4000);
+        setTimeout(() => loadActiveMeeting(true), 2000);
       }
+      
+      // Auto-dismiss notifications
+      setTimeout(() => {
+        setDeleteNotification({ show: false, message: '', type: '' });
+      }, 4000);
       
     } catch (error) {
       console.error('❌ Delete error:', error);
@@ -364,19 +385,24 @@ const AdminCommunityTab = () => {
         type: 'error' 
       });
       
+      // 🆕 RESTORE DATA FROM SERVER ON ERROR
+      setTimeout(() => loadActiveMeeting(true), 2000);
+      
       setTimeout(() => {
         setDeleteNotification({ show: false, message: '', type: '' });
       }, 4000);
     }
   };
 
+  // 🆕 FIXED RESOURCE VIEWING FUNCTION
   const handleViewResource = (resource) => {
     console.log('🔍 Viewing resource:', resource);
     
+    // 🆕 SILENTLY HANDLE RESOURCE ACCESS TRACKING - DON'T BREAK UI
     if (userData) {
       MeetApiService.recordResourceAccess(resource.id, userData.id, 'view')
         .then(result => console.log('✅ Resource access tracked:', result))
-        .catch(error => console.error('❌ Error tracking resource access:', error));
+        .catch(error => console.warn('⚠️ Non-critical: Error tracking resource access:', error));
     }
     
     setViewingResource(resource);

@@ -1,4 +1,3 @@
-// travel-tour-frontend/src/services/meet-api.js
 import { MEET_API_BASE_URL } from './api';
 
 // 🆕 USE REACT ENV VARIABLE AS FALLBACK

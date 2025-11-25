@@ -36,6 +36,29 @@ class MeetApiService {
     }
   }
 
+  // 🆕 ADD ARCHIVED RESOURCES FUNCTION
+  static async getArchivedResources() {
+    try {
+      console.log('🎯 Fetching archived resources...');
+      const response = await fetch(`${this.baseUrl}/resources/archived`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Archived resources response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Meet API get archived resources error:', error);
+      return { 
+        success: false, 
+        error: 'Failed to load archived resources',
+        details: error.message 
+      };
+    }
+  }
+
   // 🆕 FIXED uploadFileResource FUNCTION - HANDLES BOTH OLD AND NEW CALLING PATTERNS
   static async uploadFileResource(...args) {
     try {

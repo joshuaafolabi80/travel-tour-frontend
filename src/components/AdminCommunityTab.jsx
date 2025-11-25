@@ -127,6 +127,7 @@ const AdminCommunityTab = () => {
     return '';
   };
 
+  // 🆕 COMPLETELY FIXED: Load active meeting with archive support
   const loadActiveMeeting = async () => {
     try {
       setIsRefreshing(true);
@@ -153,16 +154,28 @@ const AdminCommunityTab = () => {
         // Check if host has joined
         setHostHasJoined(meeting.status === 'host_joined');
         
+        // 🆕 FETCH RESOURCES FOR ACTIVE MEETING
         const resourcesResponse = await MeetApiService.getMeetingResources(meeting.id);
         if (resourcesResponse.success) {
           setResources(resourcesResponse.resources || []);
+          console.log('✅ Loaded active meeting resources:', resourcesResponse.resources.length);
         }
       } else {
         setActiveMeeting(null);
         setIsMyMeeting(false);
         setHostHasJoined(false);
-        // 🆕 FIXED: DON'T CLEAR RESOURCES - Keep them visible from previous state
-        console.log('📚 No active meeting - keeping existing resources in archive view');
+        
+        // 🆕 CRITICAL FIX: LOAD ARCHIVED RESOURCES WHEN NO ACTIVE MEETING
+        console.log('📚 No active meeting - loading archived resources...');
+        const archivedResponse = await MeetApiService.getArchivedResources();
+        
+        if (archivedResponse.success) {
+          setResources(archivedResponse.resources || []);
+          console.log('✅ Loaded archived resources:', archivedResponse.resources.length);
+        } else {
+          console.log('📚 Could not load archived resources, keeping current state');
+          // Don't clear resources - keep whatever we have
+        }
       }
     } catch (error) {
       console.error('Error loading active meeting:', error);

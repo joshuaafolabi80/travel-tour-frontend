@@ -19,6 +19,9 @@ const AdminCommunityTab = () => {
   const [isJoining, setIsJoining] = useState(false);
   const [hostHasJoined, setHostHasJoined] = useState(false);
 
+  // 🆕 ADD STATE FOR DELETE NOTIFICATION
+  const [deleteNotification, setDeleteNotification] = useState({ show: false, message: '', type: '' });
+
   // 🎯 PERMANENT GOOGLE MEET LINK (This is the Master Link - Everyone uses this)
   const PERMANENT_MEET_LINK = "https://meet.google.com/moc-zgvj-jfn";
 
@@ -297,29 +300,73 @@ const AdminCommunityTab = () => {
     showTemporaryNotification('success', '📁 Resource shared successfully!');
   };
 
-  const handleDeleteResource = async (resourceId) => {
+  // 🆕 UPDATED DELETE FUNCTION WITH AUTO-DISMISS
+  const handleDeleteResource = async (resourceId, resourceTitle) => {
     try {
-      console.log('🗑️ Deleting resource:', resourceId);
+      console.log('🗑️ Attempting to delete resource:', resourceId);
       
-      // Get admin ID from user data
+      // Show deleting notification
+      setDeleteNotification({ 
+        show: true, 
+        message: `Deleting "${resourceTitle}"...`, 
+        type: 'info' 
+      });
+
       const adminId = userData?.id;
       
       if (!adminId) {
-        setNotification({ type: 'error', message: 'Admin ID not found. Please log in again.' });
+        setDeleteNotification({ 
+          show: true, 
+          message: '❌ Admin ID not found. Please log in again.', 
+          type: 'error' 
+        });
+        setTimeout(() => setDeleteNotification({ show: false, message: '', type: '' }), 4000);
         return;
       }
       
-      const response = await MeetApiService.deleteResource(resourceId, adminId); // Pass adminId
+      const result = await MeetApiService.deleteResource(resourceId, adminId);
       
-      if (response.success) {
+      if (result.success) {
+        // Show success notification
+        setDeleteNotification({ 
+          show: true, 
+          message: `✅ "${resourceTitle}" deleted successfully!`, 
+          type: 'success' 
+        });
+        
+        // Refresh resources after successful deletion
         setResources(prev => prev.filter(r => r.id !== resourceId));
-        showTemporaryNotification('success', '🗑️ Resource deleted successfully!');
+        
+        // Auto-dismiss after 3 seconds
+        setTimeout(() => {
+          setDeleteNotification({ show: false, message: '', type: '' });
+        }, 3000);
+        
       } else {
-        setNotification({ type: 'error', message: response.error || 'Failed to delete resource' });
+        // Show error notification
+        setDeleteNotification({ 
+          show: true, 
+          message: `❌ Failed to delete: ${result.error}`, 
+          type: 'error' 
+        });
+        
+        // Auto-dismiss error after 4 seconds
+        setTimeout(() => {
+          setDeleteNotification({ show: false, message: '', type: '' });
+        }, 4000);
       }
+      
     } catch (error) {
-      console.error('Error deleting resource:', error);
-      setNotification({ type: 'error', message: 'Failed to delete resource' });
+      console.error('❌ Delete error:', error);
+      setDeleteNotification({ 
+        show: true, 
+        message: `❌ Delete failed: ${error.message}`, 
+        type: 'error' 
+      });
+      
+      setTimeout(() => {
+        setDeleteNotification({ show: false, message: '', type: '' });
+      }, 4000);
     }
   };
 
@@ -423,6 +470,30 @@ const AdminCommunityTab = () => {
 
   return (
     <div className="container-fluid py-4">
+      {/* 🆕 DELETE NOTIFICATION */}
+      {deleteNotification.show && (
+        <div className={`alert ${
+          deleteNotification.type === 'success' ? 'alert-success' : 
+          deleteNotification.type === 'error' ? 'alert-danger' : 'alert-info'
+        } alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3 z-3`} 
+            style={{
+              minWidth: '300px', 
+              zIndex: 9999,
+              maxWidth: '90vw',
+              wordWrap: 'break-word'
+            }}>
+          <div className="d-flex justify-content-between align-items-center">
+            <span style={{ flex: 1, marginRight: '10px' }}>{deleteNotification.message}</span>
+            <button 
+              type="button" 
+              className="btn-close" 
+              onClick={() => setDeleteNotification({ show: false, message: '', type: '' })}
+              style={{ flexShrink: 0 }}
+            ></button>
+          </div>
+        </div>
+      )}
+
       {/* Notification */}
       {notification.message && (
         <div className={`alert alert-${notification.type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`} role="alert">
@@ -677,12 +748,15 @@ const AdminCommunityTab = () => {
               {/* Resources Table */}
               {currentResources.length > 0 ? (
                 <>
-                  <div className="table-responsive">
+                  <div className="table-responsive" style={{
+                    fontSize: '0.875rem',
+                    border: '0'
+                  }}>
                     <table className="table table-hover">
                       <thead className="table-light">
                         <tr>
                           <th 
-                            style={{ cursor: 'pointer', width: '35%' }}
+                            style={{ cursor: 'pointer', width: '35%', minWidth: '150px' }}
                             onClick={() => handleSort('title')}
                           >
                             Resource
@@ -690,10 +764,10 @@ const AdminCommunityTab = () => {
                               <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'} ms-1`}></i>
                             )}
                           </th>
-                          <th style={{ width: '15%' }}>Type</th>
-                          <th style={{ width: '25%' }}>Details</th>
-                          <th style={{ width: '15%' }}>Date</th>
-                          <th style={{ width: '10%' }}>Actions</th>
+                          <th style={{ width: '15%', minWidth: '80px' }}>Type</th>
+                          <th style={{ width: '25%', minWidth: '120px' }}>Details</th>
+                          <th style={{ width: '15%', minWidth: '80px' }}>Date</th>
+                          <th style={{ width: '10%', minWidth: '80px' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -702,11 +776,15 @@ const AdminCommunityTab = () => {
                             <td>
                               <div className="d-flex align-items-center">
                                 <i className={`${getResourceIcon(resource.resourceType || resource.type)} me-2`}></i>
-                                <div>
-                                  <div className="fw-semibold text-primary">
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div 
+                                    className="fw-semibold text-primary text-truncate" 
+                                    style={{ maxWidth: '200px' }}
+                                    title={resource.title}
+                                  >
                                     {resource.title}
                                   </div>
-                                  <small className="text-muted">
+                                  <small className="text-muted text-truncate d-block" style={{ maxWidth: '200px' }}>
                                     by {resource.uploadedByName || 'Unknown'}
                                   </small>
                                 </div>
@@ -745,17 +823,15 @@ const AdminCommunityTab = () => {
                                   className="btn btn-outline-primary"
                                   onClick={() => handleViewResource(resource)}
                                   title="View Resource"
+                                  style={{ whiteSpace: 'nowrap' }}
                                 >
                                   <i className="fas fa-eye"></i>
                                 </button>
                                 <button
                                   className="btn btn-outline-danger"
-                                  onClick={() => {
-                                    if (window.confirm('Are you sure you want to delete this resource? This action cannot be undone.')) {
-                                      handleDeleteResource(resource.id);
-                                    }
-                                  }}
+                                  onClick={() => handleDeleteResource(resource.id, resource.title)}
                                   title="Delete Resource"
+                                  style={{ whiteSpace: 'nowrap' }}
                                 >
                                   <i className="fas fa-trash"></i>
                                 </button>

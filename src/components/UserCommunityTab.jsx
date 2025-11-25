@@ -17,7 +17,7 @@ const UserCommunityTab = () => {
 
   // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(4);
+  const [itemsPerPage] = useState(4); // 🆕 CHANGED FROM 10 TO 4
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('all');
   const [sortField, setSortField] = useState('createdAt');
@@ -540,7 +540,7 @@ const UserCommunityTab = () => {
               <div className="d-flex justify-content-between align-items-center">
                 <h5 className="card-title mb-0">
                   <i className="fas fa-file-alt me-2"></i>
-                  Training Resources ({resources.length}) - Showing {Math.min(itemsPerPage, currentResources.length)} per page
+                  Training Resources ({resources.length})
                 </h5>
                 <button 
                   className="btn btn-sm btn-light"
@@ -613,12 +613,19 @@ const UserCommunityTab = () => {
               {/* Resources Table */}
               {currentResources.length > 0 ? (
                 <>
-                  <div className="table-responsive">
+                  <div className="table-responsive" style={{
+                    fontSize: '0.875rem',
+                    border: '0'
+                  }}>
                     <table className="table table-hover">
                       <thead className="table-light">
                         <tr>
                           <th 
-                            style={{ cursor: 'pointer', width: '40%' }}
+                            style={{ 
+                              cursor: 'pointer', 
+                              width: '45%', 
+                              minWidth: '150px'
+                            }}
                             onClick={() => handleSort('title')}
                           >
                             Resource
@@ -626,9 +633,9 @@ const UserCommunityTab = () => {
                               <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'} ms-1`}></i>
                             )}
                           </th>
-                          <th style={{ width: '15%' }}>Type</th>
-                          <th style={{ width: '30%' }}>Details</th>
-                          <th style={{ width: '15%' }}>View</th>
+                          <th style={{ width: '15%', minWidth: '80px' }}>Type</th>
+                          <th style={{ width: '25%', minWidth: '120px' }}>Details</th>
+                          <th style={{ width: '15%', minWidth: '80px' }}>View</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -637,11 +644,15 @@ const UserCommunityTab = () => {
                             <td>
                               <div className="d-flex align-items-center">
                                 <i className={`${getResourceIcon(resource.resourceType || resource.type)} me-2`}></i>
-                                <div>
-                                  <div className="fw-semibold text-primary">
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div 
+                                    className="fw-semibold text-primary text-truncate" 
+                                    style={{ maxWidth: '200px' }}
+                                    title={resource.title}
+                                  >
                                     {resource.title}
                                   </div>
-                                  <small className="text-muted">
+                                  <small className="text-muted text-truncate d-block" style={{ maxWidth: '200px' }}>
                                     by {getUploadedByName(resource)}
                                   </small>
                                 </div>
@@ -678,6 +689,7 @@ const UserCommunityTab = () => {
                                 className="btn btn-outline-primary btn-sm"
                                 onClick={() => handleViewResource(resource)}
                                 title="View Resource"
+                                style={{ whiteSpace: 'nowrap' }}
                               >
                                 <i className="fas fa-eye me-1"></i>
                                 View

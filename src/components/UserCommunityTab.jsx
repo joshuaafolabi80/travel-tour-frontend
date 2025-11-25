@@ -27,7 +27,36 @@ const UserCommunityTab = () => {
     const user = JSON.parse(localStorage.getItem('userData') || '{}');
     setUserData(user);
     loadActiveMeeting();
+    loadAllResources(); // 🆕 CRITICAL FIX: Load ALL resources like Admin does
   }, []);
+
+  // 🆕 NEW FUNCTION: Load ALL archived resources (same as Admin)
+  const loadAllResources = async () => {
+    try {
+      setResourcesLoading(true);
+      console.log('🎯 User - Loading ALL archived resources...');
+      const response = await MeetApiService.getArchivedResources();
+      
+      if (response.success) {
+        setResources(response.resources || []);
+        console.log('✅ User loaded ALL resources:', response.resources.length);
+      } else {
+        console.error('❌ Failed to load archived resources:', response.error);
+        // Fallback: try to load from active meeting
+        if (activeMeeting) {
+          await loadMeetingResources(activeMeeting.id);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error loading all resources:', error);
+      // Fallback: try to load from active meeting
+      if (activeMeeting) {
+        await loadMeetingResources(activeMeeting.id);
+      }
+    } finally {
+      setResourcesLoading(false);
+    }
+  };
 
   // 🎯 SIMPLE PERMANENT JOIN FUNCTION
   const handleJoinPermanentMeet = () => {
@@ -171,10 +200,15 @@ const UserCommunityTab = () => {
         
         console.log('✅ User loaded meeting with link:', meeting.meetingLink);
         setActiveMeeting(meeting);
-        await loadMeetingResources(meeting.id);
+        
+        // 🆕 CRITICAL FIX: Don't override all resources with just meeting resources
+        // Only load meeting resources if we don't have any resources yet
+        if (resources.length === 0) {
+          await loadMeetingResources(meeting.id);
+        }
       } else {
         setActiveMeeting(null);
-        setResources([]);
+        // Don't clear resources - keep the archived ones
       }
     } catch (error) {
       console.error('Error loading active meeting:', error);
@@ -184,18 +218,19 @@ const UserCommunityTab = () => {
     }
   };
 
+  // 🆕 UPDATED: Keep this for backward compatibility but don't override all resources
   const loadMeetingResources = async (meetingId) => {
     try {
-      setResourcesLoading(true);
       const resourcesResponse = await MeetApiService.getMeetingResources(meetingId);
-      if (resourcesResponse.success) {
-        setResources(resourcesResponse.resources || []);
-        console.log('✅ Loaded resources:', resourcesResponse.resources.length);
+      if (resourcesResponse.success && resourcesResponse.resources) {
+        // Only set if we don't have any resources from archive
+        if (resources.length === 0) {
+          setResources(resourcesResponse.resources);
+          console.log('✅ Loaded meeting-specific resources:', resourcesResponse.resources.length);
+        }
       }
     } catch (error) {
       console.error('Error loading meeting resources:', error);
-    } finally {
-      setResourcesLoading(false);
     }
   };
 
@@ -212,7 +247,11 @@ const UserCommunityTab = () => {
   };
 
   const handleManualRefresh = async () => {
-    await loadActiveMeeting();
+    // 🆕 CRITICAL FIX: Refresh BOTH active meeting AND all resources
+    await Promise.all([
+      loadActiveMeeting(),
+      loadAllResources()
+    ]);
   };
 
   // Pagination & Search Functions
@@ -220,7 +259,9 @@ const UserCommunityTab = () => {
     const matchesSearch = searchTerm === '' || 
       resource.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       resource.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      resource.uploadedByName?.toLowerCase().includes(searchTerm.toLowerCase());
+      resource.uploadedByName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      resource.sharedByName?.toLowerCase().includes(searchTerm.toLowerCase()) || // 🆕 ADD sharedByName
+      resource.content?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesType = searchType === 'all' || 
       (resource.resourceType || resource.type) === searchType;
@@ -229,8 +270,14 @@ const UserCommunityTab = () => {
   });
 
   const sortedResources = [...filteredResources].sort((a, b) => {
-    const aValue = a[sortField] || '';
-    const bValue = b[sortField] || '';
+    let aValue = a[sortField] || '';
+    let bValue = b[sortField] || '';
+    
+    // Handle date sorting
+    if (sortField === 'createdAt' || sortField === 'sharedAt') {
+      aValue = new Date(aValue).getTime();
+      bValue = new Date(bValue).getTime();
+    }
     
     if (sortOrder === 'asc') {
       return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
@@ -282,6 +329,11 @@ const UserCommunityTab = () => {
     return mb >= 1 ? `${mb.toFixed(2)} MB` : `${(bytes / 1024).toFixed(2)} KB`;
   };
 
+  // 🆕 Get uploaded by name (compatibility with both field names)
+  const getUploadedByName = (resource) => {
+    return resource.uploadedByName || resource.sharedByName || 'Unknown';
+  };
+
   if (isLoading) {
     return (
       <div className="container-fluid py-4">
@@ -290,7 +342,7 @@ const UserCommunityTab = () => {
             <div className="spinner-border text-primary mb-3" role="status">
               <span className="visually-hidden">Loading...</span>
             </div>
-            <p className="text-muted">Checking for active streams...</p>
+            <p className="text-muted">Loading community resources...</p>
           </div>
         </div>
       </div>
@@ -511,6 +563,11 @@ const UserCommunityTab = () => {
                   <i className="fas fa-info-circle me-2"></i>
                   <small>
                     <strong>All resources are permanently saved</strong> and will remain available.
+                    <br />
+                    <span className="text-success">
+                      <i className="fas fa-database me-1"></i>
+                      Showing {resources.length} resources from archive
+                    </span>
                   </small>
                 </div>
               </div>
@@ -585,7 +642,7 @@ const UserCommunityTab = () => {
                                     {resource.title}
                                   </div>
                                   <small className="text-muted">
-                                    by {resource.uploadedByName || 'Unknown'}
+                                    by {getUploadedByName(resource)}
                                   </small>
                                 </div>
                               </div>

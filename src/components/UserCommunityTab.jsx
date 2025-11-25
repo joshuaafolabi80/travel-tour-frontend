@@ -17,7 +17,7 @@ const UserCommunityTab = () => {
 
   // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(4);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('all');
   const [sortField, setSortField] = useState('createdAt');
@@ -540,7 +540,7 @@ const UserCommunityTab = () => {
               <div className="d-flex justify-content-between align-items-center">
                 <h5 className="card-title mb-0">
                   <i className="fas fa-file-alt me-2"></i>
-                  Training Resources ({resources.length})
+                  Training Resources ({resources.length}) - Showing {Math.min(itemsPerPage, currentResources.length)} per page
                 </h5>
                 <button 
                   className="btn btn-sm btn-light"

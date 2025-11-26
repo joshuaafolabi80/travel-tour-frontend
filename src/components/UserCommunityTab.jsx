@@ -623,8 +623,8 @@ const UserCommunityTab = () => {
                           <th 
                             style={{ 
                               cursor: 'pointer', 
-                              width: '45%', 
-                              minWidth: '150px'
+                              width: '40%', // 🆕 ADJUSTED WIDTH
+                              minWidth: '120px' // 🆕 REDUCED MIN WIDTH
                             }}
                             onClick={() => handleSort('title')}
                           >
@@ -633,9 +633,9 @@ const UserCommunityTab = () => {
                               <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'} ms-1`}></i>
                             )}
                           </th>
-                          <th style={{ width: '15%', minWidth: '80px' }}>Type</th>
-                          <th style={{ width: '25%', minWidth: '120px' }}>Details</th>
-                          <th style={{ width: '15%', minWidth: '80px' }}>View</th>
+                          <th style={{ width: '15%', minWidth: '70px' }}>Type</th> {/* 🆕 REDUCED MIN WIDTH */}
+                          <th style={{ width: '25%', minWidth: '100px' }}>Details</th> {/* 🆕 REDUCED MIN WIDTH */}
+                          <th style={{ width: '20%', minWidth: '70px' }}>View</th> {/* 🆕 ADJUSTED WIDTH */}
                         </tr>
                       </thead>
                       <tbody>
@@ -646,21 +646,28 @@ const UserCommunityTab = () => {
                                 <i className={`${getResourceIcon(resource.resourceType || resource.type)} me-2`}></i>
                                 <div style={{ minWidth: 0, flex: 1 }}>
                                   <div 
-                                    className="fw-semibold text-primary text-truncate" 
+                                    className="fw-semibold text-primary" 
                                     style={{ 
-                                      maxWidth: '200px',
+                                      // 🆕 IMPROVED TEXT HANDLING FOR LONG NAMES
                                       wordBreak: 'break-word',
                                       overflow: 'hidden',
                                       display: '-webkit-box',
                                       WebkitLineClamp: 2,
-                                      WebkitBoxOrient: 'vertical'
+                                      WebkitBoxOrient: 'vertical',
+                                      lineHeight: '1.3',
+                                      maxHeight: '2.6em'
                                     }}
                                     title={resource.title}
                                   >
                                     {resource.title}
                                   </div>
-                                  <small className="text-muted text-truncate d-block" style={{ maxWidth: '200px' }}>
-                                    by {resource.uploadedByName || 'Unknown'}
+                                  <small className="text-muted d-block" style={{ 
+                                    wordBreak: 'break-word',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    by {getUploadedByName(resource)}
                                   </small>
                                 </div>
                               </div>
@@ -677,8 +684,17 @@ const UserCommunityTab = () => {
                             </td>
                             <td>
                               <div className="small text-muted">
-                                {resource.description || resource.content?.substring(0, 60)}
-                                {resource.content && resource.content.length > 60 && '...'}
+                                <div style={{
+                                  wordBreak: 'break-word',
+                                  overflow: 'hidden',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  lineHeight: '1.3'
+                                }}>
+                                  {resource.description || resource.content?.substring(0, 50)}
+                                  {resource.content && resource.content.length > 50 && '...'}
+                                </div>
                                 {resource.fileSize && (
                                   <div className="mt-1">
                                     <i className="fas fa-hdd me-1"></i>
@@ -693,10 +709,9 @@ const UserCommunityTab = () => {
                             </td>
                             <td>
                               <button
-                                className="btn btn-outline-primary btn-sm"
+                                className="btn btn-outline-primary btn-sm w-100" // 🆕 MADE BUTTON FULL WIDTH
                                 onClick={() => handleViewResource(resource)}
                                 title="View Resource"
-                                style={{ whiteSpace: 'nowrap' }}
                               >
                                 <i className="fas fa-eye me-1"></i>
                                 View

@@ -40,33 +40,34 @@ const AdminCommunityTab = () => {
   }, []);
 
   // 🆕 ADD SEPARATE FUNCTION FOR ARCHIVED RESOURCES
+  // 🆕 ENHANCED: Load archived resources function
   const loadArchivedResources = async () => {
     try {
       console.log('📚 Loading archived resources...');
       const archivedResponse = await MeetApiService.getArchivedResources();
       
-      if (archivedResponse.success) {
-        setResources(archivedResponse.resources || []);
+      console.log('🔍 Archived resources response:', archivedResponse);
+      
+      if (archivedResponse.success && archivedResponse.resources) {
+        setResources(archivedResponse.resources);
         console.log('✅ Loaded archived resources:', archivedResponse.resources.length);
       } else {
-        console.log('❌ Could not load archived resources');
-        // Keep existing resources or set empty array
-        if (resources.length === 0) {
-          setResources([]);
-        }
+        console.log('❌ Could not load archived resources:', archivedResponse.error);
+        setResources([]);
       }
     } catch (error) {
       console.error('Error loading archived resources:', error);
+      setResources([]);
     }
   };
 
   // 🆕 ENHANCED LOAD ACTIVE MEETING WITH FORCE REFRESH
+  // 🆕 FIXED: Enhanced load active meeting with proper resource loading
   const loadActiveMeeting = async (forceRefresh = false) => {
     try {
       setIsRefreshing(true);
       
       if (forceRefresh) {
-        // 🆕 CLEAR CACHE AND FORCE RELOAD
         setResources([]);
         console.log('🔄 Force refreshing all data...');
       }
@@ -89,22 +90,40 @@ const AdminCommunityTab = () => {
         // 🆕 FIXED: SIMPLE LOGIC - If meeting exists, host has joined
         setHostHasJoined(true);
         
-        // 🆕 FORCE REFRESH RESOURCES WITH CACHE BUSTING
-        const resourcesResponse = await MeetApiService.getMeetingResources(meeting.id);
-        if (resourcesResponse.success) {
-          console.log('✅ Loaded FRESH resources:', resourcesResponse.resources.length);
-          setResources(resourcesResponse.resources || []);
-        } else {
-          console.log('⚠️ Could not load meeting resources, trying archived...');
-          // Fallback to archived resources
-          await loadArchivedResources();
+        // 🆕 FIXED: TRY BOTH MEETING RESOURCES AND ARCHIVED RESOURCES
+        try {
+          const resourcesResponse = await MeetApiService.getMeetingResources(meeting.id);
+          console.log('🔍 Meeting resources response:', resourcesResponse);
+          
+          if (resourcesResponse.success && resourcesResponse.resources && resourcesResponse.resources.length > 0) {
+            console.log('✅ Loaded FRESH meeting resources:', resourcesResponse.resources.length);
+            setResources(resourcesResponse.resources);
+          } else {
+            console.log('🔄 No meeting resources, trying archived resources...');
+            // Fallback to archived resources
+            const archivedResponse = await MeetApiService.getArchivedResources();
+            if (archivedResponse.success && archivedResponse.resources) {
+              console.log('✅ Loaded archived resources:', archivedResponse.resources.length);
+              setResources(archivedResponse.resources || []);
+            } else {
+              console.log('⚠️ No resources available');
+              setResources([]);
+            }
+          }
+        } catch (resourceError) {
+          console.error('❌ Error loading resources:', resourceError);
+          // Fallback to archived resources on error
+          const archivedResponse = await MeetApiService.getArchivedResources();
+          if (archivedResponse.success) {
+            setResources(archivedResponse.resources || []);
+          }
         }
       } else {
         setActiveMeeting(null);
         setIsMyMeeting(false);
         setHostHasJoined(false);
         
-        // 🆕 LOAD ARCHIVED RESOURCES
+        // 🆕 FIXED: LOAD ARCHIVED RESOURCES WHEN NO ACTIVE MEETING
         await loadArchivedResources();
       }
     } catch (error) {
@@ -297,30 +316,56 @@ const AdminCommunityTab = () => {
   };
 
   // 🆕 FIXED: End meeting with Google Meet tab handling
+  // 🆕 FIXED: End meeting with enhanced Google Meet tab handling
   const handleEndMeeting = async () => {
     if (!activeMeeting || !userData) return;
 
     try {
-      // 🆕 FIRST: Show warning about Google Meet tabs
+      // 🆕 ENHANCED: Show comprehensive warning about Google Meet tabs
       const userConfirmed = window.confirm(
-        `🛑 Ending Webinar Session\n\n⚠️ IMPORTANT: Google Meet tabs will NOT automatically close.\n\nPlease:\n1. Manually close any open Google Meet browser tabs\n2. Inform participants to also close their Meet tabs\n3. Click OK to confirm ending the webinar in the app\n\nAll shared resources will remain available in the archive.`
+        `🛑 ENDING WEBINAR SESSION - IMPORTANT\n\n` +
+        `⚠️ GOOGLE MEET TABS WILL NOT CLOSE AUTOMATICALLY\n\n` +
+        `ACTION REQUIRED:\n` +
+        `1. MANUALLY close all Google Meet browser tabs/windows\n` +
+        `2. INFORM participants to also close their Meet tabs\n` +
+        `3. The meeting will be ended in the application\n` +
+        `4. All shared resources remain available in archive\n\n` +
+        `Click OK to confirm ending the webinar session.`
       );
       
       if (!userConfirmed) {
         console.log('Webinar end cancelled by user');
+        showTemporaryNotification('info', 'Webinar end cancelled');
         return;
       }
 
+      console.log('🛑 Ending meeting with ID:', activeMeeting.id);
+      
       const response = await MeetApiService.endMeeting(activeMeeting.id, userData.id);
       
       if (response.success) {
         setActiveMeeting(null);
         setHostHasJoined(false);
         setIsMyMeeting(false);
-        showTemporaryNotification('success', '🛑 Webinar session ended successfully! All shared resources remain available in the archive.');
+        
+        // 🆕 ENHANCED SUCCESS MESSAGE
+        showTemporaryNotification('success', 
+          '🛑 Webinar session ended successfully!\n\n' +
+          '⚠️ Remember to manually close Google Meet tabs.\n' +
+          'All shared resources remain available in archive.'
+        );
         
         // 🆕 RELOAD ARCHIVED RESOURCES
         await loadArchivedResources();
+        
+        // 🆕 ADDITIONAL: Try to update meeting status to inactive
+        try {
+          await MeetApiService.updateMeetingStatus(activeMeeting.id, 'ended');
+          console.log('✅ Meeting status updated to ended');
+        } catch (statusError) {
+          console.warn('⚠️ Could not update meeting status (non-critical):', statusError);
+        }
+        
       } else {
         setNotification({ type: 'error', message: response.error || 'Failed to end meeting' });
       }

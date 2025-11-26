@@ -86,8 +86,8 @@ const AdminCommunityTab = () => {
         const isAdminMeeting = meeting.adminId === userData?.id;
         setIsMyMeeting(isAdminMeeting);
         
-        // 🆕 FIXED: Check meeting status properly
-        setHostHasJoined(meeting.status === 'host_joined' || meeting.hostJoined === true);
+        // 🆕 FIXED: SIMPLE LOGIC - If meeting exists, host has joined
+        setHostHasJoined(true);
         
         // 🆕 FORCE REFRESH RESOURCES WITH CACHE BUSTING
         const resourcesResponse = await MeetApiService.getMeetingResources(meeting.id);
@@ -125,7 +125,7 @@ const AdminCommunityTab = () => {
     showTemporaryNotification('info', '📊 Data forcefully refreshed from server!');
   };
 
-  // 🛠️ FIXED: Admin joins the PERMANENT link and updates status properly
+  // 🛠️ FIXED: Admin joins the PERMANENT link
   const handleAdminJoinFirst = async () => {
     if (!activeMeeting) return;
     
@@ -144,9 +144,8 @@ const AdminCommunityTab = () => {
       if (newTab) {
         newTab.focus();
         
-        // 🆕 FIXED: Track admin join in DB FIRST
+        // 🆕 FIXED: Track admin join in DB
         await MeetApiService.joinMeeting(activeMeeting.id, userData);
-        
         
         console.log('✅ Admin joined permanent room successfully');
         setHostHasJoined(true);
@@ -297,16 +296,26 @@ const AdminCommunityTab = () => {
     }
   };
 
-  // 🆕 FIXED: End meeting properly and reset status
+  // 🆕 FIXED: End meeting with Google Meet tab handling
   const handleEndMeeting = async () => {
     if (!activeMeeting || !userData) return;
 
     try {
+      // 🆕 FIRST: Show warning about Google Meet tabs
+      const userConfirmed = window.confirm(
+        `🛑 Ending Webinar Session\n\n⚠️ IMPORTANT: Google Meet tabs will NOT automatically close.\n\nPlease:\n1. Manually close any open Google Meet browser tabs\n2. Inform participants to also close their Meet tabs\n3. Click OK to confirm ending the webinar in the app\n\nAll shared resources will remain available in the archive.`
+      );
+      
+      if (!userConfirmed) {
+        console.log('Webinar end cancelled by user');
+        return;
+      }
+
       const response = await MeetApiService.endMeeting(activeMeeting.id, userData.id);
       
       if (response.success) {
         setActiveMeeting(null);
-        setHostHasJoined(false); // 🆕 RESET HOST STATUS
+        setHostHasJoined(false);
         setIsMyMeeting(false);
         showTemporaryNotification('success', '🛑 Webinar session ended successfully! All shared resources remain available in the archive.');
         
@@ -567,6 +576,15 @@ const AdminCommunityTab = () => {
                 Refresh
               </button>
               
+              {/* 🆕 FIXED: ALWAYS SHOW SHARE RESOURCES BUTTON */}
+              <button 
+                className="btn btn-primary btn-lg"
+                onClick={() => setShowShareModal(true)}
+              >
+                <i className="fas fa-share-alt me-2"></i>
+                Share Resources
+              </button>
+              
               {!activeMeeting && (
                 <button 
                   className="btn btn-primary btn-lg"
@@ -680,13 +698,6 @@ const AdminCommunityTab = () => {
                       >
                         <i className="fas fa-door-open me-2"></i>
                         Re-join Webinar Room
-                      </button>
-                      <button 
-                        className="btn btn-outline-primary me-2"
-                        onClick={() => setShowShareModal(true)}
-                      >
-                        <i className="fas fa-share-alt me-2"></i>
-                        Share Resources
                       </button>
                     </div>
                   )}

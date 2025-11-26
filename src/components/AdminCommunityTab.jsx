@@ -320,10 +320,21 @@ const AdminCommunityTab = () => {
     showTemporaryNotification('success', '📁 Resource shared successfully!');
   };
 
-  // 🆕 ENHANCED DELETE FUNCTION WITH INSTANT UI UPDATE
+  // 🆕 ENHANCED DELETE FUNCTION WITH CONFIRMATION DIALOG AND HARD DELETE
   const handleDeleteResource = async (resourceId, resourceTitle) => {
     try {
-      console.log('🗑️ Attempting to delete resource:', resourceId);
+      // 🆕 ADD STRICT CONFIRMATION DIALOG
+      const userConfirmed = window.confirm(
+        `🚨 PERMANENT DELETE CONFIRMATION\n\nAre you absolutely sure you want to PERMANENTLY DELETE "${resourceTitle}"?\n\n‼️ THIS ACTION CANNOT BE UNDONE!\n‼️ The resource will be completely removed from the database\n\nClick OK to confirm permanent deletion.`
+      );
+      
+      if (!userConfirmed) {
+        console.log('🗑️ Delete cancelled by user');
+        showTemporaryNotification('info', '🗑️ Delete cancelled');
+        return;
+      }
+
+      console.log('🗑️ Proceeding with HARD DELETE of resource:', resourceId);
       
       // 🆕 IMMEDIATE UI UPDATE - OPTIMISTIC DELETE
       setResources(prev => prev.filter(r => r.id !== resourceId && r.resourceId !== resourceId));
@@ -331,8 +342,8 @@ const AdminCommunityTab = () => {
       // Show deleting notification
       setDeleteNotification({ 
         show: true, 
-        message: `Deleting "${resourceTitle}"...`, 
-        type: 'info' 
+        message: `🔥 PERMANENTLY DELETING "${resourceTitle}"...`, 
+        type: 'warning' 
       });
 
       const adminId = userData?.id;
@@ -343,9 +354,7 @@ const AdminCommunityTab = () => {
           message: '❌ Admin ID not found. Please log in again.', 
           type: 'error' 
         });
-        setTimeout(() => setDeleteNotification({ show: false, message: '', type: '' }), 4000);
-        
-        // 🆕 RESTORE THE RESOURCE IF DELETE FAILS
+        // RESTORE THE RESOURCE IF DELETE FAILS
         setTimeout(() => loadActiveMeeting(true), 2000);
         return;
       }
@@ -355,18 +364,18 @@ const AdminCommunityTab = () => {
       if (result.success) {
         setDeleteNotification({ 
           show: true, 
-          message: `✅ "${resourceTitle}" deleted successfully!`, 
+          message: `✅ "${resourceTitle}" PERMANENTLY DELETED from database!`, 
           type: 'success' 
         });
         
-        // 🆕 CONFIRM SYNC WITH SERVER
+        // 🆕 REFRESH DATA TO CONFIRM
         setTimeout(() => loadActiveMeeting(true), 1000);
         
       } else {
-        // 🆕 RESTORE DATA FROM SERVER ON FAILURE
+        // RESTORE DATA FROM SERVER ON FAILURE
         setDeleteNotification({ 
           show: true, 
-          message: `❌ Failed to delete: ${result.error}`, 
+          message: `❌ Delete failed: ${result.error}`, 
           type: 'error' 
         });
         setTimeout(() => loadActiveMeeting(true), 2000);
@@ -375,7 +384,7 @@ const AdminCommunityTab = () => {
       // Auto-dismiss notifications
       setTimeout(() => {
         setDeleteNotification({ show: false, message: '', type: '' });
-      }, 4000);
+      }, 5000);
       
     } catch (error) {
       console.error('❌ Delete error:', error);
@@ -385,12 +394,12 @@ const AdminCommunityTab = () => {
         type: 'error' 
       });
       
-      // 🆕 RESTORE DATA FROM SERVER ON ERROR
+      // RESTORE DATA FROM SERVER ON ERROR
       setTimeout(() => loadActiveMeeting(true), 2000);
       
       setTimeout(() => {
         setDeleteNotification({ show: false, message: '', type: '' });
-      }, 4000);
+      }, 5000);
     }
   };
 

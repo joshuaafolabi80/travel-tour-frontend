@@ -647,13 +647,20 @@ const UserCommunityTab = () => {
                                 <div style={{ minWidth: 0, flex: 1 }}>
                                   <div 
                                     className="fw-semibold text-primary text-truncate" 
-                                    style={{ maxWidth: '200px' }}
+                                    style={{ 
+                                      maxWidth: '200px',
+                                      wordBreak: 'break-word',
+                                      overflow: 'hidden',
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical'
+                                    }}
                                     title={resource.title}
                                   >
                                     {resource.title}
                                   </div>
                                   <small className="text-muted text-truncate d-block" style={{ maxWidth: '200px' }}>
-                                    by {getUploadedByName(resource)}
+                                    by {resource.uploadedByName || 'Unknown'}
                                   </small>
                                 </div>
                               </div>

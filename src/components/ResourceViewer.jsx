@@ -82,26 +82,50 @@ const ResourceViewer = ({ resource, onClose }) => {
       );
     }
 
-    // PDF Files - View inline
+    // PDF Files - View inline - 🆕 FIXED DOUBLE API PATH
     if (contentType === 'pdf') {
+      // 🆕 FIXED: Remove double API path
+      let pdfUrl = documentContent;
+      if (pdfUrl.startsWith('/api/meet/')) {
+        pdfUrl = pdfUrl.replace('/api/meet/', '');
+      }
+      
+      // 🆕 CONSTRUCT CORRECT URL
+      const fullPdfUrl = `${MEET_API_BASE_URL}${pdfUrl.startsWith('/') ? pdfUrl : '/' + pdfUrl}`;
+      
+      console.log('📄 PDF URL:', fullPdfUrl);
+      
       return (
         <div className="h-100">
           <iframe
-            src={`${MEET_API_BASE_URL}${documentContent.startsWith('/') ? documentContent : '/' + documentContent}`}
+            src={fullPdfUrl}
             className="w-100 h-100 border-0"
             title={resource.title}
             onLoad={() => setIsLoading(false)}
+            onError={(e) => {
+              console.error('❌ PDF loading error:', e);
+              setIsLoading(false);
+              setError('Failed to load PDF document');
+            }}
           />
         </div>
       );
     }
 
-    // Image Files - View inline
+    // Image Files - View inline - 🆕 FIXED DOUBLE API PATH
     if (contentType === 'image') {
+      // 🆕 FIXED: Remove double API path
+      let imageUrl = documentContent;
+      if (imageUrl.startsWith('/api/meet/')) {
+        imageUrl = imageUrl.replace('/api/meet/', '');
+      }
+      
+      const fullImageUrl = `${MEET_API_BASE_URL}${imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl}`;
+      
       return (
         <div className="text-center">
           <img
-            src={`${MEET_API_BASE_URL}${documentContent.startsWith('/') ? documentContent : '/' + documentContent}`}
+            src={fullImageUrl}
             alt={resource.title}
             className="img-fluid"
             style={{ maxHeight: '70vh' }}
@@ -265,6 +289,12 @@ const ResourceViewer = ({ resource, onClose }) => {
                 <span className="badge bg-success ms-2">
                   <i className="fas fa-image me-1"></i>
                   With Images
+                </span>
+              )}
+              {contentType === 'pdf' && (
+                <span className="badge bg-danger ms-2">
+                  <i className="fas fa-file-pdf me-1"></i>
+                  PDF Document
                 </span>
               )}
             </h5>

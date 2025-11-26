@@ -550,18 +550,7 @@ class MeetApiService {
     try {
       console.log('🗑️ API: Deleting resource with admin ID:', { resourceId, adminId });
       
-      // 🆕 FIRST, TRY TO DEBUG THE RESOURCE ID
-      console.log('🔍 Debugging resource ID before deletion...');
-      try {
-        const debugResponse = await fetch(`${this.baseUrl}/debug/resources/${resourceId}`);
-        if (debugResponse.ok) {
-          const debugData = await debugResponse.json();
-          console.log('🔍 Resource debug info:', debugData);
-        }
-      } catch (debugError) {
-        console.warn('⚠️ Debug endpoint not available, continuing with deletion...');
-      }
-
+      // 🆕 FIXED: Use the correct endpoint that expects resourceId
       const response = await fetch(`${this.baseUrl}/resources/${resourceId}`, {
         method: 'DELETE',
         headers: {
@@ -575,14 +564,6 @@ class MeetApiService {
       
       if (!data.success) {
         console.error('❌ Delete failed with response:', data);
-        
-        // 🆕 PROVIDE BETTER ERROR MESSAGES
-        if (data.error === 'Resource not found' || data.error === 'Resource not found in database') {
-          return { 
-            success: false, 
-            error: 'Resource not found in database. It may have been already deleted or the ID is incorrect.' 
-          };
-        }
       }
       
       return data;

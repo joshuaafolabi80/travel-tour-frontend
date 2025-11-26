@@ -85,7 +85,9 @@ const AdminCommunityTab = () => {
         
         const isAdminMeeting = meeting.adminId === userData?.id;
         setIsMyMeeting(isAdminMeeting);
-        setHostHasJoined(meeting.status === 'host_joined');
+        
+        // 🆕 FIXED: Check meeting status properly
+        setHostHasJoined(meeting.status === 'host_joined' || meeting.hostJoined === true);
         
         // 🆕 FORCE REFRESH RESOURCES WITH CACHE BUSTING
         const resourcesResponse = await MeetApiService.getMeetingResources(meeting.id);
@@ -123,7 +125,7 @@ const AdminCommunityTab = () => {
     showTemporaryNotification('info', '📊 Data forcefully refreshed from server!');
   };
 
-  // 🛠️ FIXED: Admin joins the PERMANENT link (not random DB links)
+  // 🛠️ FIXED: Admin joins the PERMANENT link and updates status properly
   const handleAdminJoinFirst = async () => {
     if (!activeMeeting) return;
     
@@ -142,15 +144,27 @@ const AdminCommunityTab = () => {
       if (newTab) {
         newTab.focus();
         
-        // Track admin join in DB (so users know host is in)
+        // 🆕 FIXED: Track admin join in DB FIRST
         await MeetApiService.joinMeeting(activeMeeting.id, userData);
+        
+        // 🆕 FIXED: Update meeting status to indicate host has joined
+        try {
+          // Try to update meeting status - this should be implemented in your backend
+          const statusResponse = await MeetApiService.updateMeetingStatus(activeMeeting.id, 'host_joined');
+          console.log('✅ Meeting status updated:', statusResponse);
+        } catch (statusError) {
+          console.warn('⚠️ Could not update meeting status (may not be implemented):', statusError);
+          // If the status update fails, we'll still set the local state
+        }
         
         console.log('✅ Admin joined permanent room successfully');
         setHostHasJoined(true);
         showTemporaryNotification('success', '✅ You have joined as host! Users can now join the meeting.');
         
-        // 🆕 FIXED: Use the new status update function
-        await MeetApiService.updateMeetingStatus(activeMeeting.id, 'host_joined');
+        // 🆕 REFRESH MEETING DATA TO PROPAGATE CHANGES
+        setTimeout(() => {
+          loadActiveMeeting(true);
+        }, 1000);
 
       } else {
         // Popup blocked
@@ -292,7 +306,7 @@ const AdminCommunityTab = () => {
     }
   };
 
-  // 🆕 FIXED: End meeting without clearing resources
+  // 🆕 FIXED: End meeting properly and reset status
   const handleEndMeeting = async () => {
     if (!activeMeeting || !userData) return;
 
@@ -301,10 +315,12 @@ const AdminCommunityTab = () => {
       
       if (response.success) {
         setActiveMeeting(null);
-        // 🆕 FIXED: DON'T CLEAR RESOURCES - Keep them visible in archive
+        setHostHasJoined(false); // 🆕 RESET HOST STATUS
         setIsMyMeeting(false);
-        setHostHasJoined(false);
         showTemporaryNotification('success', '🛑 Webinar session ended successfully! All shared resources remain available in the archive.');
+        
+        // 🆕 RELOAD ARCHIVED RESOURCES
+        await loadArchivedResources();
       } else {
         setNotification({ type: 'error', message: response.error || 'Failed to end meeting' });
       }

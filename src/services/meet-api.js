@@ -9,12 +9,13 @@ class MeetApiService {
   // 🆕 ADD MISSING BASE URL PROPERTY
   static baseUrl = API_BASE_URL;
 
-  // 🆕 ADD MISSING updateMeetingStatus FUNCTION
+  // 🆕 FIXED: updateMeetingStatus FUNCTION - CORRECTED URL
   static async updateMeetingStatus(meetingId, status) {
     try {
       console.log('🔄 Updating meeting status:', { meetingId, status });
       
-      const response = await fetch(`${this.baseUrl}/${meetingId}/status`, {
+      // 🆕 FIXED: Use correct endpoint URL
+      const response = await fetch(`${this.baseUrl}/meetings/${meetingId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

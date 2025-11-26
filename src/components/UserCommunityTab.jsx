@@ -11,13 +11,14 @@ const UserCommunityTab = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewingResource, setViewingResource] = useState(null);
   const [isJoining, setIsJoining] = useState(false);
+  const [hostHasJoined, setHostHasJoined] = useState(false);
 
   // 🎯 PERMANENT GOOGLE MEET LINK
   const PERMANENT_MEET_LINK = "https://meet.google.com/moc-zgvj-jfn";
 
   // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(4); // 🆕 CHANGED FROM 10 TO 4
+  const [itemsPerPage] = useState(4);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('all');
   const [sortField, setSortField] = useState('createdAt');
@@ -27,10 +28,53 @@ const UserCommunityTab = () => {
     const user = JSON.parse(localStorage.getItem('userData') || '{}');
     setUserData(user);
     loadActiveMeeting();
-    loadAllResources(); // 🆕 CRITICAL FIX: Load ALL resources like Admin does
+    loadAllResources();
+    
+    // Set up polling to check for meeting status changes
+    const interval = setInterval(() => {
+      loadActiveMeeting();
+    }, 10000); // Check every 10 seconds
+    
+    return () => clearInterval(interval);
   }, []);
 
-  // 🆕 NEW FUNCTION: Load ALL archived resources (same as Admin)
+  // 🆕 UPDATED: Load active meeting with host status check
+  const loadActiveMeeting = async () => {
+    try {
+      setIsRefreshing(true);
+      const response = await MeetApiService.getActiveMeeting();
+      console.log('🔍 User - Active meeting response:', response);
+      
+      if (response.success && response.meeting) {
+        const meeting = response.meeting;
+        
+        // Ensure meeting has all required links
+        if (!meeting.meetingCode) {
+          meeting.meetingCode = extractMeetingCode(meeting.meetingLink);
+        }
+        if (!meeting.directJoinLink) {
+          meeting.directJoinLink = meeting.meetingLink;
+        }
+        
+        console.log('✅ User loaded meeting with status:', meeting.status);
+        setActiveMeeting(meeting);
+        setHostHasJoined(meeting.status === 'host_joined');
+        
+      } else {
+        setActiveMeeting(null);
+        setHostHasJoined(false);
+      }
+    } catch (error) {
+      console.error('Error loading active meeting:', error);
+      setActiveMeeting(null);
+      setHostHasJoined(false);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  // 🆕 NEW FUNCTION: Load ALL archived resources
   const loadAllResources = async () => {
     try {
       setResourcesLoading(true);
@@ -42,24 +86,21 @@ const UserCommunityTab = () => {
         console.log('✅ User loaded ALL resources:', response.resources.length);
       } else {
         console.error('❌ Failed to load archived resources:', response.error);
-        // Fallback: try to load from active meeting
-        if (activeMeeting) {
-          await loadMeetingResources(activeMeeting.id);
-        }
       }
     } catch (error) {
       console.error('❌ Error loading all resources:', error);
-      // Fallback: try to load from active meeting
-      if (activeMeeting) {
-        await loadMeetingResources(activeMeeting.id);
-      }
     } finally {
       setResourcesLoading(false);
     }
   };
 
-  // 🎯 SIMPLE PERMANENT JOIN FUNCTION
-  const handleJoinPermanentMeet = () => {
+  // 🎯 UPDATED: Join function - only works when host has joined
+  const handleJoinWebinarRoom = () => {
+    if (!hostHasJoined) {
+      alert('⏳ The webinar host has not joined yet. Please wait for the host to start the meeting.');
+      return;
+    }
+
     console.log('🎯 Joining Google Meet:', PERMANENT_MEET_LINK);
     setIsJoining(true);
     
@@ -93,7 +134,10 @@ const UserCommunityTab = () => {
 
   // Join Live Stream (for active meetings)
   const handleJoinStream = async (meeting) => {
-    if (!meeting) return;
+    if (!meeting || !hostHasJoined) {
+      alert('⏳ The webinar host has not joined yet. Please wait for the host to start the meeting.');
+      return;
+    }
     
     setIsJoining(true);
     try {
@@ -119,21 +163,6 @@ const UserCommunityTab = () => {
         
         console.log('✅ Stream opened successfully');
         
-        // Check for errors after delay
-        setTimeout(() => {
-          try {
-            if (newTab.location.href.includes('whoops') || 
-                newTab.location.href.includes('error') ||
-                newTab.document.title.includes('Invalid')) {
-              console.error('❌ Stream error detected');
-              newTab.close();
-              alert('❌ Stream error. Please try again.');
-            }
-          } catch (error) {
-            console.log('🔒 Cannot check tab URL (normal)');
-          }
-        }, 3000);
-        
       } else {
         // Popup blocked
         const userAction = confirm(
@@ -149,15 +178,6 @@ const UserCommunityTab = () => {
     } catch (error) {
       console.error('❌ Join error:', error);
       alert(`❌ Failed to join stream: ${error.message}`);
-      
-      // Fallback
-      const fallbackLink = meeting.meetingLink || meeting.meetLink;
-      if (fallbackLink) {
-        setTimeout(() => {
-          window.open(fallbackLink, '_blank', 'noopener,noreferrer');
-        }, 1000);
-      }
-      
     } finally {
       setIsJoining(false);
     }
@@ -181,59 +201,6 @@ const UserCommunityTab = () => {
     return '';
   };
 
-  const loadActiveMeeting = async () => {
-    try {
-      setIsRefreshing(true);
-      const response = await MeetApiService.getActiveMeeting();
-      console.log('🔍 User - Active meeting response:', response);
-      
-      if (response.success && response.meeting) {
-        const meeting = response.meeting;
-        
-        // Ensure meeting has all required links
-        if (!meeting.meetingCode) {
-          meeting.meetingCode = extractMeetingCode(meeting.meetingLink);
-        }
-        if (!meeting.directJoinLink) {
-          meeting.directJoinLink = meeting.meetingLink;
-        }
-        
-        console.log('✅ User loaded meeting with link:', meeting.meetingLink);
-        setActiveMeeting(meeting);
-        
-        // 🆕 CRITICAL FIX: Don't override all resources with just meeting resources
-        // Only load meeting resources if we don't have any resources yet
-        if (resources.length === 0) {
-          await loadMeetingResources(meeting.id);
-        }
-      } else {
-        setActiveMeeting(null);
-        // Don't clear resources - keep the archived ones
-      }
-    } catch (error) {
-      console.error('Error loading active meeting:', error);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  // 🆕 UPDATED: Keep this for backward compatibility but don't override all resources
-  const loadMeetingResources = async (meetingId) => {
-    try {
-      const resourcesResponse = await MeetApiService.getMeetingResources(meetingId);
-      if (resourcesResponse.success && resourcesResponse.resources) {
-        // Only set if we don't have any resources from archive
-        if (resources.length === 0) {
-          setResources(resourcesResponse.resources);
-          console.log('✅ Loaded meeting-specific resources:', resourcesResponse.resources.length);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading meeting resources:', error);
-    }
-  };
-
   const handleViewResource = (resource) => {
     console.log('🔍 User viewing resource:', resource);
     
@@ -247,7 +214,6 @@ const UserCommunityTab = () => {
   };
 
   const handleManualRefresh = async () => {
-    // 🆕 CRITICAL FIX: Refresh BOTH active meeting AND all resources
     await Promise.all([
       loadActiveMeeting(),
       loadAllResources()
@@ -260,7 +226,7 @@ const UserCommunityTab = () => {
       resource.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       resource.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       resource.uploadedByName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      resource.sharedByName?.toLowerCase().includes(searchTerm.toLowerCase()) || // 🆕 ADD sharedByName
+      resource.sharedByName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       resource.content?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesType = searchType === 'all' || 
@@ -361,82 +327,134 @@ const UserCommunityTab = () => {
         </div>
       </div>
 
-      {/* PERMANENT WEBINAR ROOM SECTION - ALWAYS AVAILABLE */}
+      {/* WEBINAR ROOM SECTION - DYNAMIC BASED ON HOST STATUS */}
       <div className="row">
         <div className="col-lg-8">
-          {/* Permanent Webinar Room Card */}
-          <div className="card mb-4 border-success">
-            <div className="card-header bg-success text-white">
+          {/* Webinar Room Card - Shows different content based on host status */}
+          <div className={`card mb-4 ${hostHasJoined ? 'border-success' : 'border-secondary'}`}>
+            <div className={`card-header ${hostHasJoined ? 'bg-success text-white' : 'bg-secondary text-white'}`}>
               <div className="d-flex justify-content-between align-items-center">
                 <h5 className="card-title mb-0">
                   <i className="fas fa-video me-2"></i>
                   The Conclave Academy - Webinar Room
                 </h5>
                 <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-warning text-dark">
-                    <i className="fas fa-home me-1"></i>
-                    ALWAYS AVAILABLE
-                  </span>
+                  {hostHasJoined ? (
+                    <span className="badge bg-warning text-dark">
+                      <i className="fas fa-broadcast-tower me-1"></i>
+                      LIVE NOW
+                    </span>
+                  ) : (
+                    <span className="badge bg-light text-dark">
+                      <i className="fas fa-clock me-1"></i>
+                      WAITING FOR HOST
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
             <div className="card-body">
               <div className="row align-items-center">
                 <div className="col-md-8">
-                  <h3 className="text-success mb-3">Welcome to The Conclave Academy Webinar Room</h3>
-                  <p className="text-muted mb-3">
-                    Join our dedicated webinar room for live training sessions, Q&A, and community discussions. 
-                    Available 24/7 for all Conclave Academy members.
-                  </p>
-                  
-                  <div className="d-flex flex-wrap gap-2 mb-3">
-                    <span className="badge bg-primary">
-                      <i className="fas fa-clock me-1"></i>
-                      Open 24/7
-                    </span>
-                    <span className="badge bg-info">
-                      <i className="fas fa-users me-1"></i>
-                      Community Access
-                    </span>
-                    <span className="badge bg-secondary">
-                      <i className="fas fa-video me-1"></i>
-                      Direct Join
-                    </span>
-                  </div>
+                  {hostHasJoined ? (
+                    <>
+                      <h3 className="text-success mb-3">Webinar Room is Live! 🎉</h3>
+                      <p className="text-muted mb-3">
+                        The host has joined the webinar room. You can now join the live session and participate in the training.
+                      </p>
+                      
+                      <div className="d-flex flex-wrap gap-2 mb-3">
+                        <span className="badge bg-success">
+                          <i className="fas fa-check-circle me-1"></i>
+                          Host Online
+                        </span>
+                        <span className="badge bg-info">
+                          <i className="fas fa-users me-1"></i>
+                          Ready to Join
+                        </span>
+                        <span className="badge bg-primary">
+                          <i className="fas fa-video me-1"></i>
+                          Live Session
+                        </span>
+                      </div>
 
-                  {/* 🎯 PERMANENT JOIN BUTTON */}
-                  <button 
-                    onClick={handleJoinPermanentMeet}
-                    className="btn btn-success btn-lg"
-                    disabled={isJoining}
-                  >
-                    {isJoining ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                        Joining Webinar Room...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-play-circle me-2"></i>
-                        Join Webinar Room
-                      </>
-                    )}
-                  </button>
+                      {/* 🎯 JOIN BUTTON - ONLY SHOWS WHEN HOST HAS JOINED */}
+                      <button 
+                        onClick={handleJoinWebinarRoom}
+                        className="btn btn-success btn-lg"
+                        disabled={isJoining}
+                      >
+                        {isJoining ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                            Joining Webinar Room...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-play-circle me-2"></i>
+                            Join Webinar Room
+                          </>
+                        )}
+                      </button>
 
-                  {/* Meeting Info */}
-                  <div className="mt-3 p-3 bg-light rounded">
-                    <small className="text-muted">
-                      <i className="fas fa-info-circle me-1 text-info"></i>
-                      Video call link: <strong>{PERMANENT_MEET_LINK}</strong>
-                    </small>
-                  </div>
+                      {/* Meeting Info */}
+                      <div className="mt-3 p-3 bg-light rounded">
+                        <small className="text-muted">
+                          <i className="fas fa-info-circle me-1 text-info"></i>
+                          Video call link: <strong>{PERMANENT_MEET_LINK}</strong>
+                        </small>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-secondary mb-3">Webinar Room Not Active</h3>
+                      <p className="text-muted mb-3">
+                        The webinar room is currently not active. Please wait for the host to start the meeting.
+                        You'll be able to join as soon as the host begins the session.
+                      </p>
+                      
+                      <div className="d-flex flex-wrap gap-2 mb-3">
+                        <span className="badge bg-secondary">
+                          <i className="fas fa-clock me-1"></i>
+                          Waiting for Host
+                        </span>
+                        <span className="badge bg-light text-dark">
+                          <i className="fas fa-user-tie me-1"></i>
+                          Host Offline
+                        </span>
+                        <span className="badge bg-info">
+                          <i className="fas fa-bell me-1"></i>
+                          Auto-refresh Enabled
+                        </span>
+                      </div>
+
+                      {/* 🎯 DISABLED JOIN BUTTON WITH MESSAGE */}
+                      <button 
+                        className="btn btn-secondary btn-lg"
+                        disabled
+                      >
+                        <i className="fas fa-clock me-2"></i>
+                        Waiting for Host to Join
+                      </button>
+
+                      <div className="mt-3 p-3 bg-light rounded">
+                        <small className="text-muted">
+                          <i className="fas fa-info-circle me-1 text-info"></i>
+                          This page automatically refreshes every 10 seconds. The join button will appear as soon as the host starts the meeting.
+                        </small>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="col-md-4 text-center">
-                  <div className="bg-success bg-opacity-10 rounded-circle p-4 d-inline-flex mb-3">
-                    <i className="fas fa-home fa-3x text-success"></i>
+                  <div className={`${hostHasJoined ? 'bg-success bg-opacity-10' : 'bg-secondary bg-opacity-10'} rounded-circle p-4 d-inline-flex mb-3`}>
+                    <i className={`fas ${hostHasJoined ? 'fa-broadcast-tower text-success' : 'fa-clock text-secondary'} fa-3x`}></i>
                   </div>
                   <p className="text-muted small">
-                    Your dedicated webinar space for Travel, Tours, Hotels & Tourism education
+                    {hostHasJoined 
+                      ? 'Live webinar session in progress. Join now to participate!'
+                      : 'Webinar room will activate when the host joins the meeting'
+                    }
                   </p>
                 </div>
               </div>
@@ -444,7 +462,7 @@ const UserCommunityTab = () => {
           </div>
 
           {/* Active Meeting Section (Optional - keep if you want both) */}
-          {activeMeeting && (
+          {activeMeeting && hostHasJoined && (
             <div className="card mb-4 border-primary">
               <div className="card-header bg-primary text-white">
                 <h5 className="card-title mb-0">
@@ -623,8 +641,8 @@ const UserCommunityTab = () => {
                           <th 
                             style={{ 
                               cursor: 'pointer', 
-                              width: '40%', // 🆕 ADJUSTED WIDTH
-                              minWidth: '120px' // 🆕 REDUCED MIN WIDTH
+                              width: '40%',
+                              minWidth: '120px'
                             }}
                             onClick={() => handleSort('title')}
                           >
@@ -633,9 +651,9 @@ const UserCommunityTab = () => {
                               <i className={`fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'} ms-1`}></i>
                             )}
                           </th>
-                          <th style={{ width: '15%', minWidth: '70px' }}>Type</th> {/* 🆕 REDUCED MIN WIDTH */}
-                          <th style={{ width: '25%', minWidth: '100px' }}>Details</th> {/* 🆕 REDUCED MIN WIDTH */}
-                          <th style={{ width: '20%', minWidth: '70px' }}>View</th> {/* 🆕 ADJUSTED WIDTH */}
+                          <th style={{ width: '15%', minWidth: '70px' }}>Type</th>
+                          <th style={{ width: '25%', minWidth: '100px' }}>Details</th>
+                          <th style={{ width: '20%', minWidth: '70px' }}>View</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -648,7 +666,6 @@ const UserCommunityTab = () => {
                                   <div 
                                     className="fw-semibold text-primary" 
                                     style={{ 
-                                      // 🆕 IMPROVED TEXT HANDLING FOR LONG NAMES
                                       wordBreak: 'break-word',
                                       overflow: 'hidden',
                                       display: '-webkit-box',
@@ -709,7 +726,7 @@ const UserCommunityTab = () => {
                             </td>
                             <td>
                               <button
-                                className="btn btn-outline-primary btn-sm w-100" // 🆕 MADE BUTTON FULL WIDTH
+                                className="btn btn-outline-primary btn-sm w-100"
                                 onClick={() => handleViewResource(resource)}
                                 title="View Resource"
                               >

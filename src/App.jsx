@@ -705,7 +705,7 @@ const App = () => {
                 </div>
               </div>
               <div className="col-4">
-                <div className="nav-grid-item">
+                <div className="nav-grid-item" onClick={() => navigateTo('community')}>
                   <i className="fas fa-video nav-icon"></i>
                   <span className="nav-text">Online Webinar</span>
                 </div>

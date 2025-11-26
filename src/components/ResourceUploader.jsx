@@ -60,12 +60,17 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   };
 
   const uploadFile = async () => {
+    // 🆕 CHECK IF ACTIVE MEETING EXISTS
+    if (!meetingId) {
+      showNotification('error', '❌ Please create and join a webinar room first before uploading resources.');
+      return;
+    }
+
     if (!selectedFile) {
       showNotification('error', 'Please select a file first');
       return;
     }
 
-    // 🆕 FIXED: Check only for user data, not meeting ID
     if (!user) {
       showNotification('error', 'User data missing. Please log in again.');
       return;
@@ -74,22 +79,19 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
     setIsUploading(true);
     
     try {
-      // 🆕 FIXED: Use effective meeting ID
       const effectiveMeetingId = getEffectiveMeetingId();
       
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('meetingId', effectiveMeetingId);
-      formData.append('resourceType', getResourceTypeFromFile(selectedFile));
-      formData.append('title', selectedFile.name.replace(/\.[^/.]+$/, ""));
-      formData.append('uploadedBy', user.id);
-      formData.append('uploadedByName', user.name || user.username || 'Admin');
-      formData.append('createdAt', new Date().toISOString());
-
       console.log('📤 Uploading actual file via service:', selectedFile.name);
+      console.log('🔑 Using meeting ID:', effectiveMeetingId);
 
-      // 🆕 USE THE SERVICE METHOD
-      const result = await MeetApiService.uploadFileResource(formData);
+      // 🆕 FIXED: Use the NEW upload pattern that passes meetingId as parameter
+      const result = await MeetApiService.uploadFileResource(
+        effectiveMeetingId,
+        selectedFile,
+        selectedFile.name.replace(/\.[^/.]+$/, ""), // title
+        "Uploaded document resource", // description
+        user
+      );
       
       if (result.success) {
         onResourceShared(result.resource);
@@ -101,7 +103,15 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
       }
     } catch (error) {
       console.error('File upload error:', error);
-      showNotification('error', `❌ Upload failed: ${error.message}`);
+      
+      // 🆕 BETTER ERROR HANDLING
+      if (error.message.includes('Active meeting not found')) {
+        showNotification('error', '❌ Cannot upload: No active webinar session. Please create a webinar room first.');
+      } else if (error.message.includes('Failed to fetch') || error.message.includes('404')) {
+        showNotification('error', '❌ Upload failed: Server connection issue. Please try again.');
+      } else {
+        showNotification('error', `❌ Upload failed: ${error.message}`);
+      }
     } finally {
       setIsUploading(false);
     }
@@ -123,7 +133,12 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   };
 
   const shareLink = async () => {
-    // 🆕 FIXED: Check only for user data, not meeting ID
+    // 🆕 CHECK IF ACTIVE MEETING EXISTS
+    if (!meetingId) {
+      showNotification('error', '❌ Please create and join a webinar room first before sharing resources.');
+      return;
+    }
+
     if (!user) {
       showNotification('error', 'User data missing. Please log in again.');
       return;
@@ -172,7 +187,12 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   };
 
   const shareText = async () => {
-    // 🆕 FIXED: Check only for user data, not meeting ID
+    // 🆕 CHECK IF ACTIVE MEETING EXISTS
+    if (!meetingId) {
+      showNotification('error', '❌ Please create and join a webinar room first before sharing resources.');
+      return;
+    }
+
     if (!user) {
       showNotification('error', 'User data missing. Please log in again.');
       return;
@@ -221,7 +241,12 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   };
 
   const quickShare = async (type, content, title) => {
-    // 🆕 FIXED: Check only for user data, not meeting ID
+    // 🆕 CHECK IF ACTIVE MEETING EXISTS
+    if (!meetingId) {
+      showNotification('error', '❌ Please create and join a webinar room first before sharing resources.');
+      return;
+    }
+
     if (!user) {
       showNotification('error', 'User data missing. Please log in again.');
       return;
@@ -304,6 +329,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
             className="btn btn-primary"
             onClick={() => setShowUploadOptions(true)}
             disabled={isUploading}
+            title={!meetingId ? "Create a webinar room first to upload resources" : "Share resources with participants"}
           >
             {isUploading ? (
               <>
@@ -314,9 +340,20 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
               <>
                 <i className="fas fa-share-alt me-2"></i>
                 Share Resources
+                {!meetingId && <span className="ms-1 badge bg-warning">Requires Webinar</span>}
               </>
             )}
           </button>
+          
+          {/* 🆕 SHOW WARNING WHEN NO MEETING */}
+          {!meetingId && (
+            <div className="alert alert-warning mt-2 mb-0 py-2">
+              <small>
+                <i className="fas fa-info-circle me-1"></i>
+                Create a webinar room first to enable resource sharing
+              </small>
+            </div>
+          )}
         </div>
       )}
 
@@ -360,21 +397,24 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 <button
                   className="btn btn-outline-secondary btn-sm"
                   onClick={() => quickShare('agenda', 'Session agenda and topics to be covered', 'Session Agenda')}
-                  disabled={isUploading}
+                  disabled={isUploading || !meetingId}
+                  title={!meetingId ? "Create webinar room first" : "Share session agenda"}
                 >
                   📋 Agenda
                 </button>
                 <button
                   className="btn btn-outline-secondary btn-sm"
                   onClick={() => quickShare('slides', 'Presentation slides and materials', 'Presentation Slides')}
-                  disabled={isUploading}
+                  disabled={isUploading || !meetingId}
+                  title={!meetingId ? "Create webinar room first" : "Share presentation slides"}
                 >
                   📊 Slides
                 </button>
                 <button
                   className="btn btn-outline-secondary btn-sm"
                   onClick={() => quickShare('notes', 'Important notes and key takeaways', 'Session Notes')}
-                  disabled={isUploading}
+                  disabled={isUploading || !meetingId}
+                  title={!meetingId ? "Create webinar room first" : "Share session notes"}
                 >
                   📖 Notes
                 </button>
@@ -387,7 +427,8 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
               <button
                 className="btn btn-outline-primary w-100 mb-2"
                 onClick={pickFile}
-                disabled={isUploading}
+                disabled={isUploading || !meetingId}
+                title={!meetingId ? "Create webinar room first" : "Choose file to upload"}
               >
                 <i className="fas fa-upload me-2"></i>
                 Choose File (PDF, Images, Documents, Text)
@@ -417,7 +458,8 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
               <button
                 className="btn btn-success w-100"
                 onClick={uploadFile}
-                disabled={isUploading || !selectedFile}
+                disabled={isUploading || !selectedFile || !meetingId}
+                title={!meetingId ? "Create webinar room first" : "Upload and share file"}
               >
                 {isUploading ? (
                   <>
@@ -450,7 +492,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 placeholder="Link Title *"
                 value={linkForm.title}
                 onChange={(e) => setLinkForm({ ...linkForm, title: e.target.value })}
-                disabled={isUploading}
+                disabled={isUploading || !meetingId}
               />
               <input
                 type="url"
@@ -458,7 +500,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 placeholder="https://example.com *"
                 value={linkForm.url}
                 onChange={(e) => setLinkForm({ ...linkForm, url: e.target.value })}
-                disabled={isUploading}
+                disabled={isUploading || !meetingId}
               />
               <textarea
                 className="form-control form-control-sm mb-2"
@@ -466,12 +508,13 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 rows="2"
                 value={linkForm.description}
                 onChange={(e) => setLinkForm({ ...linkForm, description: e.target.value })}
-                disabled={isUploading}
+                disabled={isUploading || !meetingId}
               />
               <button
                 className="btn btn-success btn-sm w-100"
                 onClick={shareLink}
-                disabled={isUploading || !linkForm.title || !linkForm.url}
+                disabled={isUploading || !linkForm.title || !linkForm.url || !meetingId}
+                title={!meetingId ? "Create webinar room first" : "Share link resource"}
               >
                 <i className="fas fa-link me-1"></i>
                 Share Link
@@ -487,7 +530,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 placeholder="Text Title *"
                 value={textForm.title}
                 onChange={(e) => setTextForm({ ...textForm, title: e.target.value })}
-                disabled={isUploading}
+                disabled={isUploading || !meetingId}
               />
               <textarea
                 className="form-control form-control-sm mb-2"
@@ -495,7 +538,7 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 rows="3"
                 value={textForm.content}
                 onChange={(e) => setTextForm({ ...textForm, content: e.target.value })}
-                disabled={isUploading}
+                disabled={isUploading || !meetingId}
               />
               <textarea
                 className="form-control form-control-sm mb-2"
@@ -503,12 +546,13 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 rows="2"
                 value={textForm.description}
                 onChange={(e) => setTextForm({ ...textForm, description: e.target.value })}
-                disabled={isUploading}
+                disabled={isUploading || !meetingId}
               />
               <button
                 className="btn btn-info btn-sm w-100"
                 onClick={shareText}
-                disabled={isUploading || !textForm.title || !textForm.content}
+                disabled={isUploading || !textForm.title || !textForm.content || !meetingId}
+                title={!meetingId ? "Create webinar room first" : "Share text resource"}
               >
                 <i className="fas fa-font me-1"></i>
                 Share Text

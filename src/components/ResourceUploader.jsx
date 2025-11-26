@@ -12,6 +12,14 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   // 🆕 GET API URL FROM REACT ENV
   const MEET_API_BASE_URL = process.env.REACT_APP_MEET_API_BASE_URL || 'https://travel-tour-academy-backend.onrender.com/api/meet';
 
+  // 🆕 FIXED: Generate a fallback meeting ID if none exists
+  const getEffectiveMeetingId = () => {
+    if (meetingId) return meetingId;
+    
+    // 🆕 Create a generic meeting ID for resources shared without active meeting
+    return 'general-archive-meeting';
+  };
+
   // Custom notification function
   const showNotification = (type, message) => {
     setNotification({ show: true, type, message });
@@ -57,17 +65,21 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
       return;
     }
 
-    if (!meetingId || !user) {
-      showNotification('error', 'Meeting ID or user data missing');
+    // 🆕 FIXED: Check only for user data, not meeting ID
+    if (!user) {
+      showNotification('error', 'User data missing. Please log in again.');
       return;
     }
 
     setIsUploading(true);
     
     try {
+      // 🆕 FIXED: Use effective meeting ID
+      const effectiveMeetingId = getEffectiveMeetingId();
+      
       const formData = new FormData();
       formData.append('file', selectedFile);
-      formData.append('meetingId', meetingId);
+      formData.append('meetingId', effectiveMeetingId);
       formData.append('resourceType', getResourceTypeFromFile(selectedFile));
       formData.append('title', selectedFile.name.replace(/\.[^/.]+$/, ""));
       formData.append('uploadedBy', user.id);
@@ -111,8 +123,9 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   };
 
   const shareLink = async () => {
-    if (!meetingId || !user) {
-      showNotification('error', 'Meeting ID or user data missing');
+    // 🆕 FIXED: Check only for user data, not meeting ID
+    if (!user) {
+      showNotification('error', 'User data missing. Please log in again.');
       return;
     }
 
@@ -124,8 +137,11 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
     setIsUploading(true);
     
     try {
+      // 🆕 FIXED: Use effective meeting ID
+      const effectiveMeetingId = getEffectiveMeetingId();
+      
       const resourceData = {
-        meetingId: meetingId,
+        meetingId: effectiveMeetingId,
         resourceType: 'link',
         title: linkForm.title,
         content: linkForm.url,
@@ -156,8 +172,9 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   };
 
   const shareText = async () => {
-    if (!meetingId || !user) {
-      showNotification('error', 'Meeting ID or user data missing');
+    // 🆕 FIXED: Check only for user data, not meeting ID
+    if (!user) {
+      showNotification('error', 'User data missing. Please log in again.');
       return;
     }
 
@@ -169,8 +186,11 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
     setIsUploading(true);
     
     try {
+      // 🆕 FIXED: Use effective meeting ID
+      const effectiveMeetingId = getEffectiveMeetingId();
+      
       const resourceData = {
-        meetingId: meetingId,
+        meetingId: effectiveMeetingId,
         resourceType: 'text',
         title: textForm.title,
         content: textForm.content,
@@ -201,16 +221,20 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
   };
 
   const quickShare = async (type, content, title) => {
-    if (!meetingId || !user) {
-      showNotification('error', 'Meeting ID or user data missing');
+    // 🆕 FIXED: Check only for user data, not meeting ID
+    if (!user) {
+      showNotification('error', 'User data missing. Please log in again.');
       return;
     }
 
     setIsUploading(true);
     
     try {
+      // 🆕 FIXED: Use effective meeting ID
+      const effectiveMeetingId = getEffectiveMeetingId();
+      
       const resourceData = {
-        meetingId: meetingId,
+        meetingId: effectiveMeetingId,
         resourceType: 'text',
         title: title,
         content: content,
@@ -236,6 +260,19 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  // 🆕 FIXED: Show appropriate message when no active meeting
+  const renderMeetingInfo = () => {
+    if (!meetingId) {
+      return (
+        <div className="alert alert-info mb-3">
+          <i className="fas fa-info-circle me-2"></i>
+          <strong>Note:</strong> No active webinar session. This resource will be saved to the general archive and will be available to all users.
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -299,6 +336,9 @@ const ResourceUploader = ({ meetingId, user, onResourceShared }) => {
                 disabled={isUploading}
               ></button>
             </div>
+
+            {/* 🆕 FIXED: Show meeting info */}
+            {renderMeetingInfo()}
 
             {/* Storage Warning */}
             <div className="alert alert-warning mb-3">

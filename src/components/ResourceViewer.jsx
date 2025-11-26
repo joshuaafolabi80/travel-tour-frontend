@@ -281,29 +281,36 @@ const ResourceViewer = ({ resource, onClose }) => {
     <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
       <div className="modal-dialog modal-xl modal-dialog-centered" style={{ maxWidth: '95%', height: '90vh' }}>
         <div className="modal-content h-100">
-          <div className="modal-header bg-primary text-white">
-            <h5 className="modal-title">
-              <i className="fas fa-eye me-2"></i>
-              {resource.title}
-              {contentType === 'html' && (
-                <span className="badge bg-success ms-2">
-                  <i className="fas fa-image me-1"></i>
-                  With Images
-                </span>
-              )}
-              {contentType === 'pdf' && (
-                <span className="badge bg-danger ms-2">
-                  <i className="fas fa-file-pdf me-1"></i>
-                  PDF Document
-                </span>
-              )}
-            </h5>
-            <button
-              type="button"
-              className="btn-close btn-close-white"
-              onClick={onClose}
-            ></button>
+          {/* FIXED MODAL HEADER - Mobile responsive with text truncation */}
+          <div className="modal-header bg-primary text-white position-relative">
+            <div className="d-flex align-items-center w-100">
+              <div className="flex-grow-1 text-truncate me-3">
+                <h5 className="modal-title text-truncate mb-0 fs-6 fs-md-5">
+                  <i className="fas fa-eye me-2"></i>
+                  {resource.title}
+                  {contentType === 'html' && (
+                    <span className="badge bg-success ms-2">
+                      <i className="fas fa-image me-1"></i>
+                      With Images
+                    </span>
+                  )}
+                  {contentType === 'pdf' && (
+                    <span className="badge bg-danger ms-2">
+                      <i className="fas fa-file-pdf me-1"></i>
+                      PDF Document
+                    </span>
+                  )}
+                </h5>
+              </div>
+              <button
+                type="button"
+                className="btn-close btn-close-white flex-shrink-0"
+                onClick={onClose}
+                style={{ minWidth: '30px' }}
+              ></button>
+            </div>
           </div>
+
           <div className="modal-body position-relative" style={{ minHeight: '400px' }}>
             {isLoading && (
               <div className="position-absolute top-50 start-50 translate-middle">

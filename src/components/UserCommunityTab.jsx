@@ -39,6 +39,7 @@ const UserCommunityTab = () => {
   }, []);
 
   // 🆕 UPDATED: Load active meeting with host status check
+  // 🆕 SIMPLER APPROACH: If meeting exists, host has joined
   const loadActiveMeeting = async () => {
     try {
       setIsRefreshing(true);
@@ -56,9 +57,11 @@ const UserCommunityTab = () => {
           meeting.directJoinLink = meeting.meetingLink;
         }
         
-        console.log('✅ User loaded meeting with status:', meeting.status);
+        console.log('✅ User loaded meeting:', meeting);
         setActiveMeeting(meeting);
-        setHostHasJoined(meeting.status === 'host_joined');
+        
+        // 🆕 SIMPLE FIX: If meeting exists, assume host has joined
+        setHostHasJoined(true);
         
       } else {
         setActiveMeeting(null);

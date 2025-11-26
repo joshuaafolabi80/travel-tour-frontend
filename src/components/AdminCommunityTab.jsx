@@ -147,15 +147,6 @@ const AdminCommunityTab = () => {
         // 🆕 FIXED: Track admin join in DB FIRST
         await MeetApiService.joinMeeting(activeMeeting.id, userData);
         
-        // 🆕 FIXED: Update meeting status to indicate host has joined
-        try {
-          // Try to update meeting status - this should be implemented in your backend
-          const statusResponse = await MeetApiService.updateMeetingStatus(activeMeeting.id, 'host_joined');
-          console.log('✅ Meeting status updated:', statusResponse);
-        } catch (statusError) {
-          console.warn('⚠️ Could not update meeting status (may not be implemented):', statusError);
-          // If the status update fails, we'll still set the local state
-        }
         
         console.log('✅ Admin joined permanent room successfully');
         setHostHasJoined(true);

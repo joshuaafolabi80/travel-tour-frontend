@@ -903,7 +903,9 @@ const App = () => {
             {currentPage === 'loading' && <LoadingPage />}
 
             {/* ADD THESE HOTEL ROUTES */}
-            {currentPage === 'hotel-search' && <HotelSearchHome />}
+            {currentPage === 'hotel-search' && (
+              <HotelSearchHome onSearch={(city) => navigateTo(`hotel-search/${city}`)} />
+            )}
             {currentPage === 'hotel-search-results' && <HotelSearchResults />}
             {currentPage === 'hotel-details' && <HotelDetailPage />}
           </main>

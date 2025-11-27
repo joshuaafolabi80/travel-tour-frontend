@@ -1,16 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import SearchBox from '../components/SearchBox';
 
-const HotelSearchHome = () => {
-  const navigate = useNavigate();
-
-  const handleSearch = (searchTerm) => {
-    if (searchTerm.trim()) {
-      navigate(`/hotel-search/${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
-
+const HotelSearchHome = ({ onSearch }) => {
   return (
     <div className="min-vh-100 d-flex align-items-center bg-light">
       <div className="container py-5">
@@ -26,7 +17,7 @@ const HotelSearchHome = () => {
             </div>
             
             {/* Search Box */}
-            <SearchBox onSearch={handleSearch} />
+            <SearchBox onSearch={onSearch} />
           </div>
         </div>
         
@@ -58,7 +49,7 @@ const HotelSearchHome = () => {
                 <button
                   key={city}
                   className="btn btn-outline-primary btn-sm"
-                  onClick={() => handleSearch(city)}
+                  onClick={() => onSearch(city)}
                 >
                   {city}
                 </button>

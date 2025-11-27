@@ -30,6 +30,9 @@ import UserCommunityTab from './components/UserCommunityTab';
 import VideoCourses from './components/VideoCourses';
 import MasterclassVideos from './components/MasterclassVideos';
 import AdminVideoCourses from './components/AdminVideoCourses';
+import HotelSearchHome from './hotel-search/pages/HomePage';
+import HotelSearchResults from './hotel-search/pages/SearchResultsPage';
+import HotelDetailPage from './hotel-search/pages/HotelDetailPage';
 import './App.css';
 
 // Reusable Slider Component for both Splash Screen and Home Page
@@ -681,7 +684,7 @@ const App = () => {
                 </div>
               </div>
               <div className="col-4">
-                <div className="nav-grid-item">
+                <div className="nav-grid-item" onClick={() => navigateTo('hotel-search')}>
                   <i className="fas fa-hotel nav-icon"></i>
                   <span className="nav-text">Hotels</span>
                 </div>
@@ -898,6 +901,11 @@ const App = () => {
             )}
             
             {currentPage === 'loading' && <LoadingPage />}
+
+            {/* ADD THESE HOTEL ROUTES */}
+            {currentPage === 'hotel-search' && <HotelSearchHome />}
+            {currentPage === 'hotel-search-results' && <HotelSearchResults />}
+            {currentPage === 'hotel-details' && <HotelDetailPage />}
           </main>
           <footer className="app-footer">
             &copy; {new Date().getFullYear()} The Conclave Academy. All rights reserved.

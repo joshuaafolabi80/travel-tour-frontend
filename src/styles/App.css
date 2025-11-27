@@ -1,0 +1,33 @@
+/* Custom styles */
+.hotel-card {
+  transition: transform 0.2s ease-in-out;
+}
+
+.hotel-card:hover {
+  transform: translateY(-4px);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.min-vh-100 {
+  min-height: 100vh;
+}
+
+/* Loading animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hotel-card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .display-4 {
+    font-size: 2rem;
+  }
+}

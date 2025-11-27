@@ -127,6 +127,7 @@ const App = () => {
   const [authToken, setAuthToken] = useState(null);
   const [alert, setAlert] = useState({ type: '', message: '' });
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [hotelSearchCity, setHotelSearchCity] = useState('');
   
   const [notificationCounts, setNotificationCounts] = useState({
     quizScores: 0,
@@ -496,6 +497,13 @@ const App = () => {
     console.log('📍 Navigating to:', page);
     setCurrentPage(page);
     setShowMenu(false);
+  };
+
+  // FIXED: Hotel search navigation function
+  const handleHotelSearch = (city) => {
+    console.log('🏨 Hotel search for:', city);
+    setHotelSearchCity(city);
+    setCurrentPage('hotel-search-results');
   };
 
   const renderNotificationBadge = (count) => {
@@ -880,6 +888,15 @@ const App = () => {
             {currentPage === 'community' && userRole !== 'admin' && <UserCommunityTab />}
             {currentPage === 'admin-community' && <AdminCommunityTab />}
             
+            {/* FIXED: Hotel Search Pages with proper navigation */}
+            {currentPage === 'hotel-search' && (
+              <HotelSearchHome onSearch={handleHotelSearch} />
+            )}
+            {currentPage === 'hotel-search-results' && (
+              <HotelSearchResults city={hotelSearchCity} />
+            )}
+            {currentPage === 'hotel-details' && <HotelDetailPage />}
+            
             {/* Placeholder Pages */}
             {currentPage === 'important-information' && (
               <div className="container py-4">
@@ -901,13 +918,6 @@ const App = () => {
             )}
             
             {currentPage === 'loading' && <LoadingPage />}
-
-            {/* ADD THESE HOTEL ROUTES */}
-            {currentPage === 'hotel-search' && (
-              <HotelSearchHome onSearch={(city) => navigateTo(`hotel-search/${city}`)} />
-            )}
-            {currentPage === 'hotel-search-results' && <HotelSearchResults />}
-            {currentPage === 'hotel-details' && <HotelDetailPage />}
           </main>
           <footer className="app-footer">
             &copy; {new Date().getFullYear()} The Conclave Academy. All rights reserved.

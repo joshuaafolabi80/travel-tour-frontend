@@ -1,3 +1,5 @@
+// travel-tour-frontend/src/hotel-search/components/HotelGrid.jsx
+
 import React from 'react';
 import HotelCard from './HotelCard';
 

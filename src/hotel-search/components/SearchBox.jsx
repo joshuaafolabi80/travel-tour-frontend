@@ -1,3 +1,5 @@
+// travel-tour-frontend/src/hotel-search/components/SearchBox.jsx
+
 import React, { useState } from 'react';
 
 const SearchBox = ({ onSearch }) => {

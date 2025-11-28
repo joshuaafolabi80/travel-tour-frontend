@@ -1,3 +1,5 @@
+// travel-tour-frontend/src/hotel-search/components/LoadingSpinner.jsx
+
 import React from 'react';
 
 const LoadingSpinner = ({ message = "Loading..." }) => {

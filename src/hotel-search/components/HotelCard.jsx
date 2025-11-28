@@ -1,3 +1,5 @@
+// travel-tour-frontend/src/hotel-search/components/HotelCard.jsx
+
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 

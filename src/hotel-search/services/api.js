@@ -1,3 +1,6 @@
+// travel-tour-frontend/src/hotel-search/services/api.js
+
+
 import axios from 'axios';
 
 // Use separate hotel service URL

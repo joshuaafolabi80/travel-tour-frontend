@@ -32,7 +32,7 @@ export default defineConfig({
   },
   // FIX: Changed base from '/' to '' to use relative paths. 
   // This resolves the MIME type errors and white screen on Netlify.
-  base: '', 
+  base: '/', 
   preview: {
     port: 4173,
     host: true

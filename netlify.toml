@@ -3,22 +3,15 @@
   publish = "dist"
 
 [build.environment]
-  # FIX: Updated Node version from "18" to "20.19.0" 
-  # to satisfy the requirement for Vite v7 (20.19+ or 22.12+).
   NODE_VERSION = "20.19.0"
 
-# Hotel Search Redirects (Add this before the catch-all redirect)
-[[redirects]]
-  from = "/hotel-search/*"
-  to = "/index.html"
-  status = 200
-
+# Redirects
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# Security Headers (Applies to all files)
+# Security Headers
 [[headers]]
   for = "/*"
   [headers.values]
@@ -27,7 +20,7 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# CORS Headers (Applies to all files)
+# CORS Headers
 [[headers]]
   for = "/*"
   [headers.values]
@@ -35,36 +28,24 @@
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
-# *** PERMANENT FIX: CACHE-BUSTING HEADER ***
-# This specifically targets the index.html file (the main page) 
-# to ensure browsers NEVER cache the old version, thus preventing 
-# the Service Worker or other stale asset issues from recurring.
+# Cache Busting for Index
 [[headers]]
   for = "/"
   [headers.values]
     Cache-Control = "max-age=0, must-revalidate, no-cache, no-store"
 
-# Environment variables for Netlify
+# Environment variables
 [context.production.environment]
   VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
-  # 🚨 REMOVED: Socket URL (WebRTC old system)
-  # VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
-  # 🎯 ADD: Meet Module URL
   VITE_MEET_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api/meet"
   REACT_APP_HOTEL_API_URL = "https://travel-tour-hotel-backend.onrender.com/api/hotel-search"
 
 [context.deploy-preview.environment]
   VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
-  # 🚨 REMOVED: Socket URL
-  # VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
-  # 🎯 ADD: Meet Module URL
   VITE_MEET_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api/meet"
   REACT_APP_HOTEL_API_URL = "https://travel-tour-hotel-backend.onrender.com/api/hotel-search"
 
 [context.branch-deploy.environment]
   VITE_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api"
-  # 🚨 REMOVED: Socket URL
-  # VITE_SOCKET_URL = "https://travel-tour-academy-backend.onrender.com"
-  # 🎯 ADD: Meet Module URL
   VITE_MEET_API_BASE_URL = "https://travel-tour-academy-backend.onrender.com/api/meet"
   REACT_APP_HOTEL_API_URL = "https://travel-tour-hotel-backend.onrender.com/api/hotel-search"

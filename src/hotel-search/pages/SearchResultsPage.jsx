@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom'; // <-- FIX 1: Import useNavigate
+// import { useNavigate } from 'react-router-dom'; // <-- REMOVED
 import HotelGrid from '../components/HotelGrid';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { searchHotels } from '../services/api';
 
-const SearchResultsPage = () => {
+// Accept city and navigateTo props from App.jsx
+const SearchResultsPage = ({ city, navigateTo }) => { 
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -12,20 +13,19 @@ const SearchResultsPage = () => {
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
 
-  // <-- FIX 2: Initialize navigate
-  const navigate = useNavigate(); 
- 
-  // Get city from URL
-  const getCityFromUrl = () => {
-    const path = window.location.pathname;
-    const match = path.match(/\/hotel-search\/(.+)/);
-    return match ? decodeURIComponent(match[1]) : '';
-  };
+  // const navigate = useNavigate(); // <-- REMOVED
 
-  const city = getCityFromUrl();
+  // The city variable is now available directly from props, no need for getCityFromUrl()
 
   // Load hotels
   const loadHotels = useCallback(async (reset = false) => {
+    // Ensure a city is provided before searching
+    if (!city) {
+      setLoading(false);
+      setError("No search city provided.");
+      return;
+    }
+
     try {
       if (reset) setLoading(true);
       else setLoadingMore(true);
@@ -59,14 +59,14 @@ const SearchResultsPage = () => {
 
   // Handle back to search
   const handleBack = () => {
-    // <-- FIX 3: Use navigate instead of window.location.href
-    navigate('/hotel-search'); 
+    // FIXED: Using prop function for navigation
+    navigateTo('hotel-search'); 
   };
 
   if (loading) {
     return (
       <div className="container py-5">
-        <LoadingSpinner message={`Searching hotels in ${city}...`} />
+        <LoadingSpinner message={`Searching hotels in ${city || 'unknown city'}...`} />
       </div>
     );
   }
@@ -85,7 +85,7 @@ const SearchResultsPage = () => {
         </div>
       )}
       
-      <HotelGrid hotels={hotels} city={city} />
+      <HotelGrid hotels={hotels} city={city} navigateTo={navigateTo} />
       
       {loadingMore && <LoadingSpinner message="Loading more hotels..." />}
     </div>

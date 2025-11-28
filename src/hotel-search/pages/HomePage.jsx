@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom'; // <-- REMOVED
 
-const HotelSearchHome = () => {
+// Pass onSearch function from App.jsx
+const HotelSearchHome = ({ onSearch }) => { 
   const [searchTerm, setSearchTerm] = useState('');
-  const navigate = useNavigate(); // <-- FIX 1: Initialize navigate
+  // const navigate = useNavigate(); // <-- REMOVED
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      // <-- FIX 2: Use navigate for client-side routing
-      navigate(`/hotel-search/${encodeURIComponent(searchTerm.trim())}`);
+      // FIXED: Using prop function for navigation
+      onSearch(searchTerm.trim()); 
     }
   };
 

@@ -12,7 +12,7 @@ let selectedHotelId = null;
 // --- Utility Functions ---
 
 function getBaseUrl() {
-    return 'http://localhost:3000'; // Assuming your server runs on port 3000
+    return 'https://travel-tour-academy-backend.onrender.com';
 }
 
 function generateStarRating(rating) {

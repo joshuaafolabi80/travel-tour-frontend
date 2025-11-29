@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hotel Details - Global Stay Finder</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <script src="https://payment-wrapper.liteapi.travel/dist/liteAPIPayment.js?a=11"></script>
+</head>
+<body>
+    <div class="hotel-details-container">
+        <button onclick="goBackToSearch()" class="button button--back">← Back to Search</button>
+        
+        <div id="hotel-header" class="hotel-header card">
+            <div id="hotel-basic-info">
+                <h1>Loading hotel details...</h1>
+            </div>
+        </div>
+        
+        <div id="hotel-gallery" class="hotel-gallery">
+            </div>
+
+        <section id="hotel-description-section" class="description-section card">
+            <h2>About this Hotel</h2>
+            <p id="hotel-long-description">Description loading...</p>
+            <div id="hotel-amenities-list" class="amenities-list"></div>
+        </section>
+
+        <section class="search-dates-section card">
+            <h3 class="search-dates-section__title">📅 Search Available Rooms</h3>
+            <div class="date-inputs">
+                <div class="input-group">
+                    <label for="checkin">Check-in Date</label>
+                    <input type="date" class="input" id="checkin">
+                </div>
+                <div class="input-group">
+                    <label for="checkout">Check-out Date</label>
+                    <input type="date" class="input" id="checkout">
+                </div>
+                <div class="input-group">
+                    <label for="adults">Adults</label>
+                    <select class="input" id="adults">
+                        <option value="1">1 Adult</option>
+                        <option value="2">2 Adults</option>
+                        <option value="3">3 Adults</option>
+                        <option value="4">4 Adults</option>
+                    </select>
+                </div>
+                <button class="button button--primary" onclick="searchHotelRates()">
+                    <span class="button__icon">🔍</span>
+                    Check Rates
+                </button>
+            </div>
+        </section>
+        
+        <div id="rates-section" class="rates-section card">
+            <h2>Available Rooms & Rates</h2>
+            <div id="rates-container">
+                <p class="placeholder-text">Select dates and click "Check Rates" to see available rooms</p>
+            </div>
+        </div>
+        
+        <div id="loader" class="loader">
+            <div class="spinner"></div>
+            <p id="loader-text">Loading details...</p>
+        </div>
+        <div id="error-message" class="error-message"></div>
+        
+        <div id="payment-form"></div>
+        <div id="pe"></div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Start loading details immediately when the page loads
+        document.addEventListener('DOMContentLoaded', initializeDetailsPage);
+
+        function goBackToSearch() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

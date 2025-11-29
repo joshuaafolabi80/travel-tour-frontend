@@ -31,9 +31,9 @@ import VideoCourses from './components/VideoCourses';
 import MasterclassVideos from './components/MasterclassVideos';
 import AdminVideoCourses from './components/AdminVideoCourses';
 // 🏨 ADDED: Hotel Components
-import HotelSearchHome from './hotel-search/pages/HomePage';
-import HotelSearchResults from './hotel-search/pages/SearchResultsPage';
-import HotelDetailPage from './hotel-search/pages/HotelDetailPage';
+// import HotelSearchHome from './hotel-search/pages/HomePage';
+// import HotelSearchResults from './hotel-search/pages/SearchResultsPage';
+// import HotelDetailPage from './hotel-search/pages/HotelDetailPage';
 import './App.css';
 
 // SIMPLE COMPONENTS FOR HOTEL PAGES

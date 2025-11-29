@@ -36,39 +36,61 @@ import AdminVideoCourses from './components/AdminVideoCourses';
 // import HotelDetailPage from './hotel-search/pages/HotelDetailPage';
 import './App.css';
 
-// SIMPLE COMPONENTS FOR HOTEL PAGES
+// SIMPLE COMPONENTS FOR HOTEL PAGES - REDIRECT APPROACH
 const HotelSearchHome = ({ onSearch }) => {
+  // Redirect to the hotel search page
+  React.useEffect(() => {
+    window.location.href = '/hotel-search/index.html';
+  }, []);
+  
   return (
-    <div style={{ width: '100%', height: '100vh' }}>
-      <iframe 
-        src="/hotel-search/index.html"
-        style={{ width: '100%', height: '100%', border: 'none' }}
-        title="Hotel Search"
-      />
+    <div className="d-flex flex-column justify-content-center align-items-center" style={{height: '50vh'}}>
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Loading hotel search...</span>
+      </div>
+      <p className="mt-3 text-muted">Redirecting to hotel search...</p>
     </div>
   );
 };
 
 const HotelSearchResults = ({ city, navigateTo }) => {
+  // Redirect to hotel search with city parameter
+  React.useEffect(() => {
+    if (city) {
+      window.location.href = `/hotel-search/index.html?city=${encodeURIComponent(city)}`;
+    } else {
+      window.location.href = '/hotel-search/index.html';
+    }
+  }, [city]);
+  
   return (
-    <div style={{ width: '100%', height: '100vh' }}>
-      <iframe 
-        src="/hotel-search/index.html" 
-        style={{ width: '100%', height: '100%', border: 'none' }}
-        title="Hotel Results"
-      />
+    <div className="d-flex flex-column justify-content-center align-items-center" style={{height: '50vh'}}>
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Loading hotel results...</span>
+      </div>
+      <p className="mt-3 text-muted">Redirecting to hotel results...</p>
     </div>
   );
 };
 
 const HotelDetailPage = ({ navigateTo }) => {
+  // Redirect to hotel details page
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hotelId = params.get('hotelId');
+    if (hotelId) {
+      window.location.href = `/hotel-search/hotel-details.html?hotelId=${hotelId}`;
+    } else {
+      window.location.href = '/hotel-search/hotel-details.html';
+    }
+  }, []);
+  
   return (
-    <div style={{ width: '100%', height: '100vh' }}>
-      <iframe 
-        src="/hotel-search/hotel-details.html"
-        style={{ width: '100%', height: '100%', border: 'none' }}
-        title="Hotel Details"
-      />
+    <div className="d-flex flex-column justify-content-center align-items-center" style={{height: '50vh'}}>
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Loading hotel details...</span>
+      </div>
+      <p className="mt-3 text-muted">Redirecting to hotel details...</p>
     </div>
   );
 };

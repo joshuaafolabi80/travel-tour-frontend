@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Global Hotel Finder - Book Worldwide</title>
+    <link rel="stylesheet" href="/hotel-search/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <script src="https://payment-wrapper.liteapi.travel/dist/liteAPIPayment.js?a=11"></script>
+</head>
+<body>
+    <div class="page-container">
+        <header class="header">
+            <h1 class="header__title">🗺️ Global Stay Finder</h1>
+            <p class="header__subtitle">Search &amp; book hotels in any city worldwide</p>
+        </header>
+
+        <section class="search-form-section">
+            <div class="search-card">
+                <div class="search-card__inputs">
+                    <div class="input-group">
+                        <label for="city">City Name</label>
+                        <input type="text" class="input" id="city" placeholder="e.g. Lagos, Paris, New York..." />
+                    </div>
+
+                    <div class="input-group">
+                        <label for="country">Country Code (2-letter)</label>
+                        <input type="text" class="input" id="country" placeholder="e.g. NG, US, FR..." value="NG" maxlength="2" />
+                    </div>
+
+                    <div class="input-group input-group--env">
+                        <label for="environment">Environment</label>
+                        <select id="environment" class="input">
+                            <option value="sandbox">Sandbox (Testing)</option>
+                            <option value="production">Production (Real)</option>
+                        </select>
+                    </div>
+
+                    <button class="button button--primary" onclick="searchHotels(true)" id="search-button">
+                        <span class="button__icon">🔍</span>
+                        Find Hotels
+                    </button>
+                </div>
+
+                <div class="popular-cities">
+                    <h3 class="popular-cities__title">🌍 Try These Cities:</h3>
+                    <div class="city-tags">
+                        <span class="city-tag" data-city="Lagos" data-country="NG">Lagos, NG</span>
+                        <span class="city-tag" data-city="Paris" data-country="FR">Paris, FR</span>
+                        <span class="city-tag" data-city="Dubai" data-country="AE">Dubai, AE</span>
+                        <span class="city-tag" data-city="New York" data-country="US">New York, US</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div id="loader" class="loader">
+            <div class="spinner"></div>
+            <p>Searching for hotels in <span id="searching-city"></span>...</p>
+        </div>
+        <div id="error-message" class="error-message"></div>
+
+        <section id="search-results" class="results-section" style="display: none;">
+            
+            <div id="hotel-search-filter-container" class="filter-bar" style="display: none;">
+                <input type="text" 
+                       id="hotel-search-filter" 
+                       class="input filter-bar__input" 
+                       placeholder="Filter by hotel name, address, or location...">
+                <div class="filter-bar__stats" id="filter-stats"></div>
+            </div>
+            
+            <div id="results-header" class="results-header"></div>
+            
+            <div id="hotels" class="hotels-grid"></div>
+            
+            <div id="load-more-container" class="load-more-container">
+                <button id="load-more-btn" class="button button--secondary" onclick="loadMoreHotels()">
+                    <span class="button__icon">⬇️</span>
+                    Load More Hotels
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <script src="/hotel-search/script.js"></script>
+</body>
+</html>

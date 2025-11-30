@@ -30,8 +30,8 @@ const HotelSearchHome = ({ onSearch }) => {
 
   return (
     <div className="container-fluid py-4 hotel-search-container">
-      <div className="row justify-content-center">
-        <div className="col-12 col-md-8 col-lg-6">
+      <div className="card shadow-lg border-0">
+        <div className="card-header bg-orange text-white text-center py-4">
           <div className="card shadow-lg border-0">
             <div className="card-header bg-orange text-white text-center py-4">
               <h1 className="mb-2">🌍 Global Hotel Finder</h1>

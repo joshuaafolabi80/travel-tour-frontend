@@ -834,6 +834,61 @@
 }
 
 
+/* Hotel Search Orange Theme - Add this to App.css */
+.hotel-search-container {
+  background: linear-gradient(135deg, var(--primary-orange) 0%, var(--dark-orange) 100%) !important;
+  min-height: 100vh;
+  padding: 20px 0;
+}
+
+.hotel-search-container .card {
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.hotel-search-container .card-header {
+  background: linear-gradient(135deg, var(--primary-orange), var(--dark-orange)) !important;
+  border-radius: 15px 15px 0 0 !important;
+  padding: 30px 20px;
+}
+
+.hotel-search-container .card-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.hotel-search-container .btn-orange {
+  background: linear-gradient(135deg, var(--primary-orange), var(--dark-orange));
+  color: white;
+  border: none;
+  font-weight: 600;
+  padding: 15px 30px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.hotel-search-container .btn-orange:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255, 111, 0, 0.3);
+}
+
+.hotel-search-container .btn-outline-orange {
+  color: var(--primary-orange);
+  border: 2px solid var(--primary-orange);
+  background: transparent;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.hotel-search-container .btn-outline-orange:hover {
+  background: var(--primary-orange);
+  color: white;
+  transform: translateY(-1px);
+}
+
+
 /* Mobile optimization for chat input */
 @media (max-width: 768px) {
   .chat-input-container {

@@ -1,11 +1,11 @@
-<!-- client/index.html -->
+<!-- client/App.html -->
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Global Hotel Finder - Find Hotels Anywhere in the World</title>
+    <title>Global Hotel Finder - Search Hotels Worldwide</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,9 +16,10 @@
     <div class="container">
         <header class="header">
             <h1>🌍 Global Hotel Finder</h1>
-            <p class="subtitle">Find hotels in any city anywhere in the world</p>
+            <p class="subtitle">Search and find hotels in any city worldwide</p>
         </header>
 
+        <!-- SEARCH ENGINE SECTION -->
         <div class="search-section">
             <div class="search-card">
                 <h2>🔍 Search Hotels Worldwide</h2>
@@ -27,7 +28,7 @@
                 <div class="input-group">
                     <label for="city">City Name</label>
                     <input type="text" class="input-bk" id="city" placeholder="e.g. Lagos, Abuja, Benin City, London, Paris, New York..." />
-                    <div class="input-hint">Enter any city name worldwide - LiteAPI will search globally</div>
+                    <div class="input-hint">Enter any city name worldwide</div>
                 </div>
 
                 <div class="input-group">
@@ -65,13 +66,15 @@
             </div>
         </div>
 
+        <!-- LOADER -->
         <div id="loader" class="loader">
             <div class="spinner"></div>
             <p>Searching for hotels in <span id="searching-city"></span>...</p>
         </div>
 
+        <!-- SEARCH RESULTS SECTION -->
         <div id="search-results" class="search-results">
-            <!-- Hotel Search Filter -->
+            <!-- HOTEL SEARCH FILTER -->
             <div id="hotel-search-filter-container" class="hotel-search-filter-container" style="display: none;">
                 <div class="filter-header">
                     <h3>🔍 Filter Hotels</h3>
@@ -87,7 +90,7 @@
             <div id="results-header" class="results-header"></div>
             <div id="hotels" class="hotels-grid"></div>
             
-            <!-- Load More Button -->
+            <!-- LOAD MORE BUTTON -->
             <div id="load-more-container" class="load-more-container">
                 <button id="load-more-btn" class="load-more-btn" onclick="loadMoreHotels()">
                     <span class="btn-icon">⬇️</span>
@@ -103,29 +106,5 @@
     </div>
 
     <script src="app.js"></script>
-    <script>
-        function setCity(cityName) {
-            document.getElementById('city').value = cityName;
-            document.getElementById('city').focus();
-        }
-
-        // Handle Enter key press
-        document.getElementById('city').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchHotels(true);
-            }
-        });
-
-        document.getElementById('country').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchHotels(true);
-            }
-        });
-
-        // Focus on city input when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('city').focus();
-        });
-    </script>
 </body>
 </html>

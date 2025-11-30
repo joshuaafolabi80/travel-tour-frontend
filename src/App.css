@@ -799,6 +799,41 @@
   color: #6c757d;
 }
 
+
+/* Hotel Search Specific Styles - Minimal clashes */
+.hotel-search-container {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+/* These already exist in your CSS, so they'll work perfectly */
+.bg-orange {
+  background: linear-gradient(135deg, var(--primary-orange), var(--dark-orange)) !important;
+}
+
+.btn-orange {
+  background: linear-gradient(135deg, var(--primary-orange), var(--dark-orange));
+  color: white;
+  border: none;
+  font-weight: 600;
+}
+
+.btn-orange:hover {
+  background: linear-gradient(135deg, var(--dark-orange), var(--primary-orange));
+  color: white;
+}
+
+.btn-outline-orange {
+  color: var(--primary-orange);
+  border-color: var(--primary-orange);
+}
+
+.btn-outline-orange:hover {
+  background-color: var(--primary-orange);
+  color: white;
+}
+
+
 /* Mobile optimization for chat input */
 @media (max-width: 768px) {
   .chat-input-container {

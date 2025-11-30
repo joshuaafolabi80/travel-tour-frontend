@@ -1,4 +1,4 @@
-// travel-tour-frontend/src/App.jsx - COMPLETE INTEGRATED VERSION
+// travel-tour-frontend/src/App.jsx - COMPLETE INTEGRATED VERSION WITH HOTEL SEARCH
 import React, { useState, useEffect } from 'react';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { jwtDecode } from 'jwt-decode';
@@ -31,69 +31,10 @@ import VideoCourses from './components/VideoCourses';
 import MasterclassVideos from './components/MasterclassVideos';
 import AdminVideoCourses from './components/AdminVideoCourses';
 // 🏨 ADDED: Hotel Components
-// import HotelSearchHome from './hotel-search/pages/HomePage';
-// import HotelSearchResults from './hotel-search/pages/SearchResultsPage';
-// import HotelDetailPage from './hotel-search/pages/HotelDetailPage';
+import HotelSearchHome from './components/hotel-search/HomePage';
+import HotelSearchResults from './components/hotel-search/SearchResultsPage';
+import HotelDetailPage from './components/hotel-search/HotelDetailPage';
 import './App.css';
-
-// SIMPLE COMPONENTS FOR HOTEL PAGES - REDIRECT APPROACH
-const HotelSearchHome = ({ onSearch }) => {
-  // Redirect to the hotel search page
-  React.useEffect(() => {
-    window.location.href = '/hotel-search/index.html';
-  }, []);
-  
-  return (
-    <div className="d-flex flex-column justify-content-center align-items-center" style={{height: '50vh'}}>
-      <div className="spinner-border text-primary" role="status">
-        <span className="visually-hidden">Loading hotel search...</span>
-      </div>
-      <p className="mt-3 text-muted">Redirecting to hotel search...</p>
-    </div>
-  );
-};
-
-const HotelSearchResults = ({ city, navigateTo }) => {
-  // Redirect to hotel search with city parameter
-  React.useEffect(() => {
-    if (city) {
-      window.location.href = `/hotel-search/index.html?city=${encodeURIComponent(city)}`;
-    } else {
-      window.location.href = '/hotel-search/index.html';
-    }
-  }, [city]);
-  
-  return (
-    <div className="d-flex flex-column justify-content-center align-items-center" style={{height: '50vh'}}>
-      <div className="spinner-border text-primary" role="status">
-        <span className="visually-hidden">Loading hotel results...</span>
-      </div>
-      <p className="mt-3 text-muted">Redirecting to hotel results...</p>
-    </div>
-  );
-};
-
-const HotelDetailPage = ({ navigateTo }) => {
-  // Redirect to hotel details page
-  React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const hotelId = params.get('hotelId');
-    if (hotelId) {
-      window.location.href = `/hotel-search/hotel-details.html?hotelId=${hotelId}`;
-    } else {
-      window.location.href = '/hotel-search/hotel-details.html';
-    }
-  }, []);
-  
-  return (
-    <div className="d-flex flex-column justify-content-center align-items-center" style={{height: '50vh'}}>
-      <div className="spinner-border text-primary" role="status">
-        <span className="visually-hidden">Loading hotel details...</span>
-      </div>
-      <p className="mt-3 text-muted">Redirecting to hotel details...</p>
-    </div>
-  );
-};
 
 // Reusable Slider Component for both Splash Screen and Home Page
 const HeroSlider = ({ images, texts, staticTitle, onLastSlide, onNextClick, isHomepage = false }) => {
@@ -815,6 +756,10 @@ const App = () => {
         crossOrigin="anonymous"
         referrerPolicy="no-referrer"
       />
+      <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+      />
 
       {showSplash ? (
         <div className="splash-screen-wrapper">
@@ -954,7 +899,7 @@ const App = () => {
             {currentPage === 'hotel-search-results' && (
               <HotelSearchResults 
                 city={hotelSearchCity} 
-                navigateTo={navigateTo} // PASSING navigateTo for the back button
+                navigateTo={navigateTo}
               />
             )}
             {currentPage === 'hotel-details' && <HotelDetailPage navigateTo={navigateTo} />}

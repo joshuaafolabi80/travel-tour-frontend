@@ -1,85 +1,189 @@
+<!-- client/hotel-details.html -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hotel Details - Global Stay Finder</title>
-    <link rel="stylesheet" href="/hotel-search/styles.css" />
+    <title>Hotel Details - Global Hotel Finder</title>
+    <link rel="stylesheet" href="styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet" />
     <script src="https://payment-wrapper.liteapi.travel/dist/liteAPIPayment.js?a=11"></script>
+    <style>
+        .hotel-details-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .back-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .hotel-header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .hotel-gallery {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+            height: 400px;
+        }
+        
+        .main-image {
+            grid-column: 1;
+            grid-row: 1 / span 2;
+        }
+        
+        .gallery-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+        
+        .rates-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .rate-card {
+            border: 1px solid #e1e5e9;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .rate-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        }
+        
+        .rate-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .rate-price {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c5aa0;
+        }
+        
+        .search-dates {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .date-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto auto;
+            gap: 15px;
+            align-items: end;
+        }
+        
+        .no-rates {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
 </head>
 <body>
     <div class="hotel-details-container">
-        <button onclick="goBackToSearch()" class="button button--back">← Back to Search</button>
+        <button onclick="goBackToSearch()" class="back-button">← Back to Search</button>
         
-        <div id="hotel-header" class="hotel-header card">
+        <div id="hotel-header" class="hotel-header">
             <div id="hotel-basic-info">
                 <h1>Loading hotel details...</h1>
             </div>
         </div>
         
         <div id="hotel-gallery" class="hotel-gallery">
-            </div>
-
-        <section id="hotel-description-section" class="description-section card">
-            <h2>About this Hotel</h2>
-            <p id="hotel-long-description">Description loading...</p>
-            <div id="hotel-amenities-list" class="amenities-list"></div>
-        </section>
-
-        <section class="search-dates-section card">
-            <h3 class="search-dates-section__title">📅 Search Available Rooms</h3>
+            <!-- Hotel images will be loaded here -->
+        </div>
+        
+        <div class="search-dates">
+            <h3>📅 Search Available Rooms</h3>
             <div class="date-inputs">
                 <div class="input-group">
                     <label for="checkin">Check-in Date</label>
-                    <input type="date" class="input" id="checkin">
+                    <input type="date" class="input-bk" id="checkin" value="2024-12-30">
                 </div>
                 <div class="input-group">
                     <label for="checkout">Check-out Date</label>
-                    <input type="date" class="input" id="checkout">
+                    <input type="date" class="input-bk" id="checkout" value="2024-12-31">
                 </div>
                 <div class="input-group">
                     <label for="adults">Adults</label>
-                    <select class="input" id="adults">
+                    <select class="input-bk" id="adults">
                         <option value="1">1 Adult</option>
                         <option value="2">2 Adults</option>
                         <option value="3">3 Adults</option>
                         <option value="4">4 Adults</option>
                     </select>
                 </div>
-                <button class="button button--primary" onclick="searchHotelRates()">
-                    <span class="button__icon">🔍</span>
-                    Check Rates
+                <button class="search-btn" onclick="searchHotelRates()">
+                    <span class="btn-icon">🔍</span>
+                    Search Rates
                 </button>
             </div>
-        </section>
+        </div>
         
-        <div id="rates-section" class="rates-section card">
+        <div id="rates-section" class="rates-section">
             <h2>Available Rooms & Rates</h2>
             <div id="rates-container">
-                <p class="placeholder-text">Select dates and click "Check Rates" to see available rooms</p>
+                <p>Select dates and click "Search Rates" to see available rooms</p>
             </div>
         </div>
         
         <div id="loader" class="loader">
             <div class="spinner"></div>
-            <p id="loader-text">Loading details...</p>
+            <p id="loader-text">Loading...</p>
         </div>
+        
         <div id="error-message" class="error-message"></div>
         
         <div id="payment-form"></div>
         <div id="pe"></div>
     </div>
 
-    <script src="/hotel-search/script.js"></script>
+    <script src="hotel-details.js"></script>
     <script>
-        // Start loading details immediately when the page loads
-        document.addEventListener('DOMContentLoaded', initializeDetailsPage);
-
         function goBackToSearch() {
-            window.location.href = 'index.html';
+            // Go back to the main search page (App.html)
+            window.location.href = 'app.html';
         }
     </script>
 </body>

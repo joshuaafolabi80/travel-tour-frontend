@@ -1,3 +1,5 @@
+// travel-tour-frontend/public/hotel-search/script.js
+
 // --- Global State Variables ---
 let currentPage = 0;
 let currentCity = '';
@@ -103,8 +105,18 @@ async function searchHotels(resetPage = true) {
     document.getElementById("search-button").disabled = true;
 
     try {
-        const url = `${getBaseUrl()}/search-hotels?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&environment=${environment}&page=${currentPage}`;
+        const url = `${getBaseUrl()}/api/search-hotels?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&environment=${environment}&page=${currentPage}`;
+        console.log(`🔍 Searching hotels: ${url}`);
+        
         const response = await fetch(url);
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error("Authentication failed. Hotel search is now public - please refresh and try again.");
+            }
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
 
         // 4. Handle Response
@@ -157,7 +169,7 @@ async function searchHotels(resetPage = true) {
         hideLoader();
         isLoadingMore = false;
         document.getElementById("search-button").disabled = false;
-        showError("Failed to connect to the server. Please check your network or backend service.");
+        showError(error.message || "Failed to connect to the server. Please check your network or backend service.");
     }
 }
 
@@ -306,9 +318,18 @@ async function fetchHotelDetails(hotelId) {
     hideError("error-message");
 
     try {
-        // NOTE: The server endpoint for getting hotel details (e.g., /get-hotel-details) is assumed.
-        const url = `${getBaseUrl()}/get-hotel-details?hotelId=${hotelId}&environment=${currentEnvironment}`;
+        const url = `${getBaseUrl()}/api/get-hotel-details?hotelId=${hotelId}&environment=${currentEnvironment}`;
+        console.log(`🔍 Fetching hotel details: ${url}`);
+        
         const response = await fetch(url);
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error("Authentication failed. Hotel details are now public - please refresh and try again.");
+            }
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
 
         hideLoader();
@@ -325,7 +346,7 @@ async function fetchHotelDetails(hotelId) {
     } catch (error) {
         console.error("❌ Error fetching hotel details:", error);
         hideLoader();
-        showError("Failed to fetch hotel details. Please check your connection.");
+        showError(error.message || "Failed to fetch hotel details. Please check your connection.");
     }
 }
 
@@ -391,9 +412,18 @@ async function searchHotelRates(isInitial = false) {
     hideError("error-message");
 
     try {
-        // NOTE: The server endpoint for getting hotel rates is assumed.
-        const url = `${getBaseUrl()}/get-hotel-rates?hotelId=${selectedHotelId}&checkin=${checkin}&checkout=${checkout}&adults=${adults}&environment=${currentEnvironment}`;
+        const url = `${getBaseUrl()}/api/get-hotel-rates?hotelId=${selectedHotelId}&checkin=${checkin}&checkout=${checkout}&adults=${adults}&environment=${currentEnvironment}`;
+        console.log(`🔍 Fetching hotel rates: ${url}`);
+        
         const response = await fetch(url);
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error("Authentication failed. Hotel rates are now public - please refresh and try again.");
+            }
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
 
         hideLoader();
@@ -408,7 +438,7 @@ async function searchHotelRates(isInitial = false) {
     } catch (error) {
         console.error("❌ Error fetching rates:", error);
         hideLoader();
-        showError("Failed to fetch rates. Please check your connection.", "error-message");
+        showError(error.message || "Failed to fetch rates. Please check your connection.", "error-message");
     }
 }
 
@@ -432,6 +462,11 @@ function createRateCard(rate) {
             <button class="button button--book" onclick="startBooking('${rate.rateId}', '${rate.hotelId}')">Book Now →</button>
         </div>
     `;
+}
+
+function startBooking(rateId, hotelId) {
+    alert(`Booking functionality would be implemented here for rate: ${rateId} at hotel: ${hotelId}`);
+    // In a real implementation, this would redirect to a booking page or open a booking modal
 }
 
 // --- Initialization & Event Listeners ---
@@ -471,6 +506,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
     } else if (document.querySelector('.hotel-details-container')) {
-        // hotel-details.html (Logic is in the inline script at the bottom of hotel-details.html)
+        // hotel-details.html
+        initializeDetailsPage();
+        
+        // Add event listeners for hotel details page
+        document.getElementById('search-rates-btn')?.addEventListener('click', () => searchHotelRates(false));
+        document.getElementById('back-to-search')?.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
     }
 });

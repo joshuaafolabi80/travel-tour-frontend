@@ -1,7 +1,7 @@
-// src/components/hotel-search/HotelDetailPage.jsx (FULL UPDATE - Ensure you replace your existing content)
+// src/components/hotel-search/HotelDetailPage.jsx (UPDATED WITH PLACEHOLDER CONTENT)
 
 import React, { useState, useEffect } from 'react';
-import { FaChevronLeft, FaMapMarkerAlt, FaStar, FaCheckCircle, FaDollarSign, FaCalendarAlt, FaUsers } from 'react-icons/fa';
+import { FaChevronLeft, FaMapMarkerAlt, FaStar, FaCheckCircle, FaDollarSign, FaCalendarAlt, FaUsers, FaWifi, FaSwimmingPool, FaParking, FaCoffee, FaConciergeBell, FaUtensils, FaTv, FaShower, FaSnowflake, FaDumbbell } from 'react-icons/fa';
 
 const BACKEND_URL = "https://travel-tour-hotel-backend.onrender.com";
 const DETAILS_ROUTE = "/api/hotel-search/hotel-full-details";
@@ -28,6 +28,72 @@ const HotelDetailPage = ({ navigateTo, hotelId, environment, checkInDate, checkO
     const [checkIn, setCheckIn] = useState(checkInDate || '');
     const [checkOut, setCheckOut] = useState(checkOutDate || '');
     const [numAdults, setNumAdults] = useState(adults || 1);
+
+    // Placeholder descriptions based on hotel rating or category
+    const getPlaceholderDescription = () => {
+        if (!hotel) return '';
+        
+        const rating = hotel.rating || 3;
+        const name = hotel.name || 'this hotel';
+        
+        if (rating >= 4.5) {
+            return `Experience luxury redefined at ${name}, where impeccable service meets world-class amenities. Our five-star establishment offers an unforgettable stay with elegant accommodations, gourmet dining options, and personalized attention to every detail. Whether you're here for business or leisure, our dedicated staff ensures your comfort and satisfaction from check-in to departure.`;
+        } else if (rating >= 4.0) {
+            return `Welcome to ${name}, your perfect urban retreat. Enjoy modern comfort with stylish rooms, excellent facilities, and convenient access to local attractions. Our hotel combines contemporary design with warm hospitality, creating an ideal base for exploring the city or conducting business meetings.`;
+        } else if (rating >= 3.0) {
+            return `Discover comfort and value at ${name}. We offer clean, comfortable accommodations with essential amenities at an affordable price. Perfect for travelers seeking a convenient location and reliable service without compromising on quality.`;
+        } else {
+            return `A comfortable and convenient accommodation option, ${name} provides the essentials for a pleasant stay. Ideal for budget-conscious travelers looking for a reliable place to rest and recharge during their journey.`;
+        }
+    };
+
+    // Placeholder amenities based on hotel category
+    const getPlaceholderAmenities = () => {
+        if (!hotel) return [];
+        
+        const rating = hotel.rating || 3;
+        
+        // Base amenities for all hotels
+        const baseAmenities = [
+            { name: 'Free WiFi', icon: <FaWifi /> },
+            { name: 'Air Conditioning', icon: <FaSnowflake /> },
+            { name: 'Daily Housekeeping', icon: <FaConciergeBell /> }
+        ];
+        
+        if (rating >= 4.5) {
+            return [
+                ...baseAmenities,
+                { name: 'Swimming Pool', icon: <FaSwimmingPool /> },
+                { name: 'Fitness Center', icon: <FaDumbbell /> },
+                { name: 'Restaurant & Bar', icon: <FaUtensils /> },
+                { name: '24/7 Room Service', icon: <FaCoffee /> },
+                { name: 'Flat-screen TV', icon: <FaTv /> },
+                { name: 'Premium Toiletries', icon: <FaShower /> }
+            ];
+        } else if (rating >= 4.0) {
+            return [
+                ...baseAmenities,
+                { name: 'Swimming Pool', icon: <FaSwimmingPool /> },
+                { name: 'Restaurant', icon: <FaUtensils /> },
+                { name: 'Parking Available', icon: <FaParking /> },
+                { name: 'Flat-screen TV', icon: <FaTv /> },
+                { name: 'Coffee/Tea Maker', icon: <FaCoffee /> }
+            ];
+        } else if (rating >= 3.0) {
+            return [
+                ...baseAmenities,
+                { name: 'Parking Available', icon: <FaParking /> },
+                { name: 'TV with Cable', icon: <FaTv /> },
+                { name: 'Coffee/Tea Maker', icon: <FaCoffee /> }
+            ];
+        } else {
+            return [
+                ...baseAmenities,
+                { name: 'TV with Cable', icon: <FaTv /> },
+                { name: 'Coffee/Tea Maker', icon: <FaCoffee /> }
+            ];
+        }
+    };
 
     // --- Data Fetching Logic ---
     useEffect(() => {
@@ -173,7 +239,14 @@ const HotelDetailPage = ({ navigateTo, hotelId, environment, checkInDate, checkO
     const displayImages = allImages.slice(0, 4); 
     const mainImage = displayImages[0]?.url || 'https://via.placeholder.com/800x500/ccc/888?text=Hotel+Image';
     
+    // Get description - use API description if available, otherwise use placeholder
+    const description = hotel.description || getPlaceholderDescription();
+    
+    // Get amenities - use API amenities if available, otherwise use placeholder
     const amenityList = hotel.amenities || [];
+    const displayAmenities = amenityList.length > 0 
+        ? amenityList.map(name => ({ name, icon: <FaCheckCircle /> }))
+        : getPlaceholderAmenities();
 
     return (
         <div className="hotel-detail-container p-4">
@@ -216,13 +289,13 @@ const HotelDetailPage = ({ navigateTo, hotelId, environment, checkInDate, checkO
                     <h1 className="card-title fw-bold text-dark-blue">{hotel.name}</h1>
                     <p className="text-muted d-flex align-items-center mb-3">
                         <FaMapMarkerAlt className="me-2 text-danger" /> 
-                        {hotel.address || hotel.city}
+                        {hotel.address || hotel.city || 'Location details coming soon'}
                     </p>
 
                     <div className="d-flex align-items-center mb-4">
                         <div className="me-4">{renderRating(hotel.rating)}</div>
                         <span className="text-secondary">
-                            ({hotel.reviewsCount || 0} Reviews)
+                            ({hotel.reviewsCount || 'No'} Reviews)
                         </span>
                     </div>
                     
@@ -275,22 +348,51 @@ const HotelDetailPage = ({ navigateTo, hotelId, environment, checkInDate, checkO
                     <hr className="my-4" />
 
                     <h3 className="mb-3 text-primary-dark">Description</h3>
-                    <p className="card-text mb-4">{hotel.description || 'No detailed description available.'}</p>
+                    <p className="card-text mb-4" style={{lineHeight: '1.8'}}>
+                        {description}
+                    </p>
                     
                     <h3 className="mb-3 text-primary-dark">Key Amenities</h3>
                     <div className="row">
-                        {amenityList.length > 0 ? (
-                            amenityList.map((amenity, index) => (
-                                <div key={index} className="col-6 col-md-4 mb-2">
-                                    <p className="d-flex align-items-center m-0">
-                                        <FaCheckCircle className="me-2 text-success" />
-                                        {amenity}
-                                    </p>
+                        {displayAmenities.length > 0 ? (
+                            displayAmenities.map((amenity, index) => (
+                                <div key={index} className="col-6 col-md-4 mb-3">
+                                    <div className="d-flex align-items-center p-2 border rounded bg-light">
+                                        <span className="text-primary me-2">{amenity.icon}</span>
+                                        <span className="fw-medium">{amenity.name}</span>
+                                    </div>
                                 </div>
                             ))
                         ) : (
                             <div className="col-12 text-muted">No amenities listed.</div>
                         )}
+                    </div>
+
+                    {/* Additional hotel information section */}
+                    <hr className="my-4" />
+                    <h3 className="mb-3 text-primary-dark">Additional Information</h3>
+                    <div className="row">
+                        <div className="col-md-6">
+                            <div className="p-3 border rounded mb-3">
+                                <h5 className="fw-bold text-primary">Check-in & Check-out</h5>
+                                <p className="mb-0">
+                                    <strong>Check-in:</strong> 3:00 PM<br />
+                                    <strong>Check-out:</strong> 12:00 PM<br />
+                                    <small className="text-muted">Early check-in and late check-out subject to availability</small>
+                                </p>
+                            </div>
+                        </div>
+                        <div className="col-md-6">
+                            <div className="p-3 border rounded mb-3">
+                                <h5 className="fw-bold text-primary">General Policies</h5>
+                                <p className="mb-0">
+                                    • Free cancellation up to 24 hours before check-in<br />
+                                    • Children are welcome<br />
+                                    • Pets not allowed<br />
+                                    • Smoking-free property
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

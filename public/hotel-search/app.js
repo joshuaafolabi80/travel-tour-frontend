@@ -1,4 +1,4 @@
-// client/app.js
+// travel-tour-frontend/public/hotel-search/app.js
 
 // Global variables
 let currentPage = 0;

@@ -1,114 +1,138 @@
-import React, { useState } from 'react';
+// src/components/hotel-search/HomePage.jsx - Updated to include Country and Dates
 
+import React, { useState } from 'react';
+import { FaSearch, FaCalendarAlt, FaUsers, FaGlobe } from 'react-icons/fa';
+
+/**
+ * @param {object} props
+ * @param {function(object): void} props.onSearch - Function to call when the search button is clicked. 
+ * Passes an object: { city, country, checkInDate, checkOutDate, guests, environment }
+ */
 const HotelSearchHome = ({ onSearch }) => {
   const [city, setCity] = useState('');
-  const [country, setCountry] = useState('NG');
-  const [environment, setEnvironment] = useState('sandbox');
+  const [country, setCountry] = useState('US'); // Default to US, can be changed by user
+  const [checkInDate, setCheckInDate] = useState('');
+  const [checkOutDate, setCheckOutDate] = useState('');
+  const [guests, setGuests] = useState(1);
+  const [alertMessage, setAlertMessage] = useState('');
+  const environment = 'production'; // Hardcoded for live environment
 
-  const popularCities = [
-    { name: 'Lagos', country: 'NG' },
-    { name: 'Abuja', country: 'NG' },
-    { name: 'Benin City', country: 'NG' },
-    { name: 'London', country: 'UK' },
-    { name: 'Paris', country: 'FR' },
-    { name: 'New York', country: 'US' },
-    { name: 'Dubai', country: 'AE' },
-    { name: 'Tokyo', country: 'JP' }
-  ];
-
-  const handleSearch = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (city.trim()) {
-      onSearch(city);
-    }
-  };
+    setAlertMessage('');
 
-  const setPopularCity = (cityName, countryCode) => {
-    setCity(cityName);
-    setCountry(countryCode);
+    if (!city.trim() || !country.trim()) {
+      setAlertMessage('Please enter both a destination city and a country code (e.g., US, FR, UK).');
+      return;
+    }
+    
+    // Pass the complete search object back to App.jsx
+    onSearch({ 
+      city: city.trim(), 
+      country: country.trim(),
+      checkInDate, 
+      checkOutDate, 
+      guests,
+      environment
+    });
   };
 
   return (
-    <div className="container-fluid py-4 hotel-search-container">
-      <div className="card shadow-lg border-0">
-        <div className="card-header bg-orange text-white text-center py-4">
-          <div className="card shadow-lg border-0">
-            <div className="card-header bg-orange text-white text-center py-4">
-              <h1 className="mb-2">🌍 Global Hotel Finder</h1>
-              <p className="mb-0">Search and find hotels in any city worldwide</p>
-            </div>
-            
-            <div className="card-body p-4">
-              <h2 className="h4 mb-3 text-dark">🔍 Search Hotels Worldwide</h2>
-              <p className="text-muted mb-4">Enter any city and country to find available hotels globally</p>
-              
-              <form onSubmit={handleSearch}>
-                <div className="mb-3">
-                  <label htmlFor="city" className="form-label fw-semibold">City Name</label>
-                  <input
-                    type="text"
-                    className="form-control form-control-lg"
-                    id="city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="e.g. Lagos, Abuja, Benin City, London, Paris, New York..."
-                    required
-                  />
-                  <div className="form-text">Enter any city name worldwide</div>
-                </div>
+    <div className="hotel-search-home-container p-4">
+      <header className="text-center mb-5">
+        <h1 className="display-4 fw-bold text-primary-dark">Find Your Perfect Stay 🛌</h1>
+        <p className="lead text-secondary">Search over millions of hotels worldwide and book instantly.</p>
+      </header>
+      
+      {alertMessage && (
+        <div className="alert alert-danger text-center">{alertMessage}</div>
+      )}
 
-                <div className="mb-3">
-                  <label htmlFor="country" className="form-label fw-semibold">Country Code</label>
-                  <input
-                    type="text"
-                    className="form-control form-control-lg"
-                    id="country"
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value.toUpperCase())}
-                    placeholder="e.g. NG for Nigeria, US for USA, UK for United Kingdom..."
-                    required
-                  />
-                  <div className="form-text">Use 2-letter country codes: NG, GH, KE, ZA, US, UK, FR, etc.</div>
-                </div>
-
-                <div className="mb-4">
-                  <label htmlFor="environment" className="form-label fw-semibold">Environment</label>
-                  <select
-                    className="form-select form-select-lg"
-                    id="environment"
-                    value={environment}
-                    onChange={(e) => setEnvironment(e.target.value)}
-                  >
-                    <option value="sandbox">Sandbox (Testing)</option>
-                    <option value="production">Production (Real)</option>
-                  </select>
-                </div>
-
-                <button type="submit" className="btn btn-orange btn-lg w-100 py-3">
-                  <i className="fas fa-search me-2"></i>
-                  Search Hotels Worldwide
-                </button>
-              </form>
-
-              <div className="mt-5">
-                <h3 className="h5 mb-3">🌍 Try These Cities:</h3>
-                <div className="d-flex flex-wrap gap-2">
-                  {popularCities.map((cityInfo, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      className="btn btn-outline-orange btn-sm"
-                      onClick={() => setPopularCity(cityInfo.name, cityInfo.country)}
-                    >
-                      {cityInfo.name}, {cityInfo.country}
-                    </button>
-                  ))}
-                </div>
-              </div>
+      <form onSubmit={handleSubmit} className="hotel-search-form bg-white shadow-lg p-4 p-md-5 rounded-4 border">
+        <div className="row g-3">
+          {/* Destination City Input */}
+          <div className="col-12 col-md-6 col-lg-3">
+            <div className="input-group input-group-lg">
+              <span className="input-group-text bg-light-blue"><FaSearch /></span>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="City (e.g., Paris)"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                required
+              />
             </div>
           </div>
+          
+          {/* Country Input */}
+          <div className="col-12 col-md-6 col-lg-2">
+            <div className="input-group input-group-lg">
+              <span className="input-group-text bg-light-blue"><FaGlobe /></span>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Country Code (e.g., FR)"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                maxLength="2"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Check-in Date Input */}
+          <div className="col-12 col-md-6 col-lg-2">
+            <div className="input-group input-group-lg">
+              <span className="input-group-text bg-light-blue"><FaCalendarAlt /></span>
+              <input
+                type="date"
+                className="form-control"
+                title="Check-in Date"
+                value={checkInDate}
+                onChange={(e) => setCheckInDate(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          {/* Check-out Date Input */}
+          <div className="col-12 col-md-6 col-lg-2">
+            <div className="input-group input-group-lg">
+              <span className="input-group-text bg-light-blue"><FaCalendarAlt /></span>
+              <input
+                type="date"
+                className="form-control"
+                title="Check-out Date"
+                value={checkOutDate}
+                onChange={(e) => setCheckOutDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Guests Input */}
+          <div className="col-12 col-md-6 col-lg-1">
+            <div className="input-group input-group-lg">
+              <span className="input-group-text bg-light-blue"><FaUsers /></span>
+              <input
+                type="number"
+                className="form-control"
+                placeholder="1"
+                min="1"
+                value={guests}
+                onChange={(e) => setGuests(parseInt(e.target.value))}
+              />
+            </div>
+          </div>
+
+          {/* Search Button */}
+          <div className="col-12 col-lg-2">
+            <button type="submit" className="btn btn-primary btn-lg w-100 search-btn">
+              <span className="d-lg-inline">Search Hotels</span>
+              <span className="d-inline d-lg-none"><FaSearch /></span>
+            </button>
+          </div>
         </div>
-      </div>
+      </form>
     </div>
   );
 };

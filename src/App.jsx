@@ -128,7 +128,12 @@ const App = () => {
   const [authToken, setAuthToken] = useState(null);
   const [alert, setAlert] = useState({ type: '', message: '' });
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [hotelSearchCity, setHotelSearchCity] = useState('');
+  
+  // 🏨 UPDATED: Changed from hotelSearchCity to hotelSearchCriteria
+  const [hotelSearchCriteria, setHotelSearchCriteria] = useState({});
+  
+  // 🏨 ADDED: State to hold clicked hotel's ID/environment
+  const [currentHotelDetail, setCurrentHotelDetail] = useState(null);
   
   const [notificationCounts, setNotificationCounts] = useState({
     quizScores: 0,
@@ -494,16 +499,25 @@ const App = () => {
     setShowMenu(!showMenu);
   };
 
-  const navigateTo = (page) => {
-    console.log('📍 Navigating to:', page);
+  // 🏨 UPDATED: Enhanced navigateTo function to handle hotel details
+  const navigateTo = (page, data = null) => {
+    console.log('📍 Navigating to:', page, data);
+    
+    // Handle hotel details navigation
+    if (page === 'hotel-details' && data?.hotelId) {
+      setCurrentHotelDetail(data); // Stores { hotelId, environment }
+    } else {
+      setCurrentHotelDetail(null);
+    }
+    
     setCurrentPage(page);
     setShowMenu(false);
   };
 
-  // FIXED: Hotel search navigation function
-  const handleHotelSearch = (city) => {
-    console.log('🏨 Hotel search for:', city);
-    setHotelSearchCity(city);
+  // 🏨 UPDATED: Hotel search navigation function
+  const handleHotelSearch = (searchCriteria) => {
+    console.log('🏨 Hotel search criteria:', searchCriteria);
+    setHotelSearchCriteria(searchCriteria); // Store the full object
     setCurrentPage('hotel-search-results');
   };
 
@@ -519,6 +533,18 @@ const App = () => {
   };
 
   const userMenuItems = [
+    // 💡 IMPROVED: Added Home Link for quick navigation
+    { 
+      name: "Home", 
+      icon: "fa-solid fa-home", 
+      action: () => navigateTo('home') 
+    },
+    // 🏨 ADDED: Dedicated Hotel Search Link in main menu
+    {
+      name: "Hotels",
+      icon: "fas fa-hotel",
+      action: () => navigateTo('hotel-search')
+    },
     { 
       name: "Quiz and Score", 
       icon: "fa-solid fa-chart-line",
@@ -593,6 +619,17 @@ const App = () => {
   ];
 
   const adminMenuItems = [
+    { 
+      name: "Home", 
+      icon: "fa-solid fa-home", 
+      action: () => navigateTo('home') 
+    },
+    // 🏨 ADDED: Dedicated Hotel Search Link for admins too
+    {
+      name: "Hotels",
+      icon: "fas fa-hotel",
+      action: () => navigateTo('hotel-search')
+    },
     { 
       name: "Registered Students", 
       icon: "fa-solid fa-user-graduate",
@@ -896,13 +933,23 @@ const App = () => {
             {currentPage === 'hotel-search' && (
               <HotelSearchHome onSearch={handleHotelSearch} />
             )}
+            
+            {/* 🏨 UPDATED: HotelSearchResults now receives full criteria object */}
             {currentPage === 'hotel-search-results' && (
               <HotelSearchResults 
-                city={hotelSearchCity} 
+                searchCriteria={hotelSearchCriteria}
                 navigateTo={navigateTo}
               />
             )}
-            {currentPage === 'hotel-details' && <HotelDetailPage navigateTo={navigateTo} />}
+            
+            {/* 🏨 UPDATED: HotelDetailPage now receives hotelId and environment */}
+            {currentPage === 'hotel-details' && (
+              <HotelDetailPage 
+                navigateTo={navigateTo} 
+                hotelId={currentHotelDetail?.hotelId}
+                environment={currentHotelDetail?.environment}
+              />
+            )}
             
             {/* Placeholder Pages */}
             {currentPage === 'important-information' && (

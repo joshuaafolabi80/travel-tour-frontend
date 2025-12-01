@@ -1,4 +1,4 @@
-// client/hotel-details.js
+// travel-tour-frontend/public/hotel-search/hotel-details.js
 
 // Get URL parameters
 const urlParams = new URLSearchParams(window.location.search);

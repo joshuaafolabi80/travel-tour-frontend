@@ -166,7 +166,13 @@ const HotelDetailPage = ({ navigateTo, hotelId, environment, checkInDate, checkO
 
     if (!hotel) return <div className="alert alert-warning text-center m-5">Hotel not found.</div>;
 
-    const mainImage = hotel.hotelImages?.[0]?.url || hotel.images?.[0]?.url || 'https://via.placeholder.com/800x500/ccc/888?text=Hotel+Image';
+    // --- Image Gallery Logic ---
+    // Get all images from the data structure
+    const allImages = hotel.hotelImages || hotel.images || [];
+    // We only want the first 4 or 5 images, including the main one
+    const displayImages = allImages.slice(0, 4); 
+    const mainImage = displayImages[0]?.url || 'https://via.placeholder.com/800x500/ccc/888?text=Hotel+Image';
+    
     const amenityList = hotel.amenities || [];
 
     return (
@@ -179,13 +185,32 @@ const HotelDetailPage = ({ navigateTo, hotelId, environment, checkInDate, checkO
             </button>
 
             <div className="card shadow-lg">
-                {/* Image Gallery */}
-                <img 
-                    src={mainImage} 
-                    className="img-fluid rounded-top detail-main-image" 
-                    alt={hotel.name} 
-                    style={{height: '400px', width: '100%', objectFit: 'cover'}}
-                />
+                {/* --- UPDATED: Image Gallery with Thumbnails --- */}
+                <div className="hotel-gallery mb-4">
+                    {/* Main Image */}
+                    <img 
+                        src={mainImage} 
+                        className="img-fluid rounded-top mb-2" 
+                        alt={hotel.name} 
+                        style={{height: '400px', width: '100%', objectFit: 'cover'}}
+                    />
+                    
+                    {/* Thumbnail Row (for 2 or 3 additional images) */}
+                    {displayImages.length > 1 && (
+                        <div className="row g-2">
+                            {displayImages.slice(1).map((img, index) => (
+                                <div key={index} className="col-4">
+                                    <img 
+                                        src={img.url} 
+                                        className="img-fluid rounded-3 thumbnail-image" 
+                                        alt={`${hotel.name} view ${index + 2}`} 
+                                        style={{height: '100px', width: '100%', objectFit: 'cover'}}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
                 
                 <div className="card-body p-4 p-lg-5">
                     <h1 className="card-title fw-bold text-dark-blue">{hotel.name}</h1>

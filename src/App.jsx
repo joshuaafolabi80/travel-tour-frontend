@@ -34,6 +34,12 @@ import AdminVideoCourses from './components/AdminVideoCourses';
 import HotelSearchHome from './components/hotel-search/HomePage';
 import HotelSearchResults from './components/hotel-search/SearchResultsPage';
 import HotelDetailPage from './components/hotel-search/HotelDetailPage';
+// 📝 ADDED: Blog Components
+import BlogListPage from './components/blog/BlogListPage'; // User/Student view
+import BlogDetailPage from './components/blog/BlogDetailPage';
+import AdminBlogManagement from './components/blog/AdminBlogManagement'; // Admin view/creation
+import AdminCreatePost from './components/blog/AdminCreatePost'; // Admin creation form
+
 import './App.css';
 
 // Reusable Slider Component for both Splash Screen and Home Page
@@ -122,6 +128,10 @@ const App = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
+  
+  // 📝 UPDATED: Added blogPostId state variable
+  const [blogPostId, setBlogPostId] = useState(null);
+  
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState('');
   const [userData, setUserData] = useState(null);
@@ -134,6 +144,9 @@ const App = () => {
   
   // 🏨 ADDED: State to hold clicked hotel's ID/environment
   const [currentHotelDetail, setCurrentHotelDetail] = useState(null);
+  
+  // 📝 ADDED: State to hold the selected blog post ID/slug
+  const [currentBlogPost, setCurrentBlogPost] = useState(null); 
   
   const [notificationCounts, setNotificationCounts] = useState({
     quizScores: 0,
@@ -506,8 +519,19 @@ const App = () => {
     // Handle hotel details navigation
     if (page === 'hotel-details' && data?.hotelId) {
       setCurrentHotelDetail(data); // Stores { hotelId, environment }
-    } else {
+      setCurrentBlogPost(null); // Clear other data
+      setBlogPostId(null); // Clear blog post ID
+    } 
+    // 📝 ADDED: Handle blog post details navigation
+    else if (page === 'blog-detail' && data?.postId) {
+      setCurrentBlogPost(data); // Stores { postId }
+      setBlogPostId(data.postId); // Capture the postId
+      setCurrentHotelDetail(null); // Clear other data
+    }
+    else {
       setCurrentHotelDetail(null);
+      setCurrentBlogPost(null);
+      setBlogPostId(null);
     }
     
     setCurrentPage(page);
@@ -544,6 +568,12 @@ const App = () => {
       name: "Hotels",
       icon: "fas fa-hotel",
       action: () => navigateTo('hotel-search')
+    },
+    // 📝 ADDED: Blog Link for Students
+    {
+      name: "Blog",
+      icon: "fas fa-newspaper",
+      action: () => navigateTo('blog-list')
     },
     { 
       name: "Quiz and Score", 
@@ -629,6 +659,12 @@ const App = () => {
       name: "Hotels",
       icon: "fas fa-hotel",
       action: () => navigateTo('hotel-search')
+    },
+    // 📝 ADDED: Blog Link for Admin (Management view)
+    {
+      name: "Blog Management",
+      icon: "fas fa-newspaper",
+      action: () => navigateTo('admin-blog-management')
     },
     { 
       name: "Registered Students", 
@@ -733,6 +769,7 @@ const App = () => {
                 <div className="nav-grid-item" onClick={() => navigateTo('hotel-search')}>
                   <i className="fas fa-hotel nav-icon"></i>
                   <span className="nav-text">Hotels</span>
+                  {userRole === 'admin' && <i className="fas fa-crown admin-icon"></i>}
                 </div>
               </div>
               <div className="col-4">
@@ -748,8 +785,9 @@ const App = () => {
                 </div>
               </div>
               <div className="col-4">
-                <div className="nav-grid-item">
-                  <i className="fas fa-blog nav-icon"></i>
+                {/* 📝 UPDATED: Blog Link in Home Grid */}
+                <div className="nav-grid-item" onClick={() => navigateTo('blog-list')}>
+                  <i className="fas fa-newspaper nav-icon"></i>
                   <span className="nav-text">Blog</span>
                 </div>
               </div>
@@ -903,6 +941,18 @@ const App = () => {
             
             {currentPage === 'quiz-scores' && <QuizScores />}
             
+            {/* 📝 ADDED: Blog Pages (Student View) */}
+            {currentPage === 'blog-list' && <BlogListPage navigateTo={navigateTo} />}
+            
+            {/* 📝 UPDATED: BlogDetailPage now receives blogPostId prop */}
+            {currentPage === 'blog-detail' && (
+              <BlogDetailPage 
+                postId={blogPostId}
+                navigateTo={navigateTo}
+              />
+            )}
+
+            
             {/* User Pages */}
             {currentPage === 'general-courses' && <GeneralCourses navigateTo={navigateTo} />}
             {currentPage === 'masterclass-courses' && <MasterclassCourses navigateTo={navigateTo} />}
@@ -923,6 +973,10 @@ const App = () => {
             {currentPage === 'admin-messages-from-students' && <MessageFromStudents />}
             {currentPage === 'admin-manage-courses' && <AdminManageCourses />}
             {currentPage === 'admin-video-courses' && <AdminVideoCourses navigateTo={navigateTo} />}
+
+            {/* 📝 ADDED: Blog Pages (Admin View) */}
+            {currentPage === 'admin-blog-management' && <AdminBlogManagement navigateTo={navigateTo} />}
+            {currentPage === 'admin-create-post' && <AdminCreatePost navigateTo={navigateTo} />}
             
             {/* 🎯 Community Pages with Google Meet */}
             {currentPage === 'community' && userRole === 'admin' && <AdminCommunityTab />}

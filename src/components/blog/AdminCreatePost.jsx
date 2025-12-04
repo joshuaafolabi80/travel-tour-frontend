@@ -1,17 +1,10 @@
 // src/components/blog/AdminCreatePost.jsx
 import React, { useState } from 'react';
 
-// --- CONFIGURATION ---
-// IMPORTANT: REPLACE THIS with the actual Contentful Entry ID for your Admin Author 
 const ADMIN_AUTHOR_ID = 'author'; 
-
-// CORRECTED: This is the specific Contentful Entry ID for your "Auto Ingestion Bot" Author.
 const AUTO_BOT_AUTHOR_ID = '4WOacPkmp1DHGgDf1ToJGw'; 
-// --- END CONFIGURATION ---
-
 
 const AdminCreatePost = ({ navigateTo }) => {
-
     const [postData, setPostData] = useState({
         title: '',
         content: '',
@@ -22,13 +15,15 @@ const AdminCreatePost = ({ navigateTo }) => {
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const BLOG_API_URL = process.env.REACT_APP_BLOG_API_URL; 
+    // Use the Render URL from .env
+    const BLOG_API_URL = process.env.REACT_APP_BLOG_API_URL || 'https://travel-tour-blog-server.onrender.com';
     
     const generateSlug = (text) => {
         return text.toLowerCase()
             .replace(/[^a-z0-9\s-]/g, '')
             .trim()
-            .replace(/\s+/g, '-');
+            .replace(/\s+/g, '-')
+            .slice(0, 50);
     };
 
     const handleChange = (e) => {
@@ -46,6 +41,8 @@ const AdminCreatePost = ({ navigateTo }) => {
         setMessage('');
 
         const finalSlug = generateSlug(postData.title);
+        console.log('Creating post with slug:', finalSlug);
+        console.log('API URL:', `${BLOG_API_URL}/api/admin/create-post`);
 
         const formData = new FormData();
         formData.append('title', postData.title);
@@ -59,20 +56,30 @@ const AdminCreatePost = ({ navigateTo }) => {
         }
 
         try {
+            console.log('Sending request to:', `${BLOG_API_URL}/api/admin/create-post`);
             const response = await fetch(`${BLOG_API_URL}/api/admin/create-post`, {
                 method: 'POST',
                 body: formData,
+                // Don't set Content-Type header when using FormData
             });
 
+            console.log('Response status:', response.status);
+            
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to create post.');
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Error response:', errorData);
+                throw new Error(errorData.message || `Server error: ${response.status}`);
             }
 
+            const data = await response.json();
+            console.log('Success response:', data);
+            
             setMessage('✅ Blog Post created and published successfully!');
-            setPostData(prev => ({ ...prev, title: '', content: '' }));
+            setPostData({ title: '', content: '', category: 'Travel', authorId: ADMIN_AUTHOR_ID });
             setFeaturedImageFile(null);
-            document.getElementById('featuredImage').value = ''; 
+            if (document.getElementById('featuredImage')) {
+                document.getElementById('featuredImage').value = ''; 
+            }
 
             setTimeout(() => navigateTo('admin-blog-management'), 2000);
 
@@ -86,23 +93,54 @@ const AdminCreatePost = ({ navigateTo }) => {
 
     return (
         <div className="container py-4">
-            <h2 className="mb-4 text-center">Create New Blog Post</h2>
+            <div className="d-flex justify-content-between align-items-center mb-4">
+                <h2 className="mb-0">Create New Blog Post</h2>
+                <button 
+                    className="btn btn-outline-secondary" 
+                    onClick={() => navigateTo('admin-blog-management')}
+                >
+                    <i className="fas fa-arrow-left me-2"></i> Back to Management
+                </button>
+            </div>
+            
+            <div className="alert alert-info mb-4">
+                <i className="fas fa-info-circle me-2"></i>
+                Posts are stored in Contentful and accessible via: {BLOG_API_URL}
+            </div>
             
             <form onSubmit={handleSubmit} className="p-4 bg-white rounded shadow-sm">
                 {message && (
                     <div className={`alert ${message.startsWith('✅') ? 'alert-success' : 'alert-danger'} mb-3`}>
+                        <i className={`fas ${message.startsWith('✅') ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2`}></i>
                         {message}
                     </div>
                 )}
                 
                 <div className="mb-3">
-                    <label htmlFor="title" className="form-label">Title</label>
-                    <input type="text" className="form-control" id="title" name="title" value={postData.title} onChange={handleChange} required />
+                    <label htmlFor="title" className="form-label fw-bold">Title *</label>
+                    <input 
+                        type="text" 
+                        className="form-control" 
+                        id="title" 
+                        name="title" 
+                        value={postData.title} 
+                        onChange={handleChange} 
+                        required 
+                        placeholder="Enter post title"
+                    />
+                    <small className="text-muted">This will be used to generate the URL slug</small>
                 </div>
 
                 <div className="mb-3">
-                    <label htmlFor="category" className="form-label">Category</label>
-                    <select className="form-control" id="category" name="category" value={postData.category} onChange={handleChange} required>
+                    <label htmlFor="category" className="form-label fw-bold">Category *</label>
+                    <select 
+                        className="form-control" 
+                        id="category" 
+                        name="category" 
+                        value={postData.category} 
+                        onChange={handleChange} 
+                        required
+                    >
                         <option value="Travel">Travel</option>
                         <option value="Tourism">Tourism</option>
                         <option value="Hotel">Hotel</option>
@@ -112,7 +150,7 @@ const AdminCreatePost = ({ navigateTo }) => {
                 </div>
                 
                 <div className="mb-3">
-                    <label htmlFor="featuredImage" className="form-label">Featured Image (Optional)</label>
+                    <label htmlFor="featuredImage" className="form-label fw-bold">Featured Image (Optional)</label>
                     <input 
                         type="file" 
                         className="form-control" 
@@ -121,40 +159,69 @@ const AdminCreatePost = ({ navigateTo }) => {
                         accept="image/*"
                         onChange={handleFileChange} 
                     />
-                    <small className="form-text text-muted">Max file size typically set by hosting service.</small>
+                    <small className="form-text text-muted">
+                        Supported: JPG, PNG, GIF. Max size: 10MB
+                    </small>
                 </div>
 
                 <div className="mb-3">
-                    <label htmlFor="authorId" className="form-label">Author</label>
-                    <select className="form-control" id="authorId" name="authorId" value={postData.authorId} onChange={handleChange} required>
-                        <option value={ADMIN_AUTHOR_ID}>Admin Writer (Current User)</option>
-                        <option value={AUTO_BOT_AUTHOR_ID}>Auto Ingestion Bot (ID: {AUTO_BOT_AUTHOR_ID})</option>
+                    <label htmlFor="authorId" className="form-label fw-bold">Author *</label>
+                    <select 
+                        className="form-control" 
+                        id="authorId" 
+                        name="authorId" 
+                        value={postData.authorId} 
+                        onChange={handleChange} 
+                        required
+                    >
+                        <option value={ADMIN_AUTHOR_ID}>Admin Writer (Your Account)</option>
+                        <option value={AUTO_BOT_AUTHOR_ID}>Auto Ingestion Bot</option>
                     </select>
                 </div>
                 
-                <div className="mb-3">
-                    <label htmlFor="content" className="form-label">Content</label>
-                    <textarea className="form-control" id="content" name="content" rows="10" value={postData.content} onChange={handleChange} required></textarea>
+                <div className="mb-4">
+                    <label htmlFor="content" className="form-label fw-bold">Content *</label>
+                    <textarea 
+                        className="form-control" 
+                        id="content" 
+                        name="content" 
+                        rows="10" 
+                        value={postData.content} 
+                        onChange={handleChange} 
+                        required
+                        placeholder="Write your blog post content here..."
+                    ></textarea>
+                    <small className="text-muted">Supports basic formatting. For rich text, use Contentful directly.</small>
                 </div>
                 
-                <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-                    {loading ? (
-                        <>
-                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            Posting...
-                        </>
-                    ) : (
-                        <><i className="fas fa-paper-plane me-2"></i> Post Blog</>
-                    )}
-                </button>
+                <div className="d-grid gap-2">
+                    <button 
+                        type="submit" 
+                        className="btn btn-primary btn-lg" 
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <>
+                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Publishing Post...
+                            </>
+                        ) : (
+                            <>
+                                <i className="fas fa-paper-plane me-2"></i> Publish Blog Post
+                            </>
+                        )}
+                    </button>
+                    
+                    <button 
+                        type="button" 
+                        className="btn btn-outline-secondary"
+                        onClick={() => navigateTo('admin-blog-management')}
+                        disabled={loading}
+                    >
+                        Cancel
+                    </button>
+                </div>
             </form>
-
-            <button 
-                className="btn btn-secondary mt-3" 
-                onClick={() => navigateTo('admin-blog-management')}
-            >
-                Cancel / Back
-            </button>
         </div>
     );
 };

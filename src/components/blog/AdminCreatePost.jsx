@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 
 // --- CONFIGURATION ---
 // IMPORTANT: REPLACE THIS with the actual Contentful Entry ID for your Admin Author 
-// (e.g., your specific profile entry in Contentful).
 const ADMIN_AUTHOR_ID = 'author'; 
 
 // CORRECTED: This is the specific Contentful Entry ID for your "Auto Ingestion Bot" Author.
@@ -17,17 +16,14 @@ const AdminCreatePost = ({ navigateTo }) => {
         title: '',
         content: '',
         category: 'Travel',
-        // Set the default author to the Admin profile ID
         authorId: ADMIN_AUTHOR_ID, 
     });
-    const [featuredImageFile, setFeaturedImageFile] = useState(null); // State for the file object
+    const [featuredImageFile, setFeaturedImageFile] = useState(null); 
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
 
-    // Get the dedicated blog server URL from Netlify environment
     const BLOG_API_URL = process.env.REACT_APP_BLOG_API_URL; 
     
-    // Helper to generate a basic slug
     const generateSlug = (text) => {
         return text.toLowerCase()
             .replace(/[^a-z0-9\s-]/g, '')
@@ -41,7 +37,6 @@ const AdminCreatePost = ({ navigateTo }) => {
     };
 
     const handleFileChange = (e) => {
-        // Capture the selected file object
         setFeaturedImageFile(e.target.files[0]);
     };
 
@@ -52,7 +47,6 @@ const AdminCreatePost = ({ navigateTo }) => {
 
         const finalSlug = generateSlug(postData.title);
 
-        // --- Use FormData for file uploads (must not use JSON.stringify) ---
         const formData = new FormData();
         formData.append('title', postData.title);
         formData.append('slug', finalSlug); 
@@ -61,14 +55,12 @@ const AdminCreatePost = ({ navigateTo }) => {
         formData.append('authorId', postData.authorId);
         
         if (featuredImageFile) {
-            // Append the file object under the key 'featuredImage', which the server (multer) expects
             formData.append('featuredImage', featuredImageFile); 
         }
 
         try {
             const response = await fetch(`${BLOG_API_URL}/api/admin/create-post`, {
                 method: 'POST',
-                // IMPORTANT: Do NOT set 'Content-Type', the browser sets it automatically to multipart/form-data
                 body: formData,
             });
 
@@ -78,13 +70,10 @@ const AdminCreatePost = ({ navigateTo }) => {
             }
 
             setMessage('✅ Blog Post created and published successfully!');
-            // Reset form
             setPostData(prev => ({ ...prev, title: '', content: '' }));
             setFeaturedImageFile(null);
-            document.getElementById('featuredImage').value = ''; // Reset file input
+            document.getElementById('featuredImage').value = ''; 
 
-            
-            // Navigate back to management page after a short delay
             setTimeout(() => navigateTo('admin-blog-management'), 2000);
 
         } catch (error) {
@@ -106,13 +95,11 @@ const AdminCreatePost = ({ navigateTo }) => {
                     </div>
                 )}
                 
-                {/* Title */}
                 <div className="mb-3">
                     <label htmlFor="title" className="form-label">Title</label>
                     <input type="text" className="form-control" id="title" name="title" value={postData.title} onChange={handleChange} required />
                 </div>
 
-                {/* Category */}
                 <div className="mb-3">
                     <label htmlFor="category" className="form-label">Category</label>
                     <select className="form-control" id="category" name="category" value={postData.category} onChange={handleChange} required>
@@ -124,7 +111,6 @@ const AdminCreatePost = ({ navigateTo }) => {
                     </select>
                 </div>
                 
-                {/* Featured Image Upload (File Input) */}
                 <div className="mb-3">
                     <label htmlFor="featuredImage" className="form-label">Featured Image (Optional)</label>
                     <input 
@@ -135,20 +121,17 @@ const AdminCreatePost = ({ navigateTo }) => {
                         accept="image/*"
                         onChange={handleFileChange} 
                     />
-                    <small className="form-text text-muted">This image will be uploaded to Contentful Assets and linked to the post.</small>
+                    <small className="form-text text-muted">Max file size typically set by hosting service.</small>
                 </div>
 
-                {/* Author Selection/ID (Fixed to use correct Entry IDs) */}
                 <div className="mb-3">
                     <label htmlFor="authorId" className="form-label">Author</label>
                     <select className="form-control" id="authorId" name="authorId" value={postData.authorId} onChange={handleChange} required>
                         <option value={ADMIN_AUTHOR_ID}>Admin Writer (Current User)</option>
-                        <option value={AUTO_BOT_AUTHOR_ID}>Auto Ingestion Bot (ID: 4WOacPkmp1DHGgDf1ToJGw)</option>
-                        {/* Add more options here if you manually create other author entries */}
+                        <option value={AUTO_BOT_AUTHOR_ID}>Auto Ingestion Bot (ID: {AUTO_BOT_AUTHOR_ID})</option>
                     </select>
                 </div>
                 
-                {/* Content */}
                 <div className="mb-3">
                     <label htmlFor="content" className="form-label">Content</label>
                     <textarea className="form-control" id="content" name="content" rows="10" value={postData.content} onChange={handleChange} required></textarea>

@@ -27,8 +27,10 @@
     "react-icons": "^5.5.0",
     "react-quill": "^2.0.0",
     "react-router-dom": "^7.9.6",
+    "react-simplemde-editor": "^5.2.0",
     "react-transition-group": "^4.4.5",
     "simple-peer": "^9.11.1",
+    "simplemde-theme-base": "^0.2.1",
     "socket.io-client": "^4.8.1",
     "xlsx": "^0.18.5"
   },

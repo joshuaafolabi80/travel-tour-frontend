@@ -1,10 +1,13 @@
-// travel-tour-frontend/src/components/blog/AdminCreateEditBlog.jsx - MODIFIED
+// travel-tour-frontend/src/components/blog/AdminCreateEditBlog.jsx
 
 import React, { useState, useEffect } from 'react';
 import { Container, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import { Editor } from '@tinymce/tinymce-react';
+import SimpleMdeReact from "react-simplemde-editor"; // NEW: Markdown Editor
+import "easymde/dist/easymde.min.css"; // NEW: SimpleMDE Stylesheet
 import api from '../../services/api';
-import '../../App.css';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import '../../App.css'; 
 
 // Define the fixed categories for the dropdown
 const BLOG_CATEGORIES = ["Travels", "Tours", "Hotels", "Tourism"];
@@ -13,14 +16,13 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
     const [title, setTitle] = useState('');
     const [category, setCategory] = useState(BLOG_CATEGORIES[0]); // Default to first category
     const [summary, setSummary] = useState('');
-    const [content, setContent] = useState('');
+    const [content, setContent] = useState(''); // Holds the Markdown content
     const [featuredImage, setFeaturedImage] = useState(null); // Holds the file object
     const [currentImageUrl, setCurrentImageUrl] = useState(''); // Holds the existing URL for edit mode
     const [isPublished, setIsPublished] = useState(false);
     const [status, setStatus] = useState('');
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [editorRef, setEditorRef] = useState(null);
 
     const isEditMode = mode === 'edit' && postId;
     const pageTitle = isEditMode ? 'Edit Blog Post' : 'Create New Blog Post';
@@ -31,20 +33,22 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
             setLoading(true);
             const fetchPost = async () => {
                 try {
+                    // Endpoint: /api/admin/blog/posts/:id
                     const response = await api.get(`/admin/blog/posts/${postId}`);
                     if (response.data.success && response.data.post) {
                         const post = response.data.post;
                         setTitle(post.title);
                         setCategory(post.category || BLOG_CATEGORIES[0]);
                         setSummary(post.summary);
-                        setContent(post.content);
+                        setContent(post.content); // Load existing Markdown content
                         setCurrentImageUrl(post.imageUrl); // Store existing URL
                         setIsPublished(post.isPublished);
                     } else {
                         setError('Post not found.');
                     }
                 } catch (err) {
-                    setError('Failed to fetch post data.');
+                    console.error('Fetch error:', err.response?.data || err.message);
+                    setError('Failed to fetch post data from the server.');
                 } finally {
                     setLoading(false);
                 }
@@ -71,25 +75,26 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
         formData.append('title', title);
         formData.append('category', category);
         formData.append('summary', summary);
-        formData.append('content', content);
+        formData.append('content', content); // Markdown content is sent as a string
         formData.append('isPublished', isPublished);
         
         // Only append the file if a new one was selected
         if (featuredImage) {
             formData.append('featuredImage', featuredImage); 
         } else if (isEditMode) {
-             // For edit mode, if no new file, we must send the existing URL so the backend preserves it
+             // For edit mode, if no new file, send the existing URL so the backend preserves it
              formData.append('currentImageUrl', currentImageUrl);
         }
 
         try {
             let response;
             if (isEditMode) {
-                // Must explicitly set content-type to multipart/form-data for files
+                // Endpoint: /api/admin/blog/posts/:id
                 response = await api.put(`/admin/blog/posts/${postId}`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
             } else {
+                // Endpoint: /api/admin/blog/posts
                 response = await api.post('/admin/blog/posts', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
@@ -105,15 +110,31 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
             }
         } catch (err) {
             console.error('Submission error:', err.response?.data || err);
-            setError('A server error occurred during submission. Check if the backend is running and configured for file uploads.');
+            setError('A server error occurred during submission. Check backend connection and file upload limits.');
         } finally {
             setLoading(false);
         }
     };
     
-    // TinyMCE setup for rich text editing
-    const handleEditorChange = (content, editor) => {
-        setContent(content);
+    // Configuration options for SimpleMDE
+    const mdeOptions = {
+        spellChecker: false,
+        placeholder: "Write your blog content here using Markdown...",
+        autofocus: true,
+        status: false, // Hide the status bar
+        autosave: {
+            enabled: true,
+            uniqueId: isEditMode ? postId : 'new-blog-post',
+            delay: 1000,
+        },
+        // Toolbar options to expose standard Markdown features
+        toolbar: [
+            "bold", "italic", "heading", "|", 
+            "quote", "unordered-list", "ordered-list", "|", 
+            "link", "image", "table", "|", 
+            "preview", "side-by-side", "fullscreen", "|", 
+            "guide"
+        ]
     };
 
     if (loading && isEditMode) {
@@ -130,7 +151,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h2>{pageTitle}</h2>
                 <Button variant="secondary" onClick={() => navigateTo('admin-blog-dashboard')}>
-                    <i className="fas fa-arrow-left me-2"></i> Back to Dashboard
+                    <FontAwesomeIcon icon={faArrowLeft} className="me-2" /> Back to Dashboard
                 </Button>
             </div>
 
@@ -150,7 +171,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                     />
                 </Form.Group>
                 
-                {/* 2. CATEGORY SELECTION OPTION (MODIFIED) */}
+                {/* 2. CATEGORY SELECTION */}
                 <Form.Group className="mb-3">
                     <Form.Label>Category *</Form.Label>
                     <Form.Select 
@@ -175,7 +196,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                     />
                 </Form.Group>
 
-                {/* 4. FEATURED IMAGE FILE UPLOAD (MODIFIED) */}
+                {/* 4. FEATURED IMAGE FILE UPLOAD */}
                 <Form.Group className="mb-3">
                     <Form.Label>Featured Image (Select a file)</Form.Label>
                     <Form.Control 
@@ -188,7 +209,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                     {isEditMode && currentImageUrl && !featuredImage && (
                         <div className="mt-2">
                             <p className="text-muted mb-1">Current Image:</p>
-                            <img src={currentImageUrl} alt="Current Featured" style={{maxWidth: '200px', height: 'auto'}} />
+                            <img src={currentImageUrl} alt="Current Featured" style={{maxWidth: '200px', height: 'auto', border: '1px solid #ccc'}} />
                         </div>
                     )}
                     
@@ -196,32 +217,19 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                     {featuredImage && (
                         <div className="mt-2">
                              <p className="text-success mb-1">New Image Selected:</p>
-                             <img src={URL.createObjectURL(featuredImage)} alt="New Featured Preview" style={{maxWidth: '200px', height: 'auto'}} />
+                             <img src={URL.createObjectURL(featuredImage)} alt="New Featured Preview" style={{maxWidth: '200px', height: 'auto', border: '1px solid #007bff'}} />
                         </div>
                     )}
                 </Form.Group>
                 
-                {/* 5. CONTENT INPUT (TINYMCE) */}
+                {/* 5. CONTENT INPUT (SIMPLEMDE) */}
                 <Form.Group className="mb-3">
-                    <Form.Label>Content *</Form.Label>
-                    <Editor
-                        apiKey={process.env.REACT_APP_TINY_MCE_API_KEY}
-                        onInit={(evt, editor) => setEditorRef(editor)}
+                    <Form.Label>Content * (Supports Markdown)</Form.Label>
+                    <SimpleMdeReact
                         value={content}
-                        onEditorChange={handleEditorChange}
-                        init={{
-                            height: 500,
-                            menubar: true,
-                            plugins: [
-                                'advlist autolink lists link image charmap print preview anchor',
-                                'searchreplace visualblocks code fullscreen',
-                                'insertdatetime media table paste code help wordcount'
-                            ],
-                            toolbar: 'undo redo | formatselect | bold italic backcolor | \
-                                alignleft aligncenter alignright alignjustify | \
-                                bullist numlist outdent indent | removeformat | image media | help',
-                            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
-                        }}
+                        // This handler updates the content state whenever the editor changes
+                        onChange={setContent} 
+                        options={mdeOptions}
                     />
                 </Form.Group>
 
@@ -237,7 +245,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                 <Button variant="success" type="submit" disabled={loading}>
                     {loading ? (
                         <>
-                            <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                            <FontAwesomeIcon icon={faSpinner} spin className="me-2" />
                             {isEditMode ? 'Updating...' : 'Publishing...'}
                         </>
                     ) : (

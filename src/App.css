@@ -889,6 +889,152 @@
 }
 
 
+/* travel-tour-frontend/src/App.css - ADD THESE STYLES */
+
+/* Justified Text Styles */
+.justified-text-container {
+    text-align: justify;
+    text-justify: inter-word;
+    line-height: 1.8;
+    font-size: 1.1rem;
+}
+
+.justified-text-container p {
+    margin-bottom: 1.5rem;
+    text-align: justify;
+}
+
+.justified-text-container h1,
+.justified-text-container h2,
+.justified-text-container h3,
+.justified-text-container h4 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+.justified-text-preview {
+    text-align: justify;
+    text-justify: inter-word;
+    line-height: 1.6;
+}
+
+/* Admin Blog Dashboard Styles */
+.admin-blog-container {
+    background-color: #f8f9fa;
+    min-height: calc(100vh - 200px);
+}
+
+.stats-card {
+    transition: transform 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+
+.stats-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-blog-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.admin-blog-table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Spinner Animation */
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Blog Form Styles */
+.image-upload-area {
+    transition: all 0.3s ease;
+}
+
+.image-upload-area:hover {
+    background-color: #e9ecef !important;
+    border-color: #0d6efd !important;
+}
+
+/* Blog Detail Styles */
+.detail-hero-image {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.blog-content {
+    font-size: 1.1rem;
+    line-height: 1.8;
+}
+
+.blog-content img {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.author-avatar {
+    width: 80px;
+    height: 80px;
+    background-color: #e3f2fd;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .justified-text-container {
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+    
+    .admin-blog-table td, 
+    .admin-blog-table th {
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .stats-icon {
+        width: 50px;
+        height: 50px;
+    }
+}
+
+/* Print Styles for Blog */
+@media print {
+    .blog-detail-container .btn,
+    .blog-detail-container .card-header,
+    .blog-detail-container .breadcrumb,
+    .blog-detail-container .col-lg-4 {
+        display: none !important;
+    }
+    
+    .blog-detail-container .col-lg-8 {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+    }
+    
+    .justified-text-container {
+        font-size: 12pt !important;
+        line-height: 1.5 !important;
+    }
+}
+
 /* Mobile optimization for chat input */
 @media (max-width: 768px) {
   .chat-input-container {

@@ -2,12 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Container, Button, Spinner, Alert, Card, 
-    Row, Col, Badge, Breadcrumb, ButtonGroup
+    Row, Col, Badge, Breadcrumb, ButtonGroup, Form
 } from 'react-bootstrap';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import api from '../../services/api';
+import blogApi from '../../services/blogApi';
 import { 
     FaArrowLeft, FaCalendarAlt, FaUser, FaEye, 
     FaShareAlt, FaBookmark, FaPrint, FaFacebook, 
@@ -54,7 +54,7 @@ const SingleBlogDetail = ({ navigate, postId }) => {
             setLoading(true);
             setError(null);
             try {
-                const response = await api.get(`/user/blog/posts/${postId}`);
+                const response = await blogApi.get(`/user/blog/posts/${postId}`);
                 if (response.data.success && response.data.post) {
                     const fetchedPost = response.data.post;
                     setPost(fetchedPost);
@@ -85,7 +85,7 @@ const SingleBlogDetail = ({ navigate, postId }) => {
 
         const fetchRelatedPosts = async (category) => {
             try {
-                const response = await api.get('/user/blog/posts', {
+                const response = await blogApi.get('/user/blog/posts', {
                     params: {
                         category,
                         limit: 3,

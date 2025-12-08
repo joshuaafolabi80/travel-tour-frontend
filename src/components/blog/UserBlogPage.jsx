@@ -1,6 +1,7 @@
+// travel-tour-frontend/src/components/blog/UserBlogPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Form, Button, Pagination, Badge, Spinner, Alert } from 'react-bootstrap';
-import api from '../../services/api';
+import blogApi from '../../services/blogApi';
 import { HeroSlider } from '../../App';
 import '../../App.css'; 
 
@@ -15,7 +16,7 @@ const UserBlogPage = ({ navigateTo }) => {
     const [categories, setCategories] = useState([]);
     const [heroPost, setHeroPost] = useState(null);
     
-    const postsPerPage = 6;
+    const postsPerPage = 4;
 
     // --- Fetch Posts (Published only) ---
     const fetchPosts = async (page = 1) => {
@@ -29,7 +30,7 @@ const UserBlogPage = ({ navigateTo }) => {
                 category: selectedCategory,
                 isPublished: true // Only fetch published posts for users
             };
-            const response = await api.get('/user/blog/posts', { params });
+            const response = await blogApi.get('/user/blog/posts', { params });
             
             if (response.data.success) {
                 const fetchedPosts = response.data.posts;
@@ -59,7 +60,7 @@ const UserBlogPage = ({ navigateTo }) => {
     // --- Fetch Categories ---
     const fetchCategories = async () => {
         try {
-            const response = await api.get('/user/blog/categories');
+            const response = await blogApi.get('/user/blog/categories');
             if (response.data.success) {
                 setCategories(response.data.categories);
             }

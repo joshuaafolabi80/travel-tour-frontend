@@ -6,7 +6,7 @@ import {
 } from 'react-bootstrap';
 import SimpleMdeReact from "react-simplemde-editor";
 import "easymde/dist/easymde.min.css";
-import api from '../../services/api';
+import blogApi from '../../services/blogApi';
 import { FaArrowLeft, FaSpinner, FaSave } from 'react-icons/fa';
 import '../../App.css';
 
@@ -37,7 +37,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
     // Check if backend is running
     const checkBackendConnection = async () => {
         try {
-            await api.get('/health', { timeout: 5000 });
+            await blogApi.get('/health', { timeout: 5000 });
             setBackendAvailable(true);
         } catch (err) {
             console.log('Backend not available:', err.message);
@@ -52,7 +52,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
             setLoading(true);
             const fetchPost = async () => {
                 try {
-                    const response = await api.get(`/admin/blog/posts/${postId}`);
+                    const response = await blogApi.get(`/admin/blog/posts/${postId}`);
                     if (response.data.success && response.data.post) {
                         const post = response.data.post;
                         setTitle(post.title);
@@ -147,9 +147,9 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
             };
 
             if (isEditMode) {
-                response = await api.put(`/admin/blog/posts/${postId}`, formData, config);
+                response = await blogApi.put(`/admin/blog/posts/${postId}`, formData, config);
             } else {
-                response = await api.post('/admin/blog/posts', formData, config);
+                response = await blogApi.post('/admin/blog/posts', formData, config);
             }
 
             if (response.data.success) {

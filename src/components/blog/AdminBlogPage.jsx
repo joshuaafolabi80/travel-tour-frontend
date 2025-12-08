@@ -1,6 +1,6 @@
 // travel-tour-frontend/src/components/blog/AdminBlogPage.jsx - ENHANCED UI/UX
 import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../services/api';
+import blogApi from '../../services/blogApi';
 import { 
     Container, Row, Col, Card, Button, Table, 
     Badge, Alert, Spinner, Form, InputGroup,
@@ -76,7 +76,7 @@ const AdminBlogPage = ({ navigateTo }) => {
                 isPublished: statusFilter === 'all' ? undefined : statusFilter === 'published'
             };
 
-            const response = await api.get('/admin/blog/posts', { 
+            const response = await blogApi.get('/admin/blog/posts', { 
                 params,
                 timeout: 10000 // 10 second timeout
             });
@@ -139,7 +139,7 @@ const AdminBlogPage = ({ navigateTo }) => {
     const fetchStats = async () => {
         setStatsLoading(true);
         try {
-            const response = await api.get('/admin/blog/posts');
+            const response = await blogApi.get('/admin/blog/posts');
             if (response.data.success && response.data.posts) {
                 const allPosts = response.data.posts;
                 const published = allPosts.filter(p => p.isPublished).length;
@@ -196,7 +196,7 @@ const AdminBlogPage = ({ navigateTo }) => {
         setShowDeleteModal(false);
         
         try {
-            const response = await api.delete(`/admin/blog/posts/${postToDelete._id}`);
+            const response = await blogApi.delete(`/admin/blog/posts/${postToDelete._id}`);
             if (response.data.success) {
                 setDeleteStatus('success');
                 // Refresh data

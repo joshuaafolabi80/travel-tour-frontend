@@ -1,15 +1,21 @@
+// travel-tour-frontend/src/components/blog/AdminCreateEditBlog.jsx - MODIFIED
+
 import React, { useState, useEffect } from 'react';
 import { Container, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { Editor } from '@tinymce/tinymce-react';
 import api from '../../services/api';
-import '../../App.css'; 
+import '../../App.css';
+
+// Define the fixed categories for the dropdown
+const BLOG_CATEGORIES = ["Travels", "Tours", "Hotels", "Tourism"];
 
 const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => {
     const [title, setTitle] = useState('');
-    const [category, setCategory] = useState('');
+    const [category, setCategory] = useState(BLOG_CATEGORIES[0]); // Default to first category
     const [summary, setSummary] = useState('');
     const [content, setContent] = useState('');
-    const [imageUrl, setImageUrl] = useState('');
+    const [featuredImage, setFeaturedImage] = useState(null); // Holds the file object
+    const [currentImageUrl, setCurrentImageUrl] = useState(''); // Holds the existing URL for edit mode
     const [isPublished, setIsPublished] = useState(false);
     const [status, setStatus] = useState('');
     const [error, setError] = useState(null);
@@ -29,10 +35,10 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                     if (response.data.success && response.data.post) {
                         const post = response.data.post;
                         setTitle(post.title);
-                        setCategory(post.category);
+                        setCategory(post.category || BLOG_CATEGORIES[0]);
                         setSummary(post.summary);
                         setContent(post.content);
-                        setImageUrl(post.imageUrl);
+                        setCurrentImageUrl(post.imageUrl); // Store existing URL
                         setIsPublished(post.isPublished);
                     } else {
                         setError('Post not found.');
@@ -47,7 +53,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
         }
     }, [isEditMode, postId]);
 
-    // --- Handle Submission ---
+    // --- Handle Submission (Using FormData for File Upload) ---
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -60,26 +66,37 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
             return;
         }
 
-        const postData = {
-            title,
-            category,
-            summary,
-            content,
-            imageUrl,
-            isPublished
-        };
+        // Use FormData for multi-part submission (includes file and text data)
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('category', category);
+        formData.append('summary', summary);
+        formData.append('content', content);
+        formData.append('isPublished', isPublished);
+        
+        // Only append the file if a new one was selected
+        if (featuredImage) {
+            formData.append('featuredImage', featuredImage); 
+        } else if (isEditMode) {
+             // For edit mode, if no new file, we must send the existing URL so the backend preserves it
+             formData.append('currentImageUrl', currentImageUrl);
+        }
 
         try {
             let response;
             if (isEditMode) {
-                response = await api.put(`/admin/blog/posts/${postId}`, postData);
+                // Must explicitly set content-type to multipart/form-data for files
+                response = await api.put(`/admin/blog/posts/${postId}`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
             } else {
-                response = await api.post('/admin/blog/posts', postData);
+                response = await api.post('/admin/blog/posts', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
             }
 
             if (response.data.success) {
                 setStatus(isEditMode ? 'updated' : 'created');
-                // Navigate back to the dashboard after a short delay
                 setTimeout(() => {
                     navigateTo('admin-blog-dashboard');
                 }, 1500);
@@ -87,8 +104,8 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                 setError(response.data.message || 'Submission failed.');
             }
         } catch (err) {
-            console.error('Submission error:', err);
-            setError('A server error occurred during submission.');
+            console.error('Submission error:', err.response?.data || err);
+            setError('A server error occurred during submission. Check if the backend is running and configured for file uploads.');
         } finally {
             setLoading(false);
         }
@@ -122,6 +139,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
             {error && <Alert variant="danger">{error}</Alert>}
 
             <Form onSubmit={handleSubmit} className="blog-form">
+                {/* 1. TITLE INPUT */}
                 <Form.Group className="mb-3">
                     <Form.Label>Title *</Form.Label>
                     <Form.Control 
@@ -132,16 +150,21 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                     />
                 </Form.Group>
                 
+                {/* 2. CATEGORY SELECTION OPTION (MODIFIED) */}
                 <Form.Group className="mb-3">
                     <Form.Label>Category *</Form.Label>
-                    <Form.Control 
-                        type="text" 
+                    <Form.Select 
                         value={category} 
                         onChange={(e) => setCategory(e.target.value)} 
-                        required 
-                    />
+                        required
+                    >
+                        {BLOG_CATEGORIES.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                    </Form.Select>
                 </Form.Group>
 
+                {/* 3. SUMMARY INPUT */}
                 <Form.Group className="mb-3">
                     <Form.Label>Summary (for card display)</Form.Label>
                     <Form.Control 
@@ -152,20 +175,37 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                     />
                 </Form.Group>
 
+                {/* 4. FEATURED IMAGE FILE UPLOAD (MODIFIED) */}
                 <Form.Group className="mb-3">
-                    <Form.Label>Featured Image URL</Form.Label>
+                    <Form.Label>Featured Image (Select a file)</Form.Label>
                     <Form.Control 
-                        type="url" 
-                        value={imageUrl} 
-                        onChange={(e) => setImageUrl(e.target.value)} 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => setFeaturedImage(e.target.files[0])} 
                     />
-                    {imageUrl && <img src={imageUrl} alt="Featured" className="mt-2" style={{maxWidth: '200px', height: 'auto'}} />}
+                    
+                    {/* Display current image in Edit Mode */}
+                    {isEditMode && currentImageUrl && !featuredImage && (
+                        <div className="mt-2">
+                            <p className="text-muted mb-1">Current Image:</p>
+                            <img src={currentImageUrl} alt="Current Featured" style={{maxWidth: '200px', height: 'auto'}} />
+                        </div>
+                    )}
+                    
+                    {/* Display preview of the newly selected image */}
+                    {featuredImage && (
+                        <div className="mt-2">
+                             <p className="text-success mb-1">New Image Selected:</p>
+                             <img src={URL.createObjectURL(featuredImage)} alt="New Featured Preview" style={{maxWidth: '200px', height: 'auto'}} />
+                        </div>
+                    )}
                 </Form.Group>
                 
+                {/* 5. CONTENT INPUT (TINYMCE) */}
                 <Form.Group className="mb-3">
                     <Form.Label>Content *</Form.Label>
                     <Editor
-                        apiKey={process.env.REACT_APP_TINY_MCE_API_KEY} // Ensure this is set in your .env
+                        apiKey={process.env.REACT_APP_TINY_MCE_API_KEY}
                         onInit={(evt, editor) => setEditorRef(editor)}
                         value={content}
                         onEditorChange={handleEditorChange}

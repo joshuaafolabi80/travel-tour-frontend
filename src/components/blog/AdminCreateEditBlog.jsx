@@ -1,4 +1,4 @@
-// travel-tour-frontend/src/components/blog/AdminCreateEditBlog.jsx - ENHANCED
+// travel-tour-frontend/src/components/blog/AdminCreateEditBlog.jsx - FIXED
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     Container, Form, Button, Alert, Spinner, Card,
@@ -16,13 +16,6 @@ import '../../App.css';
 
 // Define the fixed categories for the dropdown
 const BLOG_CATEGORIES = ["Travels", "Tours", "Hotels", "Tourism"];
-
-// Helper function to justify text (adds text-justify class and proper spacing)
-const justifyContent = (content) => {
-    // This function processes markdown to ensure justified display
-    // We'll add a CSS class to the container for justified text
-    return content;
-};
 
 const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => {
     const [title, setTitle] = useState('');
@@ -42,6 +35,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
     
     const fileInputRef = useRef(null);
     const formRef = useRef(null);
+    const mdeRef = useRef(null); // Add ref for the markdown editor
 
     const isEditMode = mode === 'edit' && postId;
     const pageTitle = isEditMode ? 'Edit Blog Post' : 'Create New Blog Post';
@@ -53,7 +47,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
         content: 10000
     };
 
-    // Update character counts
+    // Update character counts - use useEffect to prevent re-renders
     useEffect(() => {
         setCharCount({
             title: title.length,
@@ -88,13 +82,6 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                         setContent(post.content);
                         setCurrentImageUrl(post.imageUrl || '');
                         setIsPublished(post.isPublished || false);
-                        
-                        // Update character counts
-                        setCharCount({
-                            title: post.title.length,
-                            summary: post.summary?.length || 0,
-                            content: post.content.length
-                        });
                     } else {
                         setError('Post not found.');
                     }
@@ -221,10 +208,10 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
     };
 
     // Configuration options for SimpleMDE with justified text preview
-    const mdeOptions = {
+    const mdeOptions = React.useMemo(() => ({
         spellChecker: false,
         placeholder: "Write your blog content here using Markdown...",
-        autofocus: true,
+        autofocus: false, // Changed from true to false
         status: ['autosave', 'lines', 'words', 'cursor'],
         autosave: {
             enabled: true,
@@ -250,7 +237,28 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
             "preview", "side-by-side", "fullscreen", "|", 
             "guide"
         ]
-    };
+    }), [isEditMode, postId]); // Memoize to prevent re-creation
+
+    // Handler functions - memoized to prevent re-renders
+    const handleTitleChange = React.useCallback((e) => {
+        setTitle(e.target.value);
+    }, []);
+
+    const handleCategoryChange = React.useCallback((e) => {
+        setCategory(e.target.value);
+    }, []);
+
+    const handleSummaryChange = React.useCallback((e) => {
+        setSummary(e.target.value);
+    }, []);
+
+    const handlePublishedChange = React.useCallback((e) => {
+        setIsPublished(e.target.checked);
+    }, []);
+
+    const handleContentChange = React.useCallback((value) => {
+        setContent(value);
+    }, []);
 
     // Get character count color
     const getCharCountColor = (count, limit) => {
@@ -386,7 +394,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                     <Card className="shadow-sm border-0 mb-4">
                         <Card.Body>
                             <Form onSubmit={handleSubmit} ref={formRef} className="blog-form">
-                                {/* Title */}
+                                {/* Title - Use memoized handler */}
                                 <Form.Group className="mb-4">
                                     <Form.Label className="fw-bold">
                                         Title *
@@ -397,9 +405,15 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                                     <Form.Control 
                                         type="text" 
                                         value={title} 
-                                        onChange={(e) => setTitle(e.target.value)}
+                                        onChange={handleTitleChange}
                                         className={!formValid.title ? 'is-invalid' : ''}
                                         placeholder="Enter a compelling title for your blog post"
+                                        onFocus={() => {
+                                            // Force focus to stay on this input
+                                            if (mdeRef.current) {
+                                                mdeRef.current.simplemde.codemirror.getInputField().blur();
+                                            }
+                                        }}
                                     />
                                     {!formValid.title && (
                                         <Form.Text className="text-danger">
@@ -408,14 +422,14 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                                     )}
                                 </Form.Group>
                                 
-                                {/* Category & Status */}
+                                {/* Category & Status - Use memoized handlers */}
                                 <Row className="mb-4">
                                     <Col md={8}>
                                         <Form.Group>
                                             <Form.Label className="fw-bold">Category *</Form.Label>
                                             <Form.Select 
                                                 value={category} 
-                                                onChange={(e) => setCategory(e.target.value)}
+                                                onChange={handleCategoryChange}
                                                 className={!formValid.category ? 'is-invalid' : ''}
                                             >
                                                 {BLOG_CATEGORIES.map(cat => (
@@ -432,14 +446,14 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                                                 id="publish-switch"
                                                 label={isPublished ? "Published" : "Draft"}
                                                 checked={isPublished}
-                                                onChange={(e) => setIsPublished(e.target.checked)}
+                                                onChange={handlePublishedChange}
                                                 className="mt-2"
                                             />
                                         </Form.Group>
                                     </Col>
                                 </Row>
 
-                                {/* Summary */}
+                                {/* Summary - Use memoized handler */}
                                 <Form.Group className="mb-4">
                                     <Form.Label className="fw-bold">
                                         Summary
@@ -451,7 +465,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                                         as="textarea" 
                                         rows={3} 
                                         value={summary} 
-                                        onChange={(e) => setSummary(e.target.value)}
+                                        onChange={handleSummaryChange}
                                         placeholder="Brief summary that appears in blog listings (optional)"
                                     />
                                     <Form.Text className="text-muted">
@@ -551,7 +565,7 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                                     </Row>
                                 </Form.Group>
                                 
-                                {/* Content Editor */}
+                                {/* Content Editor - Key fix is here */}
                                 <Form.Group className="mb-4">
                                     <Form.Label className="fw-bold d-flex justify-content-between">
                                         <span>Content *</span>
@@ -561,9 +575,13 @@ const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => 
                                     </Form.Label>
                                     <div className={!formValid.content ? 'border border-danger rounded' : ''}>
                                         <SimpleMdeReact
+                                            key={`mde-${isEditMode ? postId : 'new'}`} // Add key to force fresh instance
                                             value={content}
-                                            onChange={setContent}
+                                            onChange={handleContentChange}
                                             options={mdeOptions}
+                                            getMdeInstance={(instance) => {
+                                                mdeRef.current = instance;
+                                            }}
                                         />
                                     </div>
                                     {!formValid.content && (

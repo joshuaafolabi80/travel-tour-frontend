@@ -264,7 +264,7 @@ const UserBlogPage = ({ navigateTo }) => {
             <Container className="py-4">
                 <Row className="mb-4">
                     <Col lg={8}>
-                        <h1 className="display-6 fw-bold mb-3">📚 Travel & Tourism Blog</h1>
+                        <h1 className="display-6 fw-bold mb-3">📚 Travel, Tourism, Hotel and Tour Blog</h1>
                         <p className="text-muted mb-0">
                             Explore insightful articles, travel tips, and industry news from The Conclave Academy experts.
                         </p>

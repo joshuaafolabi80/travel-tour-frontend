@@ -995,6 +995,67 @@
     cursor: pointer;
 }
 
+
+/* Add these styles to travel-tour-frontend/src/App.css */
+
+/* Issue 1 & 2: Summary justification and tag spacing */
+.text-justify {
+  text-align: justify !important;
+}
+
+/* Issue 2: Better tag spacing on mobile */
+@media (max-width: 768px) {
+  .blog-detail-container .badge {
+    margin-bottom: 8px !important;
+    margin-right: 8px !important;
+  }
+}
+
+/* Issue 3: Social media icons responsiveness */
+.social-share-container {
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 5px;
+}
+
+.social-icon {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 768px) {
+  .social-share-container {
+    justify-content: flex-start !important;
+  }
+  
+  .social-icon {
+    margin-right: 4px !important;
+    margin-bottom: 8px !important;
+  }
+}
+
+/* Issue 4: UserBlogPage Call to Action visibility */
+.blog-page-container .card.bg-light {
+  background-color: #f8f9fa !important;
+  border: 1px solid #dee2e6 !important;
+}
+
+/* Center text utility */
+.text-center {
+  text-align: center !important;
+}
+
+/* Rotate utility for arrows */
+.rotate-180 {
+  transform: rotate(180deg);
+}
+
+/* Cursor pointer utility */
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
+
+
 /* travel-tour-frontend/src/App.css - ADD THESE STYLES */
 
 /* Justified Text Styles */

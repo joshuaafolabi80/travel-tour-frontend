@@ -165,7 +165,7 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                 marginBottom: '1rem'
             }} />
         ),
-        h1: ({node, ...props}) => <h1 {...props} className="h2 mt-4 mb-3" />,
+        h1: ({node, ...props}) => <h1 {...props} className="h2 mt-4 mb-3 text-center" />, // Issue 1: Center blog title
         h2: ({node, ...props}) => <h2 {...props} className="h3 mt-4 mb-3" />,
         h3: ({node, ...props}) => <h3 {...props} className="h4 mt-4 mb-2" />,
         code({node, inline, className, children, ...props}) {
@@ -277,7 +277,8 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                         <Card.Body className="p-4 p-lg-5">
                             {/* Header */}
                             <header className="mb-5">
-                                <h1 className="display-5 fw-bold mb-3">{post.title}</h1>
+                                {/* Issue 1: Blog title centered */}
+                                <h1 className="display-5 fw-bold mb-3 text-center">{post.title}</h1>
                                 
                                 <div className="d-flex flex-wrap align-items-center text-muted mb-4">
                                     <span className="me-3 d-flex align-items-center">
@@ -297,8 +298,9 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                     </span>
                                 </div>
                                 
+                                {/* Issue 1: Summary with justified text */}
                                 {post.summary && (
-                                    <div className="lead p-3 bg-light rounded mb-4">
+                                    <div className="lead p-3 bg-light rounded mb-4 text-justify" style={{ textAlign: 'justify' }}>
                                         <strong>Summary:</strong> {post.summary}
                                     </div>
                                 )}
@@ -313,27 +315,30 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                 </div>
                             </article>
 
-                            {/* Tags */}
+                            {/* Tags - Issue 2: Add vertical spacing */}
                             <div className="mt-5 pt-4 border-top">
-                                <div className="d-flex align-items-center">
-                                    <strong className="me-3">Tags:</strong>
+                                <div className="d-flex flex-wrap align-items-center">
+                                    <strong className="me-3 mb-2">Tags:</strong>
                                     <div>
-                                        <Badge bg="secondary" className="me-2 p-2">#travel</Badge>
-                                        <Badge bg="secondary" className="me-2 p-2">#tourism</Badge>
-                                        <Badge bg="secondary" className="me-2 p-2">#{post.category.toLowerCase()}</Badge>
-                                        <Badge bg="secondary" className="p-2">#blog</Badge>
+                                        {/* Issue 2: Add margin-bottom for vertical spacing on mobile */}
+                                        <Badge bg="secondary" className="me-2 mb-2 p-2">#travel</Badge>
+                                        <Badge bg="secondary" className="me-2 mb-2 p-2">#tourism</Badge>
+                                        <Badge bg="secondary" className="me-2 mb-2 p-2">#hotels</Badge>
+                                        <Badge bg="secondary" className="me-2 mb-2 p-2">#tours</Badge>
+                                        <Badge bg="secondary" className="mb-2 p-2">#blog</Badge>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Share and Action Buttons */}
+                            {/* Share and Action Buttons - Issue 3: Make responsive */}
                             <div className="mt-4 pt-3 border-top">
-                                <div className="d-flex justify-content-between align-items-center">
+                                <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                                     <div>
-                                        <ButtonGroup className="me-3">
+                                        <ButtonGroup className="d-flex flex-wrap">
                                             <Button 
                                                 variant={isBookmarked ? "warning" : "outline-secondary"}
                                                 onClick={handleBookmark}
+                                                className="mb-2 me-2"
                                             >
                                                 <FaBookmark className="me-2" />
                                                 {isBookmarked ? 'Bookmarked' : 'Bookmark'}
@@ -341,6 +346,7 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                             <Button 
                                                 variant="outline-secondary"
                                                 onClick={handlePrint}
+                                                className="mb-2"
                                             >
                                                 <FaPrint className="me-2" />
                                                 Print
@@ -348,50 +354,58 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                         </ButtonGroup>
                                     </div>
                                     
-                                    <div className="d-flex align-items-center">
-                                        <span className="me-3 text-muted">Share:</span>
-                                        <ButtonGroup>
-                                            <Button 
-                                                variant="outline-primary" 
-                                                size="sm"
-                                                onClick={() => handleShare('facebook')}
-                                                title="Share on Facebook"
-                                            >
-                                                <FaFacebook />
-                                            </Button>
-                                            <Button 
-                                                variant="outline-info" 
-                                                size="sm"
-                                                onClick={() => handleShare('twitter')}
-                                                title="Share on Twitter"
-                                            >
-                                                <FaTwitter />
-                                            </Button>
-                                            <Button 
-                                                variant="outline-primary" 
-                                                size="sm"
-                                                onClick={() => handleShare('linkedin')}
-                                                title="Share on LinkedIn"
-                                            >
-                                                <FaLinkedin />
-                                            </Button>
-                                            <Button 
-                                                variant="outline-success" 
-                                                size="sm"
-                                                onClick={() => handleShare('whatsapp')}
-                                                title="Share on WhatsApp"
-                                            >
-                                                <FaWhatsapp />
-                                            </Button>
-                                            <Button 
-                                                variant="outline-secondary" 
-                                                size="sm"
-                                                onClick={() => handleShare('copy')}
-                                                title="Copy link"
-                                            >
-                                                <FaCopy />
-                                            </Button>
-                                        </ButtonGroup>
+                                    <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center">
+                                        <span className="me-3 text-muted mb-2 mb-md-0">Share:</span>
+                                        {/* Issue 3: Make social media icons responsive and prevent cutoff */}
+                                        <div className="d-flex flex-wrap justify-content-center justify-content-md-start social-share-container">
+                                            <ButtonGroup className="d-flex flex-wrap">
+                                                <Button 
+                                                    variant="outline-primary" 
+                                                    size="sm"
+                                                    onClick={() => handleShare('facebook')}
+                                                    title="Share on Facebook"
+                                                    className="social-icon mb-2 me-2"
+                                                >
+                                                    <FaFacebook />
+                                                </Button>
+                                                <Button 
+                                                    variant="outline-info" 
+                                                    size="sm"
+                                                    onClick={() => handleShare('twitter')}
+                                                    title="Share on Twitter"
+                                                    className="social-icon mb-2 me-2"
+                                                >
+                                                    <FaTwitter />
+                                                </Button>
+                                                <Button 
+                                                    variant="outline-primary" 
+                                                    size="sm"
+                                                    onClick={() => handleShare('linkedin')}
+                                                    title="Share on LinkedIn"
+                                                    className="social-icon mb-2 me-2"
+                                                >
+                                                    <FaLinkedin />
+                                                </Button>
+                                                <Button 
+                                                    variant="outline-success" 
+                                                    size="sm"
+                                                    onClick={() => handleShare('whatsapp')}
+                                                    title="Share on WhatsApp"
+                                                    className="social-icon mb-2 me-2"
+                                                >
+                                                    <FaWhatsapp />
+                                                </Button>
+                                                <Button 
+                                                    variant="outline-secondary" 
+                                                    size="sm"
+                                                    onClick={() => handleShare('copy')}
+                                                    title="Copy link"
+                                                    className="social-icon mb-2"
+                                                >
+                                                    <FaCopy />
+                                                </Button>
+                                            </ButtonGroup>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

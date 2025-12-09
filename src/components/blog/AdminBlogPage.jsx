@@ -65,6 +65,14 @@ const AdminBlogPage = ({ navigateTo }) => {
 
     // Fetch posts with filtering and pagination
     const fetchPosts = useCallback(async () => {
+        console.log('🔄 Starting fetchPosts...', {
+            currentPage,
+            searchTerm,
+            statusFilter,
+            sortBy,
+            sortOrder
+        });
+        
         setLoading(true);
         setError(null);
         
@@ -76,13 +84,23 @@ const AdminBlogPage = ({ navigateTo }) => {
                 isPublished: statusFilter === 'all' ? undefined : statusFilter === 'published'
             };
 
+            console.log('📤 Making API call with params:', params);
+            
             const response = await blogApi.get('/admin/blog/posts', { 
                 params,
-                timeout: 10000 // 10 second timeout
+                timeout: 30000 // Increased to 30 seconds
+            });
+            
+            console.log('📥 API Response received:', {
+                status: response.status,
+                success: response.data.success,
+                count: response.data.count,
+                postsCount: response.data.posts?.length || 0
             });
             
             if (response.data.success) {
                 let filteredPosts = response.data.posts || [];
+                console.log(`📊 Processing ${filteredPosts.length} posts`);
                 
                 // Apply client-side sorting
                 filteredPosts.sort((a, b) => {
@@ -106,84 +124,142 @@ const AdminBlogPage = ({ navigateTo }) => {
                 // Calculate counts
                 const published = filteredPosts.filter(p => p.isPublished).length;
                 const draft = filteredPosts.length - published;
-                setCounts({
+                const totalCounts = {
                     total: response.data.count || filteredPosts.length,
                     published,
                     draft
-                });
+                };
+                
+                setCounts(totalCounts);
+                console.log('📈 Counts calculated:', totalCounts);
 
                 // Calculate total pages
                 const totalPosts = response.data.count || filteredPosts.length;
-                setTotalPages(Math.ceil(totalPosts / postsPerPage));
+                const calculatedPages = Math.ceil(totalPosts / postsPerPage);
+                setTotalPages(calculatedPages);
+                
+                console.log('✅ Fetch successful:', {
+                    postsLoaded: filteredPosts.length,
+                    totalPosts: totalPosts,
+                    totalPages: calculatedPages
+                });
                 
             } else {
-                setError('Failed to fetch blog posts: ' + (response.data.message || 'Unknown error'));
+                const errorMsg = 'Failed to fetch blog posts: ' + (response.data.message || 'Unknown error');
+                console.error('❌ API returned failure:', errorMsg);
+                setError(errorMsg);
             }
         } catch (err) {
-            console.error('Fetch error:', err);
+            console.error('📛 FETCH ERROR DETAILS:', {
+                message: err.message,
+                code: err.code,
+                status: err.response?.status,
+                statusText: err.response?.statusText,
+                data: err.response?.data,
+                url: err.config?.url,
+                baseURL: err.config?.baseURL,
+                fullURL: err.config?.baseURL + err.config?.url,
+                timeout: err.config?.timeout,
+                isTimeout: err.code === 'ECONNABORTED' || err.message?.includes('timeout'),
+                is404: err.response?.status === 404,
+                isNetwork: !err.response && err.request
+            });
+            
             if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-                setError('Request timeout. The server is taking too long to respond. Please try again.');
+                setError('Request timeout. The server is taking too long to respond. Please try again. (Render cold start)');
             } else if (err.response?.status === 404) {
-                setError('API endpoint not found. Please check if the backend server is running.');
+                setError(`API endpoint not found. Please check if the backend server is running. URL: ${err.config?.baseURL}${err.config?.url}`);
             } else if (!navigator.onLine) {
                 setError('No internet connection. Please check your network.');
             } else {
-                setError('Could not connect to the server or retrieve data.');
+                setError(`Could not connect to the server: ${err.message || 'Unknown error'}`);
             }
         } finally {
             setLoading(false);
+            console.log('🏁 Fetch completed, loading set to false');
         }
     }, [currentPage, searchTerm, statusFilter, sortBy, sortOrder]);
 
     // Fetch statistics
     const fetchStats = async () => {
+        console.log('📊 Starting fetchStats...');
         setStatsLoading(true);
         try {
-            const response = await blogApi.get('/admin/blog/posts');
+            console.log('📤 Making stats API call...');
+            const response = await blogApi.get('/admin/blog/posts', {
+                params: { limit: 100 }, // Get more posts for stats
+                timeout: 30000
+            });
+            
+            console.log('📥 Stats response:', {
+                success: response.data.success,
+                postsCount: response.data.posts?.length || 0
+            });
+            
             if (response.data.success && response.data.posts) {
                 const allPosts = response.data.posts;
                 const published = allPosts.filter(p => p.isPublished).length;
                 const draft = allPosts.length - published;
-                setCounts({
+                const newCounts = {
                     total: allPosts.length,
                     published,
                     draft
-                });
+                };
+                
+                console.log('📈 New stats calculated:', newCounts);
+                setCounts(newCounts);
             }
         } catch (err) {
-            console.error('Stats fetch error:', err);
+            console.error('📛 Stats fetch error:', {
+                message: err.message,
+                status: err.response?.status,
+                url: err.config?.url
+            });
         } finally {
             setStatsLoading(false);
+            console.log('🏁 Stats fetch completed');
         }
     };
 
     useEffect(() => {
+        console.log('🎯 useEffect for fetchPosts triggered');
         fetchPosts();
     }, [fetchPosts]);
 
     useEffect(() => {
+        console.log('🎯 useEffect for fetchStats triggered');
         fetchStats();
     }, []);
 
     // Handle search with debounce
     useEffect(() => {
+        console.log('🔍 Search/Filter changed:', { searchTerm, statusFilter });
         const timer = setTimeout(() => {
             if (searchTerm !== '' || statusFilter !== 'all') {
+                console.log('🔄 Triggering search/filter fetch');
                 setCurrentPage(1);
                 fetchPosts();
             }
         }, 500);
 
-        return () => clearTimeout(timer);
+        return () => {
+            console.log('🧹 Clearing search timer');
+            clearTimeout(timer);
+        };
     }, [searchTerm, statusFilter]);
 
     // Handle page change
     const handlePageChange = (pageNumber) => {
+        console.log('📄 Page change:', { from: currentPage, to: pageNumber });
         setCurrentPage(pageNumber);
     };
 
     // Handle delete confirmation
     const confirmDelete = (post) => {
+        console.log('🗑️ Delete confirmation requested for post:', {
+            id: post._id,
+            title: post.title
+        });
         setPostToDelete(post);
         setShowDeleteModal(true);
     };
@@ -192,34 +268,69 @@ const AdminBlogPage = ({ navigateTo }) => {
     const handleDelete = async () => {
         if (!postToDelete) return;
 
+        console.log('🗑️ Executing delete for post:', {
+            id: postToDelete._id,
+            title: postToDelete.title
+        });
+
         setDeleteStatus('deleting');
         setShowDeleteModal(false);
         
         try {
-            const response = await blogApi.delete(`/admin/blog/posts/${postToDelete._id}`);
+            console.log('📤 Sending delete request...');
+            const response = await blogApi.delete(`/admin/blog/posts/${postToDelete._id}`, {
+                timeout: 30000
+            });
+            
+            console.log('📥 Delete response:', {
+                success: response.data.success,
+                message: response.data.message
+            });
+            
             if (response.data.success) {
+                console.log('✅ Delete successful');
                 setDeleteStatus('success');
                 // Refresh data
                 fetchPosts();
                 fetchStats();
-                setTimeout(() => setDeleteStatus(null), 3000);
+                setTimeout(() => {
+                    console.log('🧹 Clearing delete status');
+                    setDeleteStatus(null);
+                }, 3000);
             } else {
+                console.error('❌ Delete failed:', response.data.message);
                 setDeleteStatus('error');
                 setError('Failed to delete post: ' + (response.data.message || 'Unknown error'));
-                setTimeout(() => setDeleteStatus(null), 5000);
+                setTimeout(() => {
+                    console.log('🧹 Clearing delete error status');
+                    setDeleteStatus(null);
+                }, 5000);
             }
         } catch (err) {
-            console.error('Delete error:', err);
+            console.error('📛 Delete error:', {
+                message: err.message,
+                status: err.response?.status,
+                data: err.response?.data
+            });
             setDeleteStatus('error');
             setError('Server error during deletion. Please try again.');
-            setTimeout(() => setDeleteStatus(null), 5000);
+            setTimeout(() => {
+                console.log('🧹 Clearing delete error status');
+                setDeleteStatus(null);
+            }, 5000);
         } finally {
+            console.log('🏁 Delete process completed');
             setPostToDelete(null);
         }
     };
 
     // Handle sort change
     const handleSort = (field) => {
+        console.log('🔀 Sort change:', {
+            from: { field: sortBy, order: sortOrder },
+            to: { field, order: sortBy === field ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'desc' }
+        });
+        
         if (sortBy === field) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
         } else {
@@ -230,6 +341,7 @@ const AdminBlogPage = ({ navigateTo }) => {
 
     // Handle refresh
     const handleRefresh = () => {
+        console.log('🔄 Manual refresh triggered');
         fetchPosts();
         fetchStats();
     };

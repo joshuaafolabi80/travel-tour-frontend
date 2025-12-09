@@ -889,6 +889,112 @@
 }
 
 
+/* Blog Hero Slider */
+.blog-hero-slider {
+    position: relative;
+    height: 400px;
+    overflow: hidden;
+    border-radius: 0 0 20px 20px;
+}
+
+.blog-carousel-wrapper {
+    height: 100%;
+}
+
+.blog-carousel-image {
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    transition: background-image 1s ease-in-out;
+}
+
+.blog-carousel-overlay {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    text-align: center;
+    padding: 2rem;
+}
+
+.blog-carousel-title {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.blog-carousel-text {
+    font-size: 1.2rem;
+    max-width: 600px;
+    margin-bottom: 2rem;
+}
+
+.blog-slider-indicators {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.blog-slider-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.blog-slider-indicator.active {
+    background: white;
+    transform: scale(1.2);
+}
+
+/* Blog Cards */
+.blog-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: 1px solid #e9ecef;
+}
+
+.blog-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+
+.blog-card-img-container {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.blog-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+}
+
+.blog-card:hover .blog-card-img {
+    transform: scale(1.05);
+}
+
+.blog-card-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
 /* travel-tour-frontend/src/App.css - ADD THESE STYLES */
 
 /* Justified Text Styles */

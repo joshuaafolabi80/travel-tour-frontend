@@ -1,479 +1,401 @@
-// travel-tour-frontend/src/components/blog/AdminCreateEditBlog.jsx - FIXED FOR LIVE
+// travel-tour-frontend/src/components/blog/AdminCreateEditBlog.jsx
 import React, { useState, useEffect } from 'react';
 import { 
-    Container, Form, Button, Alert, Spinner, Card,
-    Row, Col
+    Container, Card, Form, Button, Row, Col, 
+    Alert, Spinner, Badge
 } from 'react-bootstrap';
-import SimpleMdeReact from "react-simplemde-editor";
-import "easymde/dist/easymde.min.css";
+import { 
+    FaSave, FaTimes, FaEye, FaCloudUploadAlt,
+    FaImage, FaFileAlt, FaCheck
+} from 'react-icons/fa';
 import blogApi from '../../services/blogApi';
-import { FaArrowLeft, FaSpinner, FaSave } from 'react-icons/fa';
 import '../../App.css';
 
-// Define the fixed categories for the dropdown
-const BLOG_CATEGORIES = ["Travels", "Tours", "Hotels", "Tourism"];
-
-const AdminCreateEditBlog = ({ navigateTo, mode = 'create', postId = null }) => {
-    const [title, setTitle] = useState('');
-    const [category, setCategory] = useState(BLOG_CATEGORIES[0]);
-    const [summary, setSummary] = useState('');
-    const [content, setContent] = useState('');
-    const [featuredImage, setFeaturedImage] = useState(null);
-    const [currentImageUrl, setCurrentImageUrl] = useState('');
-    const [isPublished, setIsPublished] = useState(false);
-    const [status, setStatus] = useState('');
-    const [error, setError] = useState(null);
+const AdminCreateEditBlog = ({ mode = 'create', postId = null, navigateTo }) => {
+    const [formData, setFormData] = useState({
+        title: '',
+        category: 'Travels',
+        summary: '',
+        content: '',
+        isPublished: false
+    });
+    
     const [loading, setLoading] = useState(false);
-    const [backendAvailable, setBackendAvailable] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const [imageFile, setImageFile] = useState(null);
+    const [charCount, setCharCount] = useState(0);
 
-    const isEditMode = mode === 'edit' && postId;
-    const pageTitle = isEditMode ? 'Edit Blog Post' : 'Create New Blog Post';
+    const categories = ['Travels', 'Tours', 'Hotels', 'Tourism'];
 
-    // Check backend connection on mount
+    // Fetch post data if in edit mode
     useEffect(() => {
-        checkBackendConnection();
-    }, []);
-
-    // Check if backend is running
-    const checkBackendConnection = async () => {
-        try {
-            await blogApi.get('/health', { timeout: 5000 });
-            setBackendAvailable(true);
-        } catch (err) {
-            console.log('Backend not available:', err.message);
-            setBackendAvailable(false);
-            setError('Warning: Backend server is not responding. You can still prepare your post, but it cannot be saved until the backend is running.');
+        if (mode === 'edit' && postId) {
+            fetchPostData();
         }
-    };
+    }, [mode, postId]);
 
-    // Fetch Post Data for Edit Mode
-    useEffect(() => {
-        if (isEditMode && backendAvailable) {
-            setLoading(true);
-            const fetchPost = async () => {
-                try {
-                    const response = await blogApi.get(`/admin/blog/posts/${postId}`);
-                    if (response.data.success && response.data.post) {
-                        const post = response.data.post;
-                        setTitle(post.title);
-                        setCategory(post.category || BLOG_CATEGORIES[0]);
-                        setSummary(post.summary || '');
-                        setContent(post.content);
-                        setCurrentImageUrl(post.imageUrl || '');
-                        setIsPublished(post.isPublished || false);
-                    } else {
-                        setError('Post not found.');
-                    }
-                } catch (err) {
-                    console.error('Fetch error:', err);
-                    setError('Could not load post data. Please check your connection.');
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchPost();
-        }
-    }, [isEditMode, postId, backendAvailable]);
-
-    // Handle image upload
-    const handleImageUpload = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        // Validate file type
-        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-            setError('Please upload a valid image file (JPEG, PNG, GIF, WebP).');
-            return;
-        }
-
-        // Validate file size (5MB max)
-        if (file.size > 5 * 1024 * 1024) {
-            setError('Image size should be less than 5MB.');
-            return;
-        }
-
-        setFeaturedImage(file);
-        setError(null);
-    };
-
-    // Handle Submission
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        // Check if backend is available
-        if (!backendAvailable) {
-            setError('Cannot save: Backend server is not responding. Please check your Render deployment.');
-            return;
-        }
-        
-        // Basic validation
-        if (!title.trim()) {
-            setError('Please enter a title.');
-            return;
-        }
-        
-        if (!content.trim()) {
-            setError('Please enter content.');
-            return;
-        }
-
+    const fetchPostData = async () => {
         setLoading(true);
-        setError(null);
-        setStatus('');
-
-        // Use FormData for multi-part submission
-        const formData = new FormData();
-        formData.append('title', title.trim());
-        formData.append('category', category);
-        formData.append('summary', summary.trim());
-        formData.append('content', content.trim());
-        formData.append('isPublished', isPublished);
-        
-        // Only append the file if a new one was selected
-        if (featuredImage) {
-            formData.append('featuredImage', featuredImage); 
-        } else if (isEditMode && currentImageUrl) {
-            formData.append('currentImageUrl', currentImageUrl);
-        }
-
         try {
-            let response;
-            const config = {
-                headers: { 
-                    'Content-Type': 'multipart/form-data' 
-                },
-                timeout: 30000
-            };
-
-            if (isEditMode) {
-                response = await blogApi.put(`/admin/blog/posts/${postId}`, formData, config);
-            } else {
-                response = await blogApi.post('/admin/blog/posts', formData, config);
-            }
-
+            const response = await blogApi.get(`/admin/blog/posts/${postId}`);
             if (response.data.success) {
-                setStatus(isEditMode ? 'updated' : 'created');
-                
-                // Show success message then redirect
-                setTimeout(() => {
-                    navigateTo('admin-blog-dashboard');
-                }, 1500);
-            } else {
-                setError(response.data.message || 'Submission failed.');
+                const post = response.data.post;
+                setFormData({
+                    title: post.title || '',
+                    category: post.category || 'Travels',
+                    summary: post.summary || '',
+                    content: post.content || '',
+                    isPublished: post.isPublished || false
+                });
+                setCharCount(post.content?.length || 0);
             }
         } catch (err) {
-            console.error('Submission error:', err);
-            
-            if (err.code === 'ECONNABORTED') {
-                setError('Request timeout. Your Render backend might be sleeping. Please wait a moment and try again.');
-            } else if (err.response?.status === 413) {
-                setError('File too large. Please upload an image smaller than 5MB.');
-            } else if (err.response?.status === 404) {
-                setError('API endpoint not found. Please check your Render backend URL.');
-            } else {
-                setError('Failed to save post. Please check your connection and try again.');
-            }
-            
-            // Re-check backend connection
-            checkBackendConnection();
+            console.error('Error fetching post:', err);
+            setError('Failed to load post data');
         } finally {
             setLoading(false);
         }
     };
 
-    // Configuration options for SimpleMDE
-    const mdeOptions = {
-        spellChecker: false,
-        placeholder: "Write your blog content here using Markdown...",
-        status: false,
-        autosave: {
-            enabled: true,
-            uniqueId: isEditMode ? postId : 'new-blog-post',
-            delay: 1000,
-        },
-        toolbar: [
-            "bold", "italic", "heading", "|", 
-            "quote", "unordered-list", "ordered-list", "|", 
-            "link", "image", "|", 
-            "preview", "guide"
-        ]
+    // Handle input changes
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+
+        if (name === 'content') {
+            setCharCount(value.length);
+        }
     };
 
-    if (loading && isEditMode) {
+    // Handle image file selection
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImageFile(file);
+        }
+    };
+
+    // Handle form submission - SIMPLIFIED
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        console.log('📤 Starting form submission...');
+        
+        // Basic validation
+        if (!formData.title.trim()) {
+            setError('Title is required');
+            return;
+        }
+        
+        if (!formData.content.trim()) {
+            setError('Content is required');
+            return;
+        }
+
+        setSaving(true);
+        setError('');
+        setSuccess('');
+
+        try {
+            console.log('📝 Form data:', formData);
+            console.log('🖼️ Image file:', imageFile ? 'Yes' : 'No');
+            
+            // Create FormData for file upload
+            const submitData = new FormData();
+            submitData.append('title', formData.title);
+            submitData.append('category', formData.category);
+            submitData.append('summary', formData.summary);
+            submitData.append('content', formData.content);
+            submitData.append('isPublished', formData.isPublished);
+            
+            if (imageFile) {
+                submitData.append('featuredImage', imageFile);
+                console.log('📎 Appending image file');
+            }
+
+            console.log('🚀 Sending request to server...');
+            
+            let response;
+            
+            if (mode === 'create') {
+                response = await blogApi.post('/admin/blog/posts', submitData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    },
+                    timeout: 60000
+                });
+            } else {
+                response = await blogApi.put(`/admin/blog/posts/${postId}`, submitData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    },
+                    timeout: 60000
+                });
+            }
+
+            console.log('✅ Server response:', response.data);
+            
+            if (response.data.success) {
+                const message = mode === 'create' 
+                    ? 'Blog post created successfully!' 
+                    : 'Blog post updated successfully!';
+                
+                setSuccess(message);
+                console.log('🎉 Success:', message);
+                
+                // Redirect after delay
+                setTimeout(() => {
+                    navigateTo('admin-blog-dashboard');
+                }, 2000);
+            } else {
+                setError(response.data.message || 'Failed to save post');
+                console.error('❌ Server error:', response.data);
+            }
+        } catch (err) {
+            console.error('📛 Submission error:', {
+                message: err.message,
+                status: err.response?.status,
+                data: err.response?.data,
+                code: err.code
+            });
+            
+            if (err.response?.status === 404) {
+                setError('Server endpoint not found. Check your server URL.');
+            } else if (err.code === 'ECONNABORTED') {
+                setError('Request timeout. Server is taking too long.');
+            } else if (err.response?.data?.message) {
+                setError(err.response.data.message);
+            } else {
+                setError('Failed to save post. Please try again.');
+            }
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Cancel and go back
+    const handleCancel = () => {
+        navigateTo('admin-blog-dashboard');
+    };
+
+    if (loading) {
         return (
-            <div className="text-center py-5">
-                <Spinner animation="border" variant="primary" />
-                <p className="mt-2 text-muted">Loading post data...</p>
-            </div>
+            <Container className="py-5">
+                <div className="text-center">
+                    <Spinner animation="border" variant="primary" />
+                    <p className="mt-3">Loading post data...</p>
+                </div>
+            </Container>
         );
     }
 
     return (
-        <Container fluid className="py-4">
-            {/* Header */}
+        <Container className="py-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h2 className="mb-1 fw-bold text-dark">{pageTitle}</h2>
+                    <h2 className="mb-1 fw-bold text-dark">
+                        <FaFileAlt className="me-2 text-primary" />
+                        {mode === 'create' ? 'Create New Blog Post' : 'Edit Blog Post'}
+                    </h2>
                     <p className="text-muted mb-0">
-                        {backendAvailable ? 'Create and publish blog posts' : '⚠️ Backend server offline'}
+                        {mode === 'create' 
+                            ? 'Fill in the details to create a new blog post' 
+                            : 'Update your existing blog post'}
                     </p>
                 </div>
-                <Button 
-                    variant="outline-secondary" 
-                    onClick={() => navigateTo('admin-blog-dashboard')}
-                >
-                    <FaArrowLeft className="me-2" /> Back to Dashboard
-                </Button>
+                <div className="d-flex gap-2">
+                    <Button 
+                        variant="outline-secondary" 
+                        onClick={handleCancel}
+                        disabled={saving}
+                    >
+                        <FaTimes className="me-2" /> Cancel
+                    </Button>
+                </div>
             </div>
 
-            {/* Backend Status Alert */}
-            {!backendAvailable && (
-                <Alert variant="warning" className="mb-4">
-                    <strong>⚠️ Backend Server Unavailable</strong>
-                    <p className="mb-0 mt-2">
-                        Your Render backend is not responding. This could be because:
-                    </p>
-                    <ul className="mb-0">
-                        <li>The server is sleeping (free tier on Render sleeps after inactivity)</li>
-                        <li>The server URL is incorrect in your environment variables</li>
-                        <li>The server crashed or is restarting</li>
-                    </ul>
-                    <Button 
-                        variant="outline-warning" 
-                        size="sm" 
-                        className="mt-2"
-                        onClick={checkBackendConnection}
-                    >
-                        Check Connection Again
-                    </Button>
-                </Alert>
-            )}
-
-            {/* Success Alerts */}
-            {status === 'created' && (
-                <Alert variant="success" className="mb-4">
-                    ✅ Post created successfully! Redirecting...
-                </Alert>
-            )}
-            
-            {status === 'updated' && (
-                <Alert variant="success" className="mb-4">
-                    ✅ Post updated successfully! Redirecting...
-                </Alert>
-            )}
-            
-            {/* Error Alert */}
+            {/* Alerts */}
             {error && (
-                <Alert variant="danger" className="mb-4">
+                <Alert variant="danger" dismissible onClose={() => setError('')}>
                     {error}
                 </Alert>
             )}
+            
+            {success && (
+                <Alert variant="success" dismissible onClose={() => setSuccess('')}>
+                    <FaCheck className="me-2" />
+                    {success}
+                </Alert>
+            )}
 
-            {/* Main Form */}
-            <Row>
-                <Col lg={8}>
-                    <Card className="shadow-sm border-0 mb-4">
-                        <Card.Body>
-                            <Form onSubmit={handleSubmit}>
+            <Form onSubmit={handleSubmit}>
+                <Row>
+                    <Col lg={8}>
+                        <Card className="shadow-sm border-0 mb-4">
+                            <Card.Body>
                                 {/* Title */}
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Title *</Form.Label>
-                                    <Form.Control 
-                                        type="text" 
-                                        value={title} 
-                                        onChange={(e) => setTitle(e.target.value)}
+                                <Form.Group className="mb-4">
+                                    <Form.Label className="fw-bold">
+                                        Title <span className="text-danger">*</span>
+                                    </Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        name="title"
+                                        value={formData.title}
+                                        onChange={handleChange}
                                         placeholder="Enter blog post title"
                                         required
-                                        disabled={!backendAvailable && isEditMode}
+                                        maxLength={200}
                                     />
+                                    <Form.Text className="text-muted">
+                                        Maximum 200 characters.
+                                    </Form.Text>
                                 </Form.Group>
-                                
+
                                 {/* Category & Status */}
-                                <Row className="mb-3">
-                                    <Col md={8}>
+                                <Row className="mb-4">
+                                    <Col md={6}>
                                         <Form.Group>
-                                            <Form.Label>Category *</Form.Label>
-                                            <Form.Select 
-                                                value={category} 
-                                                onChange={(e) => setCategory(e.target.value)}
-                                                required
-                                                disabled={!backendAvailable && isEditMode}
+                                            <Form.Label className="fw-bold">
+                                                Category <span className="text-danger">*</span>
+                                            </Form.Label>
+                                            <Form.Select
+                                                name="category"
+                                                value={formData.category}
+                                                onChange={handleChange}
                                             >
-                                                {BLOG_CATEGORIES.map(cat => (
-                                                    <option key={cat} value={cat}>{cat}</option>
+                                                {categories.map(cat => (
+                                                    <option key={cat} value={cat}>
+                                                        {cat}
+                                                    </option>
                                                 ))}
                                             </Form.Select>
                                         </Form.Group>
                                     </Col>
-                                    <Col md={4}>
+                                    <Col md={6}>
                                         <Form.Group>
-                                            <Form.Label>Status</Form.Label>
-                                            <Form.Check 
-                                                type="switch"
-                                                id="publish-switch"
-                                                label={isPublished ? "Published" : "Draft"}
-                                                checked={isPublished}
-                                                onChange={(e) => setIsPublished(e.target.checked)}
-                                                className="mt-2"
-                                                disabled={!backendAvailable && isEditMode}
-                                            />
+                                            <Form.Label className="fw-bold">Status</Form.Label>
+                                            <div className="mt-2">
+                                                <Form.Check
+                                                    type="switch"
+                                                    id="publish-switch"
+                                                    label={formData.isPublished ? "Published" : "Draft"}
+                                                    name="isPublished"
+                                                    checked={formData.isPublished}
+                                                    onChange={handleChange}
+                                                />
+                                            </div>
                                         </Form.Group>
                                     </Col>
                                 </Row>
 
                                 {/* Summary */}
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Summary (Optional)</Form.Label>
-                                    <Form.Control 
-                                        as="textarea" 
-                                        rows={3} 
-                                        value={summary} 
-                                        onChange={(e) => setSummary(e.target.value)}
-                                        placeholder="Brief summary that appears in blog listings"
-                                        disabled={!backendAvailable && isEditMode}
-                                    />
-                                </Form.Group>
-
-                                {/* Featured Image */}
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Featured Image (Optional)</Form.Label>
-                                    <Form.Control 
-                                        type="file" 
-                                        accept="image/*" 
-                                        onChange={handleImageUpload}
-                                        disabled={!backendAvailable && isEditMode}
-                                    />
-                                    
-                                    {/* Image Previews */}
-                                    <div className="mt-2">
-                                        {featuredImage && (
-                                            <div className="mb-2">
-                                                <p className="text-success mb-1">New Image:</p>
-                                                <img 
-                                                    src={URL.createObjectURL(featuredImage)} 
-                                                    alt="Preview" 
-                                                    className="img-fluid rounded"
-                                                    style={{ maxHeight: '150px' }}
-                                                />
-                                            </div>
-                                        )}
-                                        
-                                        {isEditMode && currentImageUrl && !featuredImage && (
-                                            <div>
-                                                <p className="text-muted mb-1">Current Image:</p>
-                                                <img 
-                                                    src={currentImageUrl} 
-                                                    alt="Current" 
-                                                    className="img-fluid rounded"
-                                                    style={{ maxHeight: '150px' }}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                </Form.Group>
-                                
-                                {/* Content Editor */}
                                 <Form.Group className="mb-4">
-                                    <Form.Label>Content *</Form.Label>
-                                    <SimpleMdeReact
-                                        value={content}
-                                        onChange={setContent}
-                                        options={mdeOptions}
+                                    <Form.Label className="fw-bold">Summary (Optional)</Form.Label>
+                                    <Form.Control
+                                        as="textarea"
+                                        name="summary"
+                                        value={formData.summary}
+                                        onChange={handleChange}
+                                        placeholder="Brief summary of your post"
+                                        rows={3}
+                                        maxLength={500}
                                     />
                                 </Form.Group>
 
-                                {/* Action Buttons */}
-                                <div className="d-flex justify-content-between pt-3 border-top">
-                                    <Button
-                                        variant="outline-secondary"
-                                        onClick={() => navigateTo('admin-blog-dashboard')}
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button 
-                                        variant="success" 
-                                        type="submit" 
-                                        disabled={loading || !backendAvailable}
-                                        className="px-4"
-                                    >
-                                        {loading ? (
-                                            <>
-                                                <FaSpinner className="me-2 spin" />
-                                                {isEditMode ? 'Updating...' : 'Saving...'}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <FaSave className="me-2" />
-                                                {isEditMode ? 'Update Post' : backendAvailable ? 'Save & Publish' : 'Server Offline'}
-                                            </>
-                                        )}
-                                    </Button>
-                                </div>
-                            </Form>
-                        </Card.Body>
-                    </Card>
-                </Col>
+                                {/* Content */}
+                                <Form.Group className="mb-4">
+                                    <div className="d-flex justify-content-between align-items-center mb-2">
+                                        <Form.Label className="fw-bold">
+                                            Content <span className="text-danger">*</span>
+                                        </Form.Label>
+                                        <Badge bg="info">
+                                            {charCount} characters
+                                        </Badge>
+                                    </div>
+                                    <Form.Control
+                                        as="textarea"
+                                        name="content"
+                                        value={formData.content}
+                                        onChange={handleChange}
+                                        placeholder="Write your blog post content here..."
+                                        rows={12}
+                                        required
+                                    />
+                                </Form.Group>
+                            </Card.Body>
+                        </Card>
+                    </Col>
 
-                {/* Sidebar */}
-                <Col lg={4}>
-                    <Card className="shadow-sm border-0 mb-3">
-                        <Card.Header className={`${backendAvailable ? 'bg-light' : 'bg-warning'}`}>
-                            <h5 className="mb-0">
-                                {backendAvailable ? 'Server Status: ✅ Online' : 'Server Status: ⚠️ Offline'}
-                            </h5>
-                        </Card.Header>
-                        <Card.Body>
-                            {backendAvailable ? (
-                                <div>
-                                    <p className="mb-2"><strong>Your setup:</strong></p>
-                                    <ul className="list-unstyled">
-                                        <li>✅ Frontend: Netlify</li>
-                                        <li>✅ Backend: Render</li>
-                                        <li>✅ API: Connected</li>
-                                    </ul>
-                                    <p className="mt-3 mb-0 small text-muted">
-                                        Posts will be saved to your Render backend database.
-                                    </p>
-                                </div>
-                            ) : (
-                                <div>
-                                    <p><strong>Render Backend Issues:</strong></p>
-                                    <ul className="small">
-                                        <li>Free tier sleeps after inactivity</li>
-                                        <li>First request may take 30-60 seconds</li>
-                                        <li>Check your Render dashboard</li>
-                                        <li>Verify environment variables</li>
-                                    </ul>
-                                    <Button 
-                                        variant="outline-warning" 
-                                        size="sm" 
-                                        className="w-100 mt-2"
-                                        onClick={checkBackendConnection}
-                                    >
-                                        Retry Connection
-                                    </Button>
-                                </div>
-                            )}
-                        </Card.Body>
-                    </Card>
+                    <Col lg={4}>
+                        {/* Image Upload */}
+                        <Card className="shadow-sm border-0 mb-4">
+                            <Card.Body>
+                                <Card.Title className="mb-3">
+                                    <FaImage className="me-2" />
+                                    Featured Image (Optional)
+                                </Card.Title>
+                                
+                                <Form.Group>
+                                    <Form.Label>Upload Image</Form.Label>
+                                    <Form.Control
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                    />
+                                    <Form.Text className="text-muted">
+                                        JPG, PNG, or GIF. Max 5MB.
+                                    </Form.Text>
+                                </Form.Group>
+                            </Card.Body>
+                        </Card>
 
-                    <Card className="shadow-sm border-0">
-                        <Card.Header className="bg-light">
-                            <h5 className="mb-0">Quick Tips</h5>
-                        </Card.Header>
-                        <Card.Body>
-                            <ul className="list-unstyled mb-0 small">
-                                <li className="mb-2">• Use clear, descriptive titles</li>
-                                <li className="mb-2">• Add images to make posts engaging</li>
-                                <li className="mb-2">• Use Markdown for formatting</li>
-                                <li className="mb-2">• Save as draft to review later</li>
-                                <li>• Publish when ready for readers</li>
-                            </ul>
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
+                        {/* Tips Card */}
+                        <Card className="shadow-sm border-0 mb-4">
+                            <Card.Body>
+                                <Card.Title className="mb-3">
+                                    Quick Tips
+                                </Card.Title>
+                                <ul className="list-unstyled mb-0 small">
+                                    <li className="mb-2">• Use clear, descriptive titles</li>
+                                    <li className="mb-2">• Add images to make posts engaging</li>
+                                    <li className="mb-2">• Save as draft to review later</li>
+                                    <li className="mb-2">• Publish when ready for readers</li>
+                                    <li>• Use categories to organize content</li>
+                                </ul>
+                            </Card.Body>
+                        </Card>
+
+                        {/* Save Button */}
+                        <div className="mt-4">
+                            <Button
+                                type="submit"
+                                variant="primary"
+                                size="lg"
+                                className="w-100 py-3"
+                                disabled={saving}
+                            >
+                                {saving ? (
+                                    <>
+                                        <Spinner animation="border" size="sm" className="me-2" />
+                                        {mode === 'create' ? 'Creating...' : 'Updating...'}
+                                    </>
+                                ) : (
+                                    <>
+                                        <FaSave className="me-2" />
+                                        {mode === 'create' ? 'Create Post' : 'Update Post'}
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </Col>
+                </Row>
+            </Form>
         </Container>
     );
 };

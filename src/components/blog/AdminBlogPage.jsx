@@ -64,14 +64,8 @@ const AdminBlogPage = ({ navigateTo }) => {
     };
 
     // Fetch posts with filtering and pagination
-    const fetchPosts = useCallback(async () => {
-        console.log('🔄 Starting fetchPosts...', {
-            currentPage,
-            searchTerm,
-            statusFilter,
-            sortBy,
-            sortOrder
-        });
+    const fetchPosts = useCallback(async (retryCount = 0) => {
+        console.log('🔄 Fetching posts...', { page: currentPage, retry: retryCount });
         
         setLoading(true);
         setError(null);
@@ -84,23 +78,21 @@ const AdminBlogPage = ({ navigateTo }) => {
                 isPublished: statusFilter === 'all' ? undefined : statusFilter === 'published'
             };
 
-            console.log('📤 Making API call with params:', params);
+            // Use longer timeout for retries
+            const timeout = 120000; // 120 seconds
             
             const response = await blogApi.get('/admin/blog/posts', { 
                 params,
-                timeout: 30000 // Increased to 30 seconds
+                timeout
             });
             
-            console.log('📥 API Response received:', {
-                status: response.status,
-                success: response.data.success,
+            console.log('📥 Posts received:', {
                 count: response.data.count,
-                postsCount: response.data.posts?.length || 0
+                posts: response.data.posts?.length || 0
             });
             
             if (response.data.success) {
                 let filteredPosts = response.data.posts || [];
-                console.log(`📊 Processing ${filteredPosts.length} posts`);
                 
                 // Apply client-side sorting
                 filteredPosts.sort((a, b) => {
@@ -131,135 +123,92 @@ const AdminBlogPage = ({ navigateTo }) => {
                 };
                 
                 setCounts(totalCounts);
-                console.log('📈 Counts calculated:', totalCounts);
 
                 // Calculate total pages
                 const totalPosts = response.data.count || filteredPosts.length;
                 const calculatedPages = Math.ceil(totalPosts / postsPerPage);
                 setTotalPages(calculatedPages);
                 
-                console.log('✅ Fetch successful:', {
-                    postsLoaded: filteredPosts.length,
-                    totalPosts: totalPosts,
-                    totalPages: calculatedPages
-                });
-                
             } else {
-                const errorMsg = 'Failed to fetch blog posts: ' + (response.data.message || 'Unknown error');
-                console.error('❌ API returned failure:', errorMsg);
-                setError(errorMsg);
+                setError('Failed to fetch blog posts');
             }
         } catch (err) {
-            console.error('📛 FETCH ERROR DETAILS:', {
-                message: err.message,
-                code: err.code,
-                status: err.response?.status,
-                statusText: err.response?.statusText,
-                data: err.response?.data,
-                url: err.config?.url,
-                baseURL: err.config?.baseURL,
-                fullURL: err.config?.baseURL + err.config?.url,
-                timeout: err.config?.timeout,
-                isTimeout: err.code === 'ECONNABORTED' || err.message?.includes('timeout'),
-                is404: err.response?.status === 404,
-                isNetwork: !err.response && err.request
-            });
+            console.error('📛 Fetch error:', err.message);
+            
+            // If timeout and we haven't retried 3 times, retry with delay
+            if ((err.code === 'ECONNABORTED' || err.message?.includes('timeout')) && retryCount < 3) {
+                console.log(`⏳ Retry ${retryCount + 1}/3 in 10 seconds...`);
+                
+                // Wait 10 seconds then retry
+                await new Promise(resolve => setTimeout(resolve, 10000));
+                return fetchPosts(retryCount + 1);
+            }
             
             if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-                setError('Request timeout. The server is taking too long to respond. Please try again. (Render cold start)');
+                setError('Server is starting up. Please wait a moment and refresh.');
             } else if (err.response?.status === 404) {
-                setError(`API endpoint not found. Please check if the backend server is running. URL: ${err.config?.baseURL}${err.config?.url}`);
-            } else if (!navigator.onLine) {
-                setError('No internet connection. Please check your network.');
+                setError('API endpoint not found.');
             } else {
-                setError(`Could not connect to the server: ${err.message || 'Unknown error'}`);
+                setError('Could not connect to the server');
             }
         } finally {
             setLoading(false);
-            console.log('🏁 Fetch completed, loading set to false');
         }
     }, [currentPage, searchTerm, statusFilter, sortBy, sortOrder]);
 
     // Fetch statistics
     const fetchStats = async () => {
-        console.log('📊 Starting fetchStats...');
         setStatsLoading(true);
         try {
-            console.log('📤 Making stats API call...');
             const response = await blogApi.get('/admin/blog/posts', {
-                params: { limit: 100 }, // Get more posts for stats
-                timeout: 30000
-            });
-            
-            console.log('📥 Stats response:', {
-                success: response.data.success,
-                postsCount: response.data.posts?.length || 0
+                params: { limit: 100 },
+                timeout: 120000
             });
             
             if (response.data.success && response.data.posts) {
                 const allPosts = response.data.posts;
                 const published = allPosts.filter(p => p.isPublished).length;
                 const draft = allPosts.length - published;
-                const newCounts = {
+                setCounts({
                     total: allPosts.length,
                     published,
                     draft
-                };
-                
-                console.log('📈 New stats calculated:', newCounts);
-                setCounts(newCounts);
+                });
             }
         } catch (err) {
-            console.error('📛 Stats fetch error:', {
-                message: err.message,
-                status: err.response?.status,
-                url: err.config?.url
-            });
+            console.error('Stats fetch error:', err.message);
         } finally {
             setStatsLoading(false);
-            console.log('🏁 Stats fetch completed');
         }
     };
 
     useEffect(() => {
-        console.log('🎯 useEffect for fetchPosts triggered');
         fetchPosts();
     }, [fetchPosts]);
 
     useEffect(() => {
-        console.log('🎯 useEffect for fetchStats triggered');
         fetchStats();
     }, []);
 
     // Handle search with debounce
     useEffect(() => {
-        console.log('🔍 Search/Filter changed:', { searchTerm, statusFilter });
         const timer = setTimeout(() => {
             if (searchTerm !== '' || statusFilter !== 'all') {
-                console.log('🔄 Triggering search/filter fetch');
                 setCurrentPage(1);
                 fetchPosts();
             }
         }, 500);
 
-        return () => {
-            console.log('🧹 Clearing search timer');
-            clearTimeout(timer);
-        };
+        return () => clearTimeout(timer);
     }, [searchTerm, statusFilter]);
 
     // Handle page change
     const handlePageChange = (pageNumber) => {
-        console.log('📄 Page change:', { from: currentPage, to: pageNumber });
         setCurrentPage(pageNumber);
     };
 
     // Handle delete confirmation
     const confirmDelete = (post) => {
-        console.log('🗑️ Delete confirmation requested for post:', {
-            id: post._id,
-            title: post.title
-        });
         setPostToDelete(post);
         setShowDeleteModal(true);
     };
@@ -268,69 +217,37 @@ const AdminBlogPage = ({ navigateTo }) => {
     const handleDelete = async () => {
         if (!postToDelete) return;
 
-        console.log('🗑️ Executing delete for post:', {
-            id: postToDelete._id,
-            title: postToDelete.title
-        });
-
         setDeleteStatus('deleting');
         setShowDeleteModal(false);
         
         try {
-            console.log('📤 Sending delete request...');
             const response = await blogApi.delete(`/admin/blog/posts/${postToDelete._id}`, {
-                timeout: 30000
-            });
-            
-            console.log('📥 Delete response:', {
-                success: response.data.success,
-                message: response.data.message
+                timeout: 60000
             });
             
             if (response.data.success) {
-                console.log('✅ Delete successful');
                 setDeleteStatus('success');
                 // Refresh data
                 fetchPosts();
                 fetchStats();
-                setTimeout(() => {
-                    console.log('🧹 Clearing delete status');
-                    setDeleteStatus(null);
-                }, 3000);
+                setTimeout(() => setDeleteStatus(null), 3000);
             } else {
-                console.error('❌ Delete failed:', response.data.message);
                 setDeleteStatus('error');
-                setError('Failed to delete post: ' + (response.data.message || 'Unknown error'));
-                setTimeout(() => {
-                    console.log('🧹 Clearing delete error status');
-                    setDeleteStatus(null);
-                }, 5000);
+                setError('Failed to delete post');
+                setTimeout(() => setDeleteStatus(null), 5000);
             }
         } catch (err) {
-            console.error('📛 Delete error:', {
-                message: err.message,
-                status: err.response?.status,
-                data: err.response?.data
-            });
+            console.error('Delete error:', err);
             setDeleteStatus('error');
-            setError('Server error during deletion. Please try again.');
-            setTimeout(() => {
-                console.log('🧹 Clearing delete error status');
-                setDeleteStatus(null);
-            }, 5000);
+            setError('Server error during deletion');
+            setTimeout(() => setDeleteStatus(null), 5000);
         } finally {
-            console.log('🏁 Delete process completed');
             setPostToDelete(null);
         }
     };
 
     // Handle sort change
     const handleSort = (field) => {
-        console.log('🔀 Sort change:', {
-            from: { field: sortBy, order: sortOrder },
-            to: { field, order: sortBy === field ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'desc' }
-        });
-        
         if (sortBy === field) {
             setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
         } else {
@@ -341,7 +258,6 @@ const AdminBlogPage = ({ navigateTo }) => {
 
     // Handle refresh
     const handleRefresh = () => {
-        console.log('🔄 Manual refresh triggered');
         fetchPosts();
         fetchStats();
     };
@@ -642,7 +558,7 @@ const AdminBlogPage = ({ navigateTo }) => {
                     {loading ? (
                         <div className="text-center py-5">
                             <Spinner animation="border" variant="primary" />
-                            <p className="mt-2 text-muted">Loading posts...</p>
+                            <p className="mt-2 text-muted">Loading posts... Please wait (server waking up)</p>
                         </div>
                     ) : posts.length === 0 ? (
                         <div className="text-center py-5">

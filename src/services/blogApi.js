@@ -13,11 +13,15 @@ console.log('📚 Blog API Configuration:', {
 
 const blogApi = axios.create({
   baseURL: BLOG_API_URL,
-  timeout: 60000, // Increased to 60 seconds for Render cold starts
+  timeout: 120000, // 120 seconds (2 minutes) for Render cold starts
   headers: {
     'Content-Type': 'application/json'
   }
 });
+
+// Retry logic for failed requests
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 5000; // 5 seconds between retries
 
 // Request interceptor for blog API
 blogApi.interceptors.request.use(
@@ -27,50 +31,70 @@ blogApi.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
+    // Initialize retry count if not present
+    config._retryCount = config._retryCount || 0;
+    
     // 🔍 DEBUG: Log the full URL being called
     const fullUrl = config.baseURL + config.url;
-    console.log('🔗 Blog API Full URL:', fullUrl);
-    console.log(`📚 Blog API Request: ${config.method?.toUpperCase()} ${config.url}`, {
-      baseURL: config.baseURL,
+    console.log('🔗 Blog API Request:', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
       fullUrl: fullUrl,
       timeout: config.timeout,
+      retryCount: config._retryCount,
       hasAuth: !!token
     });
     
     return config;
   },
   (error) => {
-    console.error('❌ Blog API Request Error:', {
-      message: error.message,
-      config: error.config
-    });
+    console.error('❌ Blog API Request Error:', error.message);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor for blog API
+// Response interceptor with retry logic
 blogApi.interceptors.response.use(
   (response) => {
     console.log(`✅ Blog API Response: ${response.config.url}`, {
       status: response.status,
-      data: response.data,
-      fullUrl: response.config.baseURL + response.config.url
+      retryCount: response.config._retryCount || 0
     });
     return response;
   },
-  (error) => {
-    console.error('❌ Blog API Error Details:', {
-      message: error.message,
-      code: error.code,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If it's a timeout error and we haven't retried enough times
+    const isTimeoutError = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
+    
+    if (isTimeoutError && originalRequest && (!originalRequest._retryCount || originalRequest._retryCount < MAX_RETRIES)) {
+      originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
+      
+      // Calculate delay: 5s, 10s, 15s for retries
+      const delay = originalRequest._retryCount * RETRY_DELAY;
+      
+      console.log(`🔄 Retry ${originalRequest._retryCount}/${MAX_RETRIES} in ${delay/1000}s for:`, originalRequest.url);
+      
+      // Wait and retry
+      await new Promise(resolve => setTimeout(resolve, delay));
+      
+      // Increase timeout for retry
+      originalRequest.timeout = 150000; // 150 seconds for retry
+      
+      return blogApi(originalRequest);
+    }
+    
+    // Final error after all retries
+    console.error('❌ Blog API Final Error:', {
+      url: originalRequest?.url,
+      method: originalRequest?.method,
       status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      url: error.config?.url,
-      baseURL: error.config?.baseURL,
-      fullUrl: error.config?.baseURL + error.config?.url,
-      method: error.config?.method,
-      timeout: error.config?.timeout
+      message: error.message,
+      retries: originalRequest?._retryCount || 0,
+      maxRetries: MAX_RETRIES
     });
+    
     return Promise.reject(error);
   }
 );

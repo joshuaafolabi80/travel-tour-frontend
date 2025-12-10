@@ -2,11 +2,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     Container, Card, Form, Button, Row, Col,
-    Alert, Spinner, Modal
+    Alert, Spinner, Modal, ProgressBar
 } from 'react-bootstrap';
-import { FaPaperPlane, FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaStar, FaCheck } from 'react-icons/fa';
+import { FaPaperPlane, FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaStar, FaCheck, FaServer, FaCogs, FaPaperclip, FaRocket } from 'react-icons/fa';
 import blogApi from '../../services/blogApi';
-import axios from 'axios'; // Import axios directly as fallback
+import axios from 'axios';
 import '../../App.css';
 
 const ContactForm = ({ navigateTo }) => {
@@ -30,8 +30,15 @@ const ContactForm = ({ navigateTo }) => {
     const [submittedName, setSubmittedName] = useState('');
     const [submittedEmail, setSubmittedEmail] = useState('');
     
+    // Progress tracking states
+    const [progress, setProgress] = useState(0);
+    const [progressMessage, setProgressMessage] = useState('');
+    const [currentStage, setCurrentStage] = useState(0);
+    const [stageMessages, setStageMessages] = useState([]);
+    
     const timeoutRef = useRef(null);
     const submitControllerRef = useRef(null);
+    const progressIntervalRef = useRef(null);
 
     const interestsOptions = [
         'Travel Writing',
@@ -55,6 +62,46 @@ const ContactForm = ({ navigateTo }) => {
         'Other'
     ];
 
+    // Stages with their messages and icons
+    const stages = [
+        { 
+            id: 1, 
+            message: '🚀 Initializing submission...', 
+            icon: <FaRocket className="me-2" />,
+            progress: 10 
+        },
+        { 
+            id: 2, 
+            message: '⚡ Warming up server (may take 30-60s on first try)...', 
+            icon: <FaServer className="me-2" />,
+            progress: 30 
+        },
+        { 
+            id: 3, 
+            message: '🔄 Server responding...', 
+            icon: <FaCogs className="me-2" />,
+            progress: 50 
+        },
+        { 
+            id: 4, 
+            message: '📤 Sending form data to server...', 
+            icon: <FaPaperclip className="me-2" />,
+            progress: 70 
+        },
+        { 
+            id: 5, 
+            message: '📧 Sending email notification...', 
+            icon: <FaPaperPlane className="me-2" />,
+            progress: 90 
+        },
+        { 
+            id: 6, 
+            message: '✅ Finalizing submission...', 
+            icon: <FaCheck className="me-2" />,
+            progress: 100 
+        }
+    ];
+
     // Cleanup function
     const cleanupRequests = () => {
         if (submitControllerRef.current) {
@@ -65,6 +112,10 @@ const ContactForm = ({ navigateTo }) => {
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
         }
+        if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+            progressIntervalRef.current = null;
+        }
     };
 
     useEffect(() => {
@@ -72,6 +123,33 @@ const ContactForm = ({ navigateTo }) => {
             cleanupRequests();
         };
     }, []);
+
+    const updateProgress = (stageIndex, customMessage = '') => {
+        setCurrentStage(stageIndex);
+        setProgress(stages[stageIndex].progress);
+        setProgressMessage(customMessage || stages[stageIndex].message);
+        
+        // Add to stage history
+        setStageMessages(prev => [
+            ...prev,
+            {
+                stage: stageIndex + 1,
+                message: customMessage || stages[stageIndex].message,
+                time: new Date().toLocaleTimeString(),
+                progress: stages[stageIndex].progress
+            }
+        ]);
+    };
+
+    const simulateProgress = () => {
+        let currentProgress = 0;
+        progressIntervalRef.current = setInterval(() => {
+            if (currentProgress < 95) { // Stop at 95%, let actual completion finish
+                currentProgress += Math.random() * 3 + 1; // 1-4% increment
+                setProgress(Math.min(currentProgress, 95));
+            }
+        }, 500);
+    };
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -119,6 +197,10 @@ const ContactForm = ({ navigateTo }) => {
             return;
         }
         
+        // Reset progress
+        setProgress(0);
+        setCurrentStage(0);
+        setStageMessages([]);
         setLoading(true);
         setError('');
         
@@ -142,29 +224,61 @@ const ContactForm = ({ navigateTo }) => {
         submitControllerRef.current = new AbortController();
         
         try {
-            console.log('🚀 Submitting form...');
-            
             // Save submitted data for success modal
             setSubmittedName(formData.firstName);
             setSubmittedEmail(formData.email);
             
-            // ⚡ FIRST: Try to warm up the server with a quick health check
+            // Start progress simulation
+            simulateProgress();
+            
+            // STAGE 1: Initializing
+            updateProgress(0, '🚀 Preparing your submission...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // STAGE 2: Warming up server
+            updateProgress(1, '⚡ Warming up Render.com server (this may take 30-60 seconds on first try)...');
+            
             try {
-                console.log('⚡ Warming up server...');
-                await axios.get('https://travel-tour-blog-server.onrender.com/health', {
-                    timeout: 10000 // 10 seconds for warm-up
+                const warmupStart = Date.now();
+                const warmupResponse = await axios.get('https://travel-tour-blog-server.onrender.com/health', {
+                    timeout: 45000, // 45 seconds for warm-up
+                    signal: submitControllerRef.current.signal
                 });
-                console.log('✅ Server warmed up');
+                const warmupTime = Date.now() - warmupStart;
+                updateProgress(1, `✅ Server warmed up in ${(warmupTime/1000).toFixed(1)} seconds`);
             } catch (warmupError) {
-                console.log('⚠️ Server warm-up failed (expected for Render.com)');
-                // Continue anyway - server might be waking up
+                if (warmupError.code === 'ECONNABORTED') {
+                    updateProgress(1, '⚠️ Server is taking longer to start (Render.com cold start)...');
+                } else {
+                    updateProgress(1, '⚠️ Server warm-up in progress...');
+                }
+                // Continue anyway
             }
             
-            // ⚡ NOW submit the form with 3 minute timeout
+            // STAGE 3: Server responding
+            updateProgress(2, '🔄 Connecting to blog server...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // STAGE 4: Submitting form data
+            updateProgress(3, '📤 Sending your form data to server...');
+            
             const response = await blogApi.post('/contact/submit', formData, {
-                timeout: 180000, // 180 seconds (3 minutes)
+                timeout: 120000, // 120 seconds (2 minutes)
                 signal: submitControllerRef.current.signal
             });
+            
+            // STAGE 5: Processing
+            updateProgress(4, '📧 Sending email notifications...');
+            
+            if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+            }
+            setProgress(100);
+            
+            // STAGE 6: Success
+            updateProgress(5, '✅ Submission completed successfully!');
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
             console.log('✅ Server response:', response.data);
             
@@ -197,12 +311,16 @@ const ContactForm = ({ navigateTo }) => {
         } catch (err) {
             console.error('❌ Submission error:', err);
             
+            if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+            }
+            
             let errorMessage = '';
             
             if (err.code === 'ECONNABORTED') {
-                errorMessage = 'Request timed out (3 minutes). Render.com server is cold starting. Please wait 60 seconds and try again.';
+                errorMessage = 'Request timed out (2 minutes). Render.com server is starting. Please wait 60 seconds and try again.';
             } else if (err.name === 'AbortError') {
-                errorMessage = 'Request was cancelled.';
+                errorMessage = 'Submission was cancelled.';
             } else if (err.response?.status === 500) {
                 errorMessage = 'Server error. Please try again later.';
             } else if (err.response?.data?.message) {
@@ -219,6 +337,10 @@ const ContactForm = ({ navigateTo }) => {
         } finally {
             setLoading(false);
             submitControllerRef.current = null;
+            if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+                progressIntervalRef.current = null;
+            }
         }
     };
 
@@ -322,6 +444,52 @@ const ContactForm = ({ navigateTo }) => {
             background: #0056b3;
         }
         
+        .progress-container {
+            margin: 25px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .progress-message {
+            font-size: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            color: #495057;
+        }
+        
+        .stage-history {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .stage-item {
+            padding: 8px 12px;
+            border-left: 3px solid #007bff;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .stage-item.completed {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+        
+        .stage-time {
+            font-size: 12px;
+            color: #6c757d;
+            margin-left: 10px;
+        }
+        
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -331,6 +499,10 @@ const ContactForm = ({ navigateTo }) => {
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+        
+        .progress-bar-animated {
+            transition: width 0.5s ease-in-out;
         }
     `;
 
@@ -407,6 +579,51 @@ const ContactForm = ({ navigateTo }) => {
                                     <Alert variant="danger" dismissible onClose={() => setError('')}>
                                         <strong>Error:</strong> {error}
                                     </Alert>
+                                )}
+                                
+                                {/* Progress Section - Only show when loading */}
+                                {loading && (
+                                    <div className="progress-container mb-4">
+                                        <h5 className="mb-3 text-primary">
+                                            <FaCogs className="me-2" />
+                                            Submission Progress
+                                        </h5>
+                                        
+                                        <div className="progress-message">
+                                            {stages[currentStage]?.icon}
+                                            {progressMessage}
+                                        </div>
+                                        
+                                        <ProgressBar 
+                                            now={progress} 
+                                            label={`${Math.round(progress)}%`}
+                                            animated 
+                                            striped 
+                                            className="mb-3"
+                                        />
+                                        
+                                        <div className="d-flex justify-content-between small text-muted mb-3">
+                                            <span>Stage {currentStage + 1} of {stages.length}</span>
+                                            <span>{Math.round(progress)}% Complete</span>
+                                        </div>
+                                        
+                                        {stageMessages.length > 0 && (
+                                            <div className="stage-history">
+                                                <small className="text-muted d-block mb-2">Progress History:</small>
+                                                {stageMessages.map((stage, index) => (
+                                                    <div key={index} className={`stage-item ${index < stageMessages.length - 1 ? 'completed' : ''}`}>
+                                                        {stage.message}
+                                                        <span className="stage-time">{stage.time}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        
+                                        <Alert variant="info" className="mt-3 small">
+                                            <strong>Note:</strong> First submission may take 60+ seconds as Render.com server starts up.
+                                            Please don't close or refresh this page.
+                                        </Alert>
+                                    </div>
                                 )}
                                 
                                 <Form onSubmit={handleSubmit}>
@@ -606,7 +823,7 @@ const ContactForm = ({ navigateTo }) => {
                                                             size="sm"
                                                             className="me-2"
                                                         />
-                                                        Submitting...
+                                                        Submitting ({Math.round(progress)}%)...
                                                     </>
                                                 ) : (
                                                     <>
@@ -624,6 +841,7 @@ const ContactForm = ({ navigateTo }) => {
                                 <div className="text-center text-muted small">
                                     <p className="mb-1">
                                         <strong>Note:</strong> Your information will be sent to joshuaafolabi80@gmail.com
+                                        and a confirmation email will be sent to you.
                                     </p>
                                     <p className="mb-0">
                                         Expected response time: 3-5 business days

@@ -4,17 +4,17 @@ import axios from 'axios';
 // Get blog API URL from environment variable or use default
 const BLOG_API_URL = import.meta.env.VITE_BLOG_API_URL || 'https://travel-tour-blog-server.onrender.com/api';
 
-console.log(`🚀 Blog API - CLEAN VERSION LOADED`);
+console.log(`🚀 Blog API - RENDER.COM EDITION`);
 
 const blogApi = axios.create({
   baseURL: BLOG_API_URL,
-  timeout: 60000, // 60 seconds
+  timeout: 180000, // ⚡ INCREASED TO 180 SECONDS (3 minutes) for Render.com
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// SIMPLE request interceptor
+// Request interceptor
 blogApi.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
@@ -32,7 +32,7 @@ blogApi.interceptors.request.use(
   }
 );
 
-// SIMPLE response interceptor
+// Response interceptor
 blogApi.interceptors.response.use(
   (response) => {
     console.log('✅ API Success:', {

@@ -142,15 +142,27 @@ const ContactForm = ({ navigateTo }) => {
         submitControllerRef.current = new AbortController();
         
         try {
-            console.log('🚀 Submitting form via blogApi...');
+            console.log('🚀 Submitting form...');
             
             // Save submitted data for success modal
             setSubmittedName(formData.firstName);
             setSubmittedEmail(formData.email);
             
-            // Use blogApi (now clean, no retry logic)
+            // ⚡ FIRST: Try to warm up the server with a quick health check
+            try {
+                console.log('⚡ Warming up server...');
+                await axios.get('https://travel-tour-blog-server.onrender.com/health', {
+                    timeout: 10000 // 10 seconds for warm-up
+                });
+                console.log('✅ Server warmed up');
+            } catch (warmupError) {
+                console.log('⚠️ Server warm-up failed (expected for Render.com)');
+                // Continue anyway - server might be waking up
+            }
+            
+            // ⚡ NOW submit the form with 3 minute timeout
             const response = await blogApi.post('/contact/submit', formData, {
-                timeout: 60000, // 60 seconds
+                timeout: 180000, // 180 seconds (3 minutes)
                 signal: submitControllerRef.current.signal
             });
             
@@ -185,10 +197,10 @@ const ContactForm = ({ navigateTo }) => {
         } catch (err) {
             console.error('❌ Submission error:', err);
             
-            let errorMessage = 'Failed to submit. ';
+            let errorMessage = '';
             
             if (err.code === 'ECONNABORTED') {
-                errorMessage = 'Request timed out (60s). The server is slow. Please try again.';
+                errorMessage = 'Request timed out (3 minutes). Render.com server is cold starting. Please wait 60 seconds and try again.';
             } else if (err.name === 'AbortError') {
                 errorMessage = 'Request was cancelled.';
             } else if (err.response?.status === 500) {
@@ -197,6 +209,8 @@ const ContactForm = ({ navigateTo }) => {
                 errorMessage = err.response.data.message;
             } else if (err.message) {
                 errorMessage = err.message;
+            } else {
+                errorMessage = 'Failed to submit. Please try again.';
             }
             
             setError(errorMessage);

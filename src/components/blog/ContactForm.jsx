@@ -29,7 +29,6 @@ const ContactForm = ({ navigateTo }) => {
     
     // Refs for API cancellation
     const notificationControllerRef = useRef(null);
-    const formControllerRef = useRef(null);
     const timeoutRef = useRef(null);
 
     const interestsOptions = [
@@ -60,12 +59,6 @@ const ContactForm = ({ navigateTo }) => {
         if (notificationControllerRef.current) {
             notificationControllerRef.current.abort('Form submission in progress');
             notificationControllerRef.current = null;
-        }
-        
-        // Cancel form submission if in progress
-        if (formControllerRef.current) {
-            formControllerRef.current.abort();
-            formControllerRef.current = null;
         }
         
         // Clear any timeouts
@@ -154,28 +147,19 @@ const ContactForm = ({ navigateTo }) => {
         // 2. SET global flag to stop notification fetching
         window.isFormSubmitting = true;
         
-        // 3. Create AbortController for this form submission
-        formControllerRef.current = new AbortController();
-        const timeoutId = setTimeout(() => {
-            if (formControllerRef.current) {
-                formControllerRef.current.abort('Request timeout');
-            }
-        }, 120000);
-        
         try {
             // Prepare form data
             const submissionData = { ...formData };
             
-            // Send to backend API with cancellation support
+            // Send to backend API - NO AbortController for form submission
+            // Just use blogApi's built-in timeout and retry logic
             const response = await blogApi.post('/contact/submit', submissionData, {
-                timeout: 120000,
-                signal: formControllerRef.current.signal,
+                // Don't override timeout - let blogApi.js handle it (120000ms)
+                // Don't add signal - it conflicts with retry logic
                 headers: {
                     'Content-Type': 'application/json',
                 }
             });
-            
-            clearTimeout(timeoutId);
             
             if (response.data.success) {
                 // Show success modal
@@ -206,13 +190,13 @@ const ContactForm = ({ navigateTo }) => {
                 showNotificationDialog('error', errorMsg);
             }
         } catch (err) {
-            clearTimeout(timeoutId);
-            
             let errorMessage = 'Failed to submit form. Please try again.';
             
-            // Handle different error types
-            if (err.code === 'ECONNABORTED' || err.name === 'AbortError') {
-                errorMessage = 'Request timeout. Please check your connection and try again.';
+            // Handle specific error types
+            if (err.code === 'ERR_CANCELED' || err.message?.includes('canceled')) {
+                errorMessage = 'Submission was cancelled. Please try again without refreshing the page.';
+            } else if (err.code === 'ECONNABORTED') {
+                errorMessage = 'Request timed out. The server might be starting up. Please try again in a moment.';
             } else if (err.response?.status === 500) {
                 errorMessage = 'Server error. Please try again later.';
             } else if (err.message?.includes('network')) {
@@ -232,12 +216,7 @@ const ContactForm = ({ navigateTo }) => {
             timeoutRef.current = setTimeout(() => {
                 window.isFormSubmitting = false;
                 console.log('Notification fetching re-enabled');
-            }, 15000); // 15 seconds delay
-            
-            // Clean up controller
-            if (formControllerRef.current) {
-                formControllerRef.current = null;
-            }
+            }, 30000); // 30 seconds delay for Render.com
         }
     };
 

@@ -142,29 +142,19 @@ const ContactForm = ({ navigateTo }) => {
         submitControllerRef.current = new AbortController();
         
         try {
-            console.log('🚀 Submitting form...');
+            console.log('🚀 Submitting form via blogApi...');
             
             // Save submitted data for success modal
             setSubmittedName(formData.firstName);
             setSubmittedEmail(formData.email);
             
-            // OPTION 1: Try direct axios call first (bypasses any cached blogApi)
-            const response = await axios.post(
-                'https://travel-tour-blog-server.onrender.com/api/contact/submit',
-                formData,
-                {
-                    timeout: 45000, // 45 seconds max
-                    signal: submitControllerRef.current.signal,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': localStorage.getItem('authToken') 
-                            ? `Bearer ${localStorage.getItem('authToken')}` 
-                            : undefined
-                    }
-                }
-            );
+            // Use blogApi (now clean, no retry logic)
+            const response = await blogApi.post('/contact/submit', formData, {
+                timeout: 60000, // 60 seconds
+                signal: submitControllerRef.current.signal
+            });
             
-            console.log('✅ Direct axios response:', response.data);
+            console.log('✅ Server response:', response.data);
             
             if (response.data && response.data.success) {
                 // Show success
@@ -198,11 +188,13 @@ const ContactForm = ({ navigateTo }) => {
             let errorMessage = 'Failed to submit. ';
             
             if (err.code === 'ECONNABORTED') {
-                errorMessage = 'Request timed out (45s). The server is slow. Please try again.';
+                errorMessage = 'Request timed out (60s). The server is slow. Please try again.';
             } else if (err.name === 'AbortError') {
                 errorMessage = 'Request was cancelled.';
             } else if (err.response?.status === 500) {
                 errorMessage = 'Server error. Please try again later.';
+            } else if (err.response?.data?.message) {
+                errorMessage = err.response.data.message;
             } else if (err.message) {
                 errorMessage = err.message;
             }

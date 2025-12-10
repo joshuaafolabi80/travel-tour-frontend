@@ -4,20 +4,17 @@ import axios from 'axios';
 // Get blog API URL from environment variable or use default
 const BLOG_API_URL = import.meta.env.VITE_BLOG_API_URL || 'https://travel-tour-blog-server.onrender.com/api';
 
-// Cache busting version
-const API_VERSION = 'no-retry-v2-' + Date.now();
-console.log(`🚀 Blog API ${API_VERSION} - NO RETRY VERSION LOADED`);
+console.log(`🚀 Blog API - CLEAN VERSION LOADED`);
 
 const blogApi = axios.create({
   baseURL: BLOG_API_URL,
-  timeout: 60000, // 60 seconds - shorter timeout
+  timeout: 60000, // 60 seconds
   headers: {
-    'Content-Type': 'application/json',
-    'X-Cache-Bust': API_VERSION
+    'Content-Type': 'application/json'
   }
 });
 
-// SIMPLE request interceptor - NO RETRY LOGIC
+// SIMPLE request interceptor
 blogApi.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
@@ -25,7 +22,7 @@ blogApi.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    console.log('📤 API Request (NO RETRY):', {
+    console.log('📤 API Request:', {
       url: config.url,
       method: config.method,
       timeout: config.timeout
@@ -35,7 +32,7 @@ blogApi.interceptors.request.use(
   }
 );
 
-// SIMPLE response interceptor - NO RETRY LOGIC
+// SIMPLE response interceptor
 blogApi.interceptors.response.use(
   (response) => {
     console.log('✅ API Success:', {
@@ -45,7 +42,7 @@ blogApi.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.log('❌ API Error (No Retry):', {
+    console.log('❌ API Error:', {
       url: error.config?.url,
       message: error.message,
       code: error.code

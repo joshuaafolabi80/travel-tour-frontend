@@ -16,7 +16,7 @@ const UserBlogPage = ({ navigateTo }) => {
     const [totalPosts, setTotalPosts] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
-    const [categories, setCategories] = useState(['Travels', 'Tours', 'Hotels', 'Tourism']); // Hardcoded categories
+    const [categories, setCategories] = useState(['Travels', 'Tours', 'Hotels', 'Tourism']);
     
     const postsPerPage = 9;
 
@@ -112,7 +112,7 @@ const UserBlogPage = ({ navigateTo }) => {
 
     // Effect for fetching posts based on filters/page change
     useEffect(() => {
-        fetchPosts(1); // Reset to page 1 on filter/search change
+        fetchPosts(1);
     }, [searchTerm, selectedCategory]);
 
     useEffect(() => {
@@ -418,7 +418,11 @@ const UserBlogPage = ({ navigateTo }) => {
                             <p className="text-muted mb-4">
                                 Share your travel experiences and tourism insights with our community.
                             </p>
-                            <Button variant="outline-primary" size="lg">
+                            <Button 
+                                variant="outline-primary" 
+                                size="lg"
+                                onClick={() => navigateTo('write-for-us')}
+                            >
                                 <i className="fas fa-pen-fancy me-2"></i> Write for Us
                             </Button>
                         </Card.Body>

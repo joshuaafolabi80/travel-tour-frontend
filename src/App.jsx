@@ -1,5 +1,4 @@
-// travel-tour-frontend/src/App.jsx - FINAL VERSION (Router-Free)
-
+// travel-tour-frontend/src/App.jsx - UPDATED
 import React, { useState, useEffect } from 'react';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { jwtDecode } from 'jwt-decode';
@@ -45,16 +44,18 @@ import HotelSearchHome from './components/hotel-search/HomePage';
 import HotelSearchResults from './components/hotel-search/SearchResultsPage';
 import HotelDetailPage from './components/hotel-search/HotelDetailPage';
 
-// 📝 NEW BLOG COMPONENTS (MongoDB/Admin-Driven)
-import AdminBlogPage from './components/blog/AdminBlogPage';             // Replaces AdminBlogManagement (Dashboard & Archive)
-import AdminCreateEditBlog from './components/blog/AdminCreateEditBlog'; // Replaces AdminCreatePost (Create & Edit)
-import UserBlogPage from './components/blog/UserBlogPage';               // Replaces BlogListPage (User View/Landing)
-import SingleBlogDetail from './components/blog/SingleBlogDetail';       // Replaces BlogDetailPage (The actual detail page)
+// 📝 BLOG COMPONENTS
+import AdminBlogPage from './components/blog/AdminBlogPage';
+import AdminCreateEditBlog from './components/blog/AdminCreateEditBlog';
+import UserBlogPage from './components/blog/UserBlogPage';
+import SingleBlogDetail from './components/blog/SingleBlogDetail';
+
+// 📝 NEW: Import ContactForm
+import ContactForm from './components/blog/ContactForm';
 
 import './App.css';
 
-// Reusable Slider Component for both Splash Screen and Home Page
-// (Keep HeroSlider as defined in your original code)
+// Reusable Slider Component
 export const HeroSlider = ({ images, texts, staticTitle, onLastSlide, onNextClick, isHomepage = false }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -140,17 +141,13 @@ const App = () => {
     const [showSplash, setShowSplash] = useState(true);
     const [showMenu, setShowMenu] = useState(false);
     const [currentPage, setCurrentPage] = useState('home');
-    
-    // 📝 UPDATED: Using blogPostId for all blog detail navigation
     const [blogPostId, setBlogPostId] = useState(null); 
-    
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userRole, setUserRole] = useState('');
     const [userData, setUserData] = useState(null);
     const [authToken, setAuthToken] = useState(null);
     const [alert, setAlert] = useState({ type: '', message: '' });
     const [selectedCourse, setSelectedCourse] = useState(null);
-    
     const [hotelSearchCriteria, setHotelSearchCriteria] = useState({});
     const [currentHotelDetail, setCurrentHotelDetail] = useState(null);
     
@@ -169,6 +166,8 @@ const App = () => {
         generalVideos: 0,
         masterclassVideos: 0
     });
+
+    // ... [All your existing functions remain the same - validateToken, fetchNotificationCounts, etc.]
 
     const validateToken = (token) => {
         try {
@@ -501,7 +500,6 @@ const App = () => {
         setShowMenu(!showMenu);
     };
 
-    // 📝 ENHANCED navigateTo function for Blog Pages (Admin/User View)
     const navigateTo = (page, data = null) => {
         console.log('📍 Navigating to:', page, data);
         
@@ -509,12 +507,10 @@ const App = () => {
             setCurrentHotelDetail(data); 
             setBlogPostId(null); 
         } 
-        // Blog detail page: used by Admin (View) and User (Click Card/Read More)
         else if (page === 'blog-detail' && data?.postId) {
             setBlogPostId(data.postId); 
             setCurrentHotelDetail(null); 
         }
-        // Admin Edit page: used by Admin (Edit button)
         else if (page === 'admin-edit-post' && data?.postId) {
             setBlogPostId(data.postId); 
             setCurrentHotelDetail(null); 
@@ -548,7 +544,6 @@ const App = () => {
     const userMenuItems = [
         { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
         { name: "Hotels", icon: "fas fa-hotel", action: () => navigateTo('hotel-search') },
-        // 📝 UPDATED: Navigates to the new UserBlogPage (Landing Page #1 & #3)
         { name: "Blog", icon: "fas fa-newspaper", action: () => navigateTo('blog-list-page') }, 
         { 
             name: "Quiz and Score", icon: "fa-solid fa-chart-line",
@@ -594,7 +589,6 @@ const App = () => {
     const adminMenuItems = [
         { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
         { name: "Hotels", icon: "fas fa-hotel", action: () => navigateTo('hotel-search') },
-        // 📝 UPDATED: Navigates to the new AdminBlogPage (Dashboard #1)
         { name: "Blog Management", icon: "fas fa-newspaper", action: () => navigateTo('admin-blog-dashboard') }, 
         { name: "Registered Students", icon: "fa-solid fa-user-graduate", action: () => navigateTo('admin-students') },
         { name: "Message your Students", icon: "fa-solid fa-comments", action: () => navigateTo('admin-message-students') },
@@ -682,7 +676,6 @@ const App = () => {
                                 </div>
                             </div>
                             <div className="col-4">
-                                {/* 📝 UPDATED: Blog Link in Home Grid */}
                                 <div className="nav-grid-item" onClick={() => navigateTo('blog-list-page')}>
                                     <i className="fas fa-newspaper nav-icon"></i>
                                     <span className="nav-text">Blog</span>
@@ -751,7 +744,6 @@ const App = () => {
                 </div>
             ) : isLoggedIn ? (
                 <div className="main-app-content">
-                    {/* FIXED HEADER WITH MULTI-ROW NAVIGATION */}
                     <header className="app-header">
                         <div className="header-logo-container">
                             <img 
@@ -838,30 +830,27 @@ const App = () => {
                         
                         {currentPage === 'quiz-scores' && <QuizScores />}
                         
-                        {/* 📝 NEW BLOG PAGES INTEGRATION */}
-                        {/* User Blog Landing Page (Replaces BlogListPage) */}
+                        {/* 📝 BLOG PAGES */}
                         {currentPage === 'blog-list-page' && <UserBlogPage navigateTo={navigateTo} />}
                         
-                        {/* Single Blog Detail Page (Replaces BlogDetailPage) */}
                         {currentPage === 'blog-detail' && blogPostId && (
                             <SingleBlogDetail 
-                                postId={blogPostId} // This is the MongoDB ID
-                                navigate={navigateTo} // Note: Passed as 'navigate' or 'navigateTo'
+                                postId={blogPostId}
+                                navigate={navigateTo}
                             />
                         )}
 
-                        {/* Admin Blog Dashboard (Replaces AdminBlogManagement) - #1 */}
                         {currentPage === 'admin-blog-dashboard' && <AdminBlogPage navigateTo={navigateTo} />}
                         
-                        {/* Admin Create Post (Part of #1 & #2) */}
                         {currentPage === 'admin-create-post' && <AdminCreateEditBlog mode="create" navigateTo={navigateTo} />}
                         
-                        {/* Admin Edit Post (Edit functionality for #1) */}
                         {currentPage === 'admin-edit-post' && blogPostId && (
                             <AdminCreateEditBlog mode="edit" postId={blogPostId} navigateTo={navigateTo} />
                         )}
 
-                        
+                        {/* 📝 NEW: Write for Us Contact Form */}
+                        {currentPage === 'write-for-us' && <ContactForm navigateTo={navigateTo} />}
+
                         {/* User Pages */}
                         {currentPage === 'general-courses' && <GeneralCourses navigateTo={navigateTo} />}
                         {currentPage === 'masterclass-courses' && <MasterclassCourses navigateTo={navigateTo} />}
@@ -882,12 +871,12 @@ const App = () => {
                         {currentPage === 'admin-manage-courses' && <AdminManageCourses />}
                         {currentPage === 'admin-video-courses' && <AdminVideoCourses navigateTo={navigateTo} />}
 
-                        {/* Community Pages with Google Meet */}
+                        {/* Community Pages */}
                         {currentPage === 'community' && userRole === 'admin' && <AdminCommunityTab />}
                         {currentPage === 'community' && userRole !== 'admin' && <UserCommunityTab />}
                         {currentPage === 'admin-community' && <AdminCommunityTab />}
                         
-                        {/* Hotel Search Pages (State-Based Routing) */}
+                        {/* Hotel Search Pages */}
                         {currentPage === 'hotel-search' && (
                             <HotelSearchHome onSearch={handleHotelSearch} />
                         )}

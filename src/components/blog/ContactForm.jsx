@@ -4,8 +4,9 @@ import {
     Container, Card, Form, Button, Row, Col,
     Alert, Spinner, Modal
 } from 'react-bootstrap';
-import { FaPaperPlane, FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaStar, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaPaperPlane, FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaStar, FaCheck } from 'react-icons/fa';
 import blogApi from '../../services/blogApi';
+import axios from 'axios'; // Import axios directly as fallback
 import '../../App.css';
 
 const ContactForm = ({ navigateTo }) => {
@@ -26,10 +27,11 @@ const ContactForm = ({ navigateTo }) => {
     const [error, setError] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [notification, setNotification] = useState({ show: false, type: '', message: '' });
+    const [submittedName, setSubmittedName] = useState('');
+    const [submittedEmail, setSubmittedEmail] = useState('');
     
-    // Refs for API cancellation
-    const notificationControllerRef = useRef(null);
     const timeoutRef = useRef(null);
+    const submitControllerRef = useRef(null);
 
     const interestsOptions = [
         'Travel Writing',
@@ -55,26 +57,16 @@ const ContactForm = ({ navigateTo }) => {
 
     // Cleanup function
     const cleanupRequests = () => {
-        // Cancel any pending notification API request
-        if (notificationControllerRef.current) {
-            notificationControllerRef.current.abort('Form submission in progress');
-            notificationControllerRef.current = null;
+        if (submitControllerRef.current) {
+            submitControllerRef.current.abort();
+            submitControllerRef.current = null;
         }
-        
-        // Clear any timeouts
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
         }
-        
-        // Clear any notification fetching intervals
-        if (window.notificationTimer) {
-            clearInterval(window.notificationTimer);
-            window.notificationTimer = null;
-        }
     };
 
-    // Cleanup on component unmount
     useEffect(() => {
         return () => {
             cleanupRequests();
@@ -113,7 +105,6 @@ const ContactForm = ({ navigateTo }) => {
             message
         });
         
-        // Auto-hide success notifications after 5 seconds
         if (type === 'success') {
             timeoutRef.current = setTimeout(() => {
                 setNotification({ show: false, type: '', message: '' });
@@ -123,6 +114,11 @@ const ContactForm = ({ navigateTo }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (loading) {
+            return;
+        }
+        
         setLoading(true);
         setError('');
         
@@ -133,7 +129,6 @@ const ContactForm = ({ navigateTo }) => {
             return;
         }
         
-        // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
             setError('Please enter a valid email address');
@@ -141,35 +136,44 @@ const ContactForm = ({ navigateTo }) => {
             return;
         }
         
-        // 1. CANCEL any ongoing notification API calls
         cleanupRequests();
         
-        // 2. SET global flag to stop notification fetching
-        window.isFormSubmitting = true;
+        // Create abort controller
+        submitControllerRef.current = new AbortController();
         
         try {
-            // Prepare form data
-            const submissionData = { ...formData };
+            console.log('🚀 Submitting form...');
             
-            // Send to backend API - NO AbortController for form submission
-            // Just use blogApi's built-in timeout and retry logic
-            const response = await blogApi.post('/contact/submit', submissionData, {
-                // Don't override timeout - let blogApi.js handle it (120000ms)
-                // Don't add signal - it conflicts with retry logic
-                headers: {
-                    'Content-Type': 'application/json',
+            // Save submitted data for success modal
+            setSubmittedName(formData.firstName);
+            setSubmittedEmail(formData.email);
+            
+            // OPTION 1: Try direct axios call first (bypasses any cached blogApi)
+            const response = await axios.post(
+                'https://travel-tour-blog-server.onrender.com/api/contact/submit',
+                formData,
+                {
+                    timeout: 45000, // 45 seconds max
+                    signal: submitControllerRef.current.signal,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': localStorage.getItem('authToken') 
+                            ? `Bearer ${localStorage.getItem('authToken')}` 
+                            : undefined
+                    }
                 }
-            });
+            );
             
-            if (response.data.success) {
-                // Show success modal
+            console.log('✅ Direct axios response:', response.data);
+            
+            if (response.data && response.data.success) {
+                // Show success
                 setSuccess(true);
                 setShowModal(true);
                 
-                // Also show notification dialog
                 showNotificationDialog(
                     'success',
-                    'Your submission was successful! We\'ll review it soon.'
+                    'Submission successful! We\'ll review it soon.'
                 );
                 
                 // Reset form
@@ -185,38 +189,30 @@ const ContactForm = ({ navigateTo }) => {
                     hearAboutUs: ''
                 });
             } else {
-                const errorMsg = response.data.message || 'Failed to submit form. Please try again.';
-                setError(errorMsg);
-                showNotificationDialog('error', errorMsg);
+                throw new Error(response.data?.message || 'Submission failed');
             }
-        } catch (err) {
-            let errorMessage = 'Failed to submit form. Please try again.';
             
-            // Handle specific error types
-            if (err.code === 'ERR_CANCELED' || err.message?.includes('canceled')) {
-                errorMessage = 'Submission was cancelled. Please try again without refreshing the page.';
-            } else if (err.code === 'ECONNABORTED') {
-                errorMessage = 'Request timed out. The server might be starting up. Please try again in a moment.';
+        } catch (err) {
+            console.error('❌ Submission error:', err);
+            
+            let errorMessage = 'Failed to submit. ';
+            
+            if (err.code === 'ECONNABORTED') {
+                errorMessage = 'Request timed out (45s). The server is slow. Please try again.';
+            } else if (err.name === 'AbortError') {
+                errorMessage = 'Request was cancelled.';
             } else if (err.response?.status === 500) {
                 errorMessage = 'Server error. Please try again later.';
-            } else if (err.message?.includes('network')) {
-                errorMessage = 'Network error. Please check your connection.';
-            } else if (err.response?.data?.message) {
-                errorMessage = err.response.data.message;
+            } else if (err.message) {
+                errorMessage = err.message;
             }
             
-            console.error('Submission error:', err);
             setError(errorMessage);
             showNotificationDialog('error', errorMessage);
             
         } finally {
             setLoading(false);
-            
-            // Re-enable notification fetching after delay
-            timeoutRef.current = setTimeout(() => {
-                window.isFormSubmitting = false;
-                console.log('Notification fetching re-enabled');
-            }, 30000); // 30 seconds delay for Render.com
+            submitControllerRef.current = null;
         }
     };
 
@@ -233,7 +229,7 @@ const ContactForm = ({ navigateTo }) => {
         }
     };
 
-    // CSS for mobile button spacing - Add to your App.css or inline
+    // CSS for mobile button spacing and notifications
     const mobileButtonStyles = `
         @media (max-width: 768px) {
             .form-buttons-container {
@@ -334,10 +330,8 @@ const ContactForm = ({ navigateTo }) => {
 
     return (
         <>
-            {/* Add inline styles for notification and mobile fixes */}
             <style>{mobileButtonStyles}</style>
             
-            {/* Notification Dialog */}
             {notification.show && (
                 <div className="notification-dialog-overlay">
                     <div className={`notification-dialog ${notification.type}`}>
@@ -353,7 +347,6 @@ const ContactForm = ({ navigateTo }) => {
             )}
             
             <Container className="py-5">
-                {/* Success Modal */}
                 <Modal show={showModal} onHide={handleCloseModal} centered>
                     <Modal.Header closeButton className="bg-success text-white">
                         <Modal.Title>
@@ -368,12 +361,12 @@ const ContactForm = ({ navigateTo }) => {
                                     <FaStar size={48} className="text-success" />
                                 </div>
                             </div>
-                            <h5 className="mb-3">Thank You, {formData.firstName}!</h5>
+                            <h5 className="mb-3">Thank You, {submittedName}!</h5>
                             <p className="mb-2">
                                 Your submission has been received successfully.
                             </p>
                             <p className="mb-2">
-                                A copy has been sent to your email: <strong>{formData.email}</strong>
+                                A copy has been sent to your email: <strong>{submittedEmail}</strong>
                             </p>
                             <p className="mb-0">
                                 Our team will review your information and contact you 
@@ -404,7 +397,6 @@ const ContactForm = ({ navigateTo }) => {
                             </Card.Header>
                             
                             <Card.Body className="p-4 p-md-5">
-                                {/* Error Alert */}
                                 {error && (
                                     <Alert variant="danger" dismissible onClose={() => setError('')}>
                                         <strong>Error:</strong> {error}
@@ -584,7 +576,6 @@ const ContactForm = ({ navigateTo }) => {
                                     </Form.Group>
                                     
                                     <div className="mt-5 pt-3 border-top">
-                                        {/* Mobile Button Fix Container */}
                                         <div className="form-buttons-container d-flex justify-content-between align-items-center">
                                             <Button
                                                 variant="outline-secondary"

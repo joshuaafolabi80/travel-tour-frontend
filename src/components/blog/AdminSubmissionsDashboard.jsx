@@ -9,7 +9,7 @@ import {
     FaCommentDots, FaUser, FaPhone, FaMapMarkerAlt,
     FaPaperclip, FaCrown, FaTrash
 } from 'react-icons/fa';
-import blogApi, { socket } from '../../services/blogApi'; // IMPORT SOCKET
+import blogApi, { socket } from '../../services/blogApi';
 import '../../App.css';
 
 const AdminSubmissionsDashboard = ({ navigateTo }) => {
@@ -97,19 +97,44 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
         }
     };
 
-    // Send reply to submission
+    // Send reply to submission - COMPLETELY FIXED
     const sendReply = async () => {
-        if (!replyText.trim()) {
+        // Add these validations
+        if (!selectedSubmission || !selectedSubmission._id) {
+            console.error('❌ No submission selected!');
+            alert('No submission selected. Please select a submission first.');
+            return;
+        }
+        
+        if (!replyText || replyText.trim() === '') {
             alert('Please enter a reply message');
             return;
         }
-
+        
         try {
-            const adminId = 'admin'; // In real app, get from auth
+            const adminId = 'admin';
+            
+            // Debug: Log what's being sent
+            console.log('🔍 Debug - Reply data being sent:', {
+                url: `/submissions/${selectedSubmission._id}/reply`,
+                data: {
+                    adminReply: replyText,
+                    adminId
+                },
+                submissionId: selectedSubmission._id
+            });
+            
+            console.log('📤 Sending reply with data:', {
+                adminReply: replyText,
+                adminId
+            });
+            
             const response = await blogApi.post(`/submissions/${selectedSubmission._id}/reply`, {
                 adminReply: replyText,
                 adminId
             });
+
+            console.log('✅ Reply response:', response.data);
 
             if (response.data.success) {
                 // Update local state
@@ -117,7 +142,11 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
                     sub._id === selectedSubmission._id
                         ? {
                             ...sub,
-                            adminReply: response.data.submission.adminReply,
+                            adminReply: response.data.submission?.adminReply || {
+                                message: replyText,
+                                repliedAt: new Date(),
+                                adminId: 'admin'
+                            },
                             status: 'replied'
                         }
                         : sub
@@ -129,19 +158,23 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
                 setSelectedSubmission(null);
 
                 alert('Reply sent successfully!');
+            } else {
+                alert('Failed to send reply: ' + (response.data.message || 'Unknown error'));
             }
         } catch (err) {
-            console.error('Reply error:', err);
-            alert('Failed to send reply');
+            console.error('❌ Reply error details:', err);
+            console.error('❌ Response data:', err.response?.data);
+            console.error('❌ Response status:', err.response?.status);
+            console.error('❌ Full error:', err);
+            alert('Failed to send reply: ' + (err.response?.data?.message || err.message));
         }
     };
 
-    // Delete submission - USING CORRECT ENDPOINT
+    // Delete submission
     const deleteSubmission = async () => {
         if (!submissionToDelete) return;
 
         try {
-            // Use the DELETE endpoint that we added to server.js
             await blogApi.delete(`/submissions/${submissionToDelete._id}`);
             
             // Remove from local state
@@ -216,10 +249,20 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
         }
     };
 
-    // Handle reply
+    // Handle reply - FIXED WITH DEBUGGING
     const handleReply = (submission) => {
+        console.log('🔍 Selected submission for reply:', submission);
+        console.log('🔍 Submission ID:', submission._id);
+        console.log('🔍 Submission exists:', !!submission);
+        
         setSelectedSubmission(submission);
         setShowReplyModal(true);
+        
+        // Debug: Check if submission exists in database
+        blogApi.get(`/debug-submission/${submission._id}`)
+            .then(res => console.log('✅ Submission found in DB:', res.data))
+            .catch(err => console.error('❌ Submission not in DB:', err));
+        
         if (!submission.isReadByAdmin) {
             markAsRead(submission._id);
         }

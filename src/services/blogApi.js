@@ -1,13 +1,13 @@
 // travel-tour-frontend/src/services/blogApi.js
 import axios from 'axios';
-import io from 'socket.io-client';
+import { io } from 'socket.io-client';
 
 // Get blog API URL from environment variable or use default
 const BLOG_API_URL = import.meta.env.VITE_BLOG_API_URL || 'https://travel-tour-blog-server.onrender.com/api';
 
 console.log(`🚀 Blog API - WITH REAL-TIME DASHBOARD`);
 
-// Create socket connection for real-time updates
+// Create socket connection for real-time updates - SINGLE EXPORT
 const socketUrl = BLOG_API_URL.replace('/api', '');
 export const socket = io(socketUrl, {
     transports: ['websocket', 'polling'],
@@ -16,7 +16,7 @@ export const socket = io(socketUrl, {
     reconnectionDelay: 1000
 });
 
-// Socket event listeners
+// Socket event listeners - No duplicate export here
 socket.on('connect', () => {
     console.log('🔌 Socket connected:', socket.id);
 });
@@ -25,9 +25,7 @@ socket.on('disconnect', () => {
     console.log('🔌 Socket disconnected');
 });
 
-// Export socket for use in components
-export { socket };
-
+// Create axios instance for API calls
 const blogApi = axios.create({
     baseURL: BLOG_API_URL,
     timeout: 180000, // ⚡ 180 SECONDS (3 minutes) for Render.com

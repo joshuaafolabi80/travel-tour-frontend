@@ -9,15 +9,13 @@ import {
     FaCommentDots, FaUser, FaPhone, FaMapMarkerAlt,
     FaPaperclip, FaCrown, FaTrash
 } from 'react-icons/fa';
-import blogApi from '../../services/blogApi';
-import io from 'socket.io-client';
+import blogApi, { socket } from '../../services/blogApi'; // IMPORT SOCKET
 import '../../App.css';
 
 const AdminSubmissionsDashboard = ({ navigateTo }) => {
     const [submissions, setSubmissions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [socket, setSocket] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
     const [selectedSubmission, setSelectedSubmission] = useState(null);
     const [showReplyModal, setShowReplyModal] = useState(false);
@@ -32,16 +30,11 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
     useEffect(() => {
         fetchSubmissions();
 
-        // Socket connection for real-time updates
-        const socketUrl = import.meta.env.VITE_BLOG_API_URL?.replace('/api', '') || 'https://travel-tour-blog-server.onrender.com';
-        const newSocket = io(socketUrl);
-        setSocket(newSocket);
-
-        // Join admin room
-        newSocket.emit('admin-connected');
+        // Join admin room (socket already imported)
+        socket.emit('admin-connected');
 
         // Listen for new submissions
-        newSocket.on('new-submission', (data) => {
+        socket.on('new-submission', (data) => {
             console.log('🔔 New submission received:', data.submission?._id);
             setSubmissions(prev => [data.submission, ...prev]);
             setUnreadCount(prev => prev + 1);
@@ -51,7 +44,8 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
         fetchUnreadCount();
 
         return () => {
-            if (newSocket) newSocket.disconnect();
+            // Don't disconnect socket globally, just remove listeners
+            socket.off('new-submission');
         };
     }, []);
 
@@ -142,12 +136,12 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
         }
     };
 
-    // Delete submission
+    // Delete submission - USING CORRECT ENDPOINT
     const deleteSubmission = async () => {
         if (!submissionToDelete) return;
 
         try {
-            // Note: You need to add DELETE endpoint on server
+            // Use the DELETE endpoint that we added to server.js
             await blogApi.delete(`/submissions/${submissionToDelete._id}`);
             
             // Remove from local state
@@ -156,6 +150,8 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
             // Reset
             setSubmissionToDelete(null);
             setShowDeleteModal(false);
+            
+            alert('Submission deleted successfully!');
         } catch (err) {
             console.error('Delete error:', err);
             alert('Failed to delete submission');

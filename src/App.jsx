@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { jwtDecode } from 'jwt-decode';
 import api from './services/api';
+import blogApi from './services/blogApi'; // ADD THIS IMPORT
 
 // --- Core Components ---
 import LoginRegister from './LoginRegister';
@@ -166,7 +167,10 @@ const App = () => {
         messagesFromStudents: 0,
         videoCourses: 0,
         generalVideos: 0,
-        masterclassVideos: 0
+        masterclassVideos: 0,
+        // NEW: Add submission notification counts
+        adminSubmissions: 0,
+        userSubmissions: 0
     });
 
     const validateToken = (token) => {
@@ -178,6 +182,35 @@ const App = () => {
             return decoded;
         } catch (error) {
             return null;
+        }
+    };
+
+    // NEW FUNCTION: Fetch submission notification counts
+    const fetchSubmissionCounts = async () => {
+        if (!isLoggedIn || !userData) return;
+        
+        try {
+            if (userRole === 'admin') {
+                // Fetch admin unread submissions
+                const response = await blogApi.get('/submissions/admin/unread-count');
+                if (response.data.success) {
+                    setNotificationCounts(prev => ({
+                        ...prev,
+                        adminSubmissions: response.data.count || 0
+                    }));
+                }
+            } else if (userRole === 'student') {
+                // Fetch user unread submissions
+                const response = await blogApi.get(`/submissions/user/${userData.email}/unread-count`);
+                if (response.data.success) {
+                    setNotificationCounts(prev => ({
+                        ...prev,
+                        userSubmissions: response.data.count || 0
+                    }));
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching submission counts:', error);
         }
     };
 
@@ -242,14 +275,21 @@ const App = () => {
                     }
                 });
                 
-                setNotificationCounts(updatedCounts);
+                setNotificationCounts(prev => ({
+                    ...prev,
+                    ...updatedCounts
+                }));
+                
+                // Fetch submission counts
+                fetchSubmissionCounts();
             }
         } catch (error) {
             console.error('Error fetching notification counts:', error);
             setNotificationCounts({
                 quizScores: 0, courseRemarks: 0, generalCourses: 0, masterclassCourses: 0,
                 importantInfo: 0, adminMessages: 0, quizCompleted: 0, courseCompleted: 0,
-                messagesFromStudents: 0, videoCourses: 0, generalVideos: 0, masterclassVideos: 0
+                messagesFromStudents: 0, videoCourses: 0, generalVideos: 0, masterclassVideos: 0,
+                adminSubmissions: 0, userSubmissions: 0
             });
         }
     };
@@ -279,6 +319,14 @@ const App = () => {
                 await api.put('/notifications/mark-admin-messages-read');
             } else if (notificationType === 'messagesFromStudents' && userRole === 'admin') {
                 await api.put('/notifications/mark-admin-messages-read');
+            } else if (notificationType === 'adminSubmissions' && userRole === 'admin') {
+                // Mark all submissions as read by admin
+                // This would require a new endpoint or you can handle it differently
+                console.log('Marking admin submissions as read');
+            } else if (notificationType === 'userSubmissions' && userRole === 'student') {
+                // Mark all user submissions as read
+                // This would require a new endpoint
+                console.log('Marking user submissions as read');
             }
         } catch (error) {
             console.error('Error marking notifications as read:', error);
@@ -545,9 +593,10 @@ const App = () => {
         { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
         { name: "Hotels", icon: "fas fa-hotel", action: () => navigateTo('hotel-search') },
         { name: "Blog", icon: "fas fa-newspaper", action: () => navigateTo('blog-list-page') }, 
-        // ADD THIS NEW ITEM
+        // UPDATED: Added notification badge for user submissions
         { 
             name: "My Submissions", icon: "fas fa-envelope",
+            notificationKey: 'userSubmissions', notification: notificationCounts.userSubmissions,
             action: () => navigateTo('user-submissions')
         },
         { 
@@ -595,9 +644,10 @@ const App = () => {
         { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
         { name: "Hotels", icon: "fas fa-hotel", action: () => navigateTo('hotel-search') },
         { name: "Blog Management", icon: "fas fa-newspaper", action: () => navigateTo('admin-blog-dashboard') }, 
-        // ADD THIS NEW ITEM
+        // UPDATED: Added notification badge for admin submissions
         { 
             name: "Submissions", icon: "fas fa-envelope",
+            notificationKey: 'adminSubmissions', notification: notificationCounts.adminSubmissions,
             action: () => navigateTo('admin-submissions-dashboard')
         },
         { name: "Registered Students", icon: "fa-solid fa-user-graduate", action: () => navigateTo('admin-students') },

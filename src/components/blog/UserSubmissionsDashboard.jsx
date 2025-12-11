@@ -8,15 +8,13 @@ import {
     FaBell, FaArrowLeft, FaPaperPlane, FaUser,
     FaCalendarAlt, FaCommentDots, FaSync
 } from 'react-icons/fa';
-import blogApi from '../../services/blogApi';
-import io from 'socket.io-client';
+import blogApi, { socket } from '../../services/blogApi'; // IMPORT SOCKET
 import '../../App.css';
 
 const UserSubmissionsDashboard = ({ navigateTo, userEmail = '', userName = '' }) => {
     const [submissions, setSubmissions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [socket, setSocket] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
     const [selectedSubmission, setSelectedSubmission] = useState(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -32,16 +30,11 @@ const UserSubmissionsDashboard = ({ navigateTo, userEmail = '', userName = '' })
 
         fetchSubmissions();
 
-        // Socket connection for real-time updates
-        const socketUrl = import.meta.env.VITE_BLOG_API_URL?.replace('/api', '') || 'https://travel-tour-blog-server.onrender.com';
-        const newSocket = io(socketUrl);
-        setSocket(newSocket);
-
-        // Join user's room
-        newSocket.emit('user-connected', userEmail);
+        // Join user's room using email (socket already imported)
+        socket.emit('user-connected', userEmail);
 
         // Listen for admin replies
-        newSocket.on('admin-reply', (data) => {
+        socket.on('admin-reply', (data) => {
             console.log('🔔 New admin reply received:', data.submissionId);
             setSubmissions(prev => prev.map(sub =>
                 sub._id === data.submissionId
@@ -57,7 +50,8 @@ const UserSubmissionsDashboard = ({ navigateTo, userEmail = '', userName = '' })
         });
 
         return () => {
-            if (newSocket) newSocket.disconnect();
+            // Don't disconnect socket globally, just remove listeners
+            socket.off('admin-reply');
         };
     }, [userEmail]);
 

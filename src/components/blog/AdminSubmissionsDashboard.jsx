@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
     Container, Card, Table, Badge, Alert, Spinner,
-    Button, Modal, Row, Col, Form, InputGroup
+    Button, Modal, Row, Col, Form, InputGroup,
+    Pagination
 } from 'react-bootstrap';
 import {
     FaUsers, FaEnvelope, FaCheck, FaReply, FaEye,
     FaBell, FaSearch, FaFilter, FaSync, FaCalendarAlt,
     FaCommentDots, FaUser, FaPhone, FaMapMarkerAlt,
-    FaPaperclip, FaCrown, FaTrash
+    FaPaperclip, FaCrown, FaTrash, FaArrowLeft, FaArrowRight
 } from 'react-icons/fa';
 import blogApi, { socket } from '../../services/blogApi';
 import '../../App.css';
@@ -25,6 +26,14 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [submissionToDelete, setSubmissionToDelete] = useState(null);
+    
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(5);
+    
+    // Success message states
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     // Initialize socket and fetch data
     useEffect(() => {
@@ -44,7 +53,6 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
         fetchUnreadCount();
 
         return () => {
-            // Don't disconnect socket globally, just remove listeners
             socket.off('new-submission');
         };
     }, []);
@@ -97,24 +105,31 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
         }
     };
 
-    // Send reply to submission - COMPLETELY FIXED
+    // Show success message
+    const showSuccessMessage = (message) => {
+        setSuccessMessage(message);
+        setShowSuccess(true);
+        setTimeout(() => {
+            setShowSuccess(false);
+        }, 3000);
+    };
+
+    // Send reply to submission
     const sendReply = async () => {
-        // Add these validations
         if (!selectedSubmission || !selectedSubmission._id) {
             console.error('❌ No submission selected!');
-            alert('No submission selected. Please select a submission first.');
+            showSuccessMessage('No submission selected. Please select a submission first.');
             return;
         }
         
         if (!replyText || replyText.trim() === '') {
-            alert('Please enter a reply message');
+            showSuccessMessage('Please enter a reply message');
             return;
         }
         
         try {
             const adminId = 'admin';
             
-            // Debug: Log what's being sent
             console.log('🔍 Debug - Reply data being sent:', {
                 url: `/submissions/${selectedSubmission._id}/reply`,
                 data: {
@@ -157,16 +172,14 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
                 setShowReplyModal(false);
                 setSelectedSubmission(null);
 
-                alert('Reply sent successfully!');
+                // Show custom success message
+                showSuccessMessage('✅ Reply sent successfully!');
             } else {
-                alert('Failed to send reply: ' + (response.data.message || 'Unknown error'));
+                showSuccessMessage('Failed to send reply: ' + (response.data.message || 'Unknown error'));
             }
         } catch (err) {
             console.error('❌ Reply error details:', err);
-            console.error('❌ Response data:', err.response?.data);
-            console.error('❌ Response status:', err.response?.status);
-            console.error('❌ Full error:', err);
-            alert('Failed to send reply: ' + (err.response?.data?.message || err.message));
+            showSuccessMessage('Failed to send reply: ' + (err.response?.data?.message || err.message));
         }
     };
 
@@ -184,10 +197,11 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
             setSubmissionToDelete(null);
             setShowDeleteModal(false);
             
-            alert('Submission deleted successfully!');
+            // Show success message
+            showSuccessMessage('✅ Submission deleted successfully!');
         } catch (err) {
             console.error('Delete error:', err);
-            alert('Failed to delete submission');
+            showSuccessMessage('Failed to delete submission');
         }
     };
 
@@ -241,6 +255,18 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
         return matchesSearch && matchesStatus;
     });
 
+    // Pagination logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredSubmissions.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredSubmissions.length / itemsPerPage);
+
+    // Handle page change
+    const handlePageChange = (pageNumber) => {
+        setCurrentPage(pageNumber);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     // Handle view submission
     const handleViewSubmission = (submission) => {
         setSelectedSubmission(submission);
@@ -249,7 +275,7 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
         }
     };
 
-    // Handle reply - FIXED WITH DEBUGGING
+    // Handle reply
     const handleReply = (submission) => {
         console.log('🔍 Selected submission for reply:', submission);
         console.log('🔍 Submission ID:', submission._id);
@@ -278,6 +304,7 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
     const handleRefresh = () => {
         fetchSubmissions();
         fetchUnreadCount();
+        setCurrentPage(1);
     };
 
     // Calculate stats
@@ -287,6 +314,11 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
         replied: submissions.filter(s => s.status === 'replied').length,
         unread: submissions.filter(s => !s.isReadByAdmin && s.status === 'new').length
     };
+
+    // Reset to first page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter]);
 
     if (loading && !refreshing) {
         return (
@@ -301,6 +333,48 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
 
     return (
         <Container fluid className="py-4 admin-submissions-dashboard">
+            {/* Custom Success Message */}
+            {showSuccess && (
+                <div style={{
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    zIndex: 9999,
+                    minWidth: '300px',
+                    maxWidth: '400px',
+                    backgroundColor: '#28a745',
+                    color: 'white',
+                    padding: '15px 20px',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    animation: 'slideInRight 0.3s ease-out'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                        <FaCheck style={{ marginRight: '10px', fontSize: '20px' }} />
+                        <span style={{ fontSize: '14px', fontWeight: '500' }}>
+                            {successMessage}
+                        </span>
+                    </div>
+                    <button 
+                        onClick={() => setShowSuccess(false)}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'white',
+                            fontSize: '16px',
+                            cursor: 'pointer',
+                            marginLeft: '15px',
+                            opacity: '0.8'
+                        }}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+
             {/* Header */}
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
@@ -442,7 +516,7 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
             )}
 
             {/* Submissions Table */}
-            <Card className="shadow-sm border-0">
+            <Card className="shadow-sm border-0 mb-4">
                 <Card.Body className="p-0">
                     {filteredSubmissions.length === 0 ? (
                         <div className="text-center py-5">
@@ -470,7 +544,7 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredSubmissions.map((sub) => (
+                                        {currentItems.map((sub) => (
                                             <tr
                                                 key={sub._id}
                                                 className={`align-middle ${!sub.isReadByAdmin && sub.status === 'new' ? 'table-warning' : ''}`}
@@ -559,7 +633,12 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
                             {/* Summary */}
                             <div className="d-flex justify-content-between align-items-center p-3 border-top">
                                 <div className="text-muted small">
-                                    Showing {filteredSubmissions.length} of {submissions.length} submissions
+                                    Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredSubmissions.length)} of {filteredSubmissions.length} submissions
+                                    {filteredSubmissions.length !== submissions.length && (
+                                        <span className="ms-2">
+                                            (Filtered from {submissions.length} total)
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="small">
                                     <Badge bg="light" text="dark" className="me-2">
@@ -577,6 +656,67 @@ const AdminSubmissionsDashboard = ({ navigateTo }) => {
                     )}
                 </Card.Body>
             </Card>
+
+            {/* Pagination */}
+            {filteredSubmissions.length > itemsPerPage && (
+                <div className="d-flex justify-content-center">
+                    <Pagination>
+                        <Pagination.First 
+                            onClick={() => handlePageChange(1)}
+                            disabled={currentPage === 1}
+                        />
+                        <Pagination.Prev 
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                        />
+                        
+                        {/* Show page numbers */}
+                        {[...Array(totalPages)].map((_, index) => {
+                            const pageNumber = index + 1;
+                            // Show first page, last page, current page, and pages around current page
+                            if (
+                                pageNumber === 1 ||
+                                pageNumber === totalPages ||
+                                (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                            ) {
+                                return (
+                                    <Pagination.Item
+                                        key={pageNumber}
+                                        active={pageNumber === currentPage}
+                                        onClick={() => handlePageChange(pageNumber)}
+                                    >
+                                        {pageNumber}
+                                    </Pagination.Item>
+                                );
+                            }
+                            // Show ellipsis for skipped pages
+                            if (
+                                pageNumber === currentPage - 2 ||
+                                pageNumber === currentPage + 2
+                            ) {
+                                return <Pagination.Ellipsis key={pageNumber} />;
+                            }
+                            return null;
+                        })}
+                        
+                        <Pagination.Next 
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                        />
+                        <Pagination.Last 
+                            onClick={() => handlePageChange(totalPages)}
+                            disabled={currentPage === totalPages}
+                        />
+                    </Pagination>
+                </div>
+            )}
+
+            {/* Page Info */}
+            {filteredSubmissions.length > 0 && (
+                <div className="text-center text-muted small mt-2">
+                    Page {currentPage} of {totalPages} • {itemsPerPage} submissions per page
+                </div>
+            )}
 
             {/* View Submission Modal */}
             <Modal

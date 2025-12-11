@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
     Container, Card, Table, Badge, Alert, Spinner,
-    Button, Modal, Row, Col, Form
+    Button, Modal, Row, Col, Form, Pagination
 } from 'react-bootstrap';
 import {
     FaEnvelope, FaClock, FaCheck, FaReply, FaEye,
     FaBell, FaArrowLeft, FaPaperPlane, FaUser,
     FaCalendarAlt, FaCommentDots, FaSync
 } from 'react-icons/fa';
-import blogApi, { socket } from '../../services/blogApi'; // IMPORT SOCKET
+import blogApi, { socket } from '../../services/blogApi';
 import '../../App.css';
 
 const UserSubmissionsDashboard = ({ navigateTo, userEmail = '', userName = '' }) => {
@@ -19,6 +19,10 @@ const UserSubmissionsDashboard = ({ navigateTo, userEmail = '', userName = '' })
     const [selectedSubmission, setSelectedSubmission] = useState(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(5);
 
     // Initialize socket and fetch data
     useEffect(() => {
@@ -50,7 +54,6 @@ const UserSubmissionsDashboard = ({ navigateTo, userEmail = '', userName = '' })
         });
 
         return () => {
-            // Don't disconnect socket globally, just remove listeners
             socket.off('admin-reply');
         };
     }, [userEmail]);
@@ -115,6 +118,18 @@ const UserSubmissionsDashboard = ({ navigateTo, userEmail = '', userName = '' })
         });
     };
 
+    // Pagination logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = submissions.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(submissions.length / itemsPerPage);
+
+    // Handle page change
+    const handlePageChange = (pageNumber) => {
+        setCurrentPage(pageNumber);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     // Handle view submission details
     const handleViewDetails = (submission) => {
         setSelectedSubmission(submission);
@@ -129,6 +144,7 @@ const UserSubmissionsDashboard = ({ navigateTo, userEmail = '', userName = '' })
     // Handle refresh
     const handleRefresh = () => {
         fetchSubmissions();
+        setCurrentPage(1);
     };
 
     if (loading && !refreshing) {
@@ -239,7 +255,7 @@ const UserSubmissionsDashboard = ({ navigateTo, userEmail = '', userName = '' })
             </Row>
 
             {/* Submissions Table */}
-            <Card className="shadow-sm border-0">
+            <Card className="shadow-sm border-0 mb-4">
                 <Card.Body className="p-0">
                     {submissions.length === 0 ? (
                         <div className="text-center py-5">
@@ -271,7 +287,7 @@ const UserSubmissionsDashboard = ({ navigateTo, userEmail = '', userName = '' })
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {submissions.map((sub) => (
+                                        {currentItems.map((sub) => (
                                             <tr
                                                 key={sub._id}
                                                 className={`align-middle ${!sub.isReadByUser && sub.status === 'replied' ? 'table-warning' : ''}`}
@@ -337,10 +353,86 @@ const UserSubmissionsDashboard = ({ navigateTo, userEmail = '', userName = '' })
                                     </tbody>
                                 </Table>
                             </div>
+                            
+                            {/* Summary */}
+                            <div className="d-flex justify-content-between align-items-center p-3 border-top">
+                                <div className="text-muted small">
+                                    Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, submissions.length)} of {submissions.length} submissions
+                                </div>
+                                <div className="small">
+                                    <Badge bg="light" text="dark" className="me-2">
+                                        New: {submissions.filter(s => s.status === 'new').length}
+                                    </Badge>
+                                    <Badge bg="light" text="dark">
+                                        Replied: {submissions.filter(s => s.status === 'replied').length}
+                                    </Badge>
+                                </div>
+                            </div>
                         </>
                     )}
                 </Card.Body>
             </Card>
+
+            {/* Pagination */}
+            {submissions.length > itemsPerPage && (
+                <div className="d-flex justify-content-center">
+                    <Pagination>
+                        <Pagination.First 
+                            onClick={() => handlePageChange(1)}
+                            disabled={currentPage === 1}
+                        />
+                        <Pagination.Prev 
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                        />
+                        
+                        {/* Show page numbers */}
+                        {[...Array(totalPages)].map((_, index) => {
+                            const pageNumber = index + 1;
+                            // Show first page, last page, current page, and pages around current page
+                            if (
+                                pageNumber === 1 ||
+                                pageNumber === totalPages ||
+                                (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                            ) {
+                                return (
+                                    <Pagination.Item
+                                        key={pageNumber}
+                                        active={pageNumber === currentPage}
+                                        onClick={() => handlePageChange(pageNumber)}
+                                    >
+                                        {pageNumber}
+                                    </Pagination.Item>
+                                );
+                            }
+                            // Show ellipsis for skipped pages
+                            if (
+                                pageNumber === currentPage - 2 ||
+                                pageNumber === currentPage + 2
+                            ) {
+                                return <Pagination.Ellipsis key={pageNumber} />;
+                            }
+                            return null;
+                        })}
+                        
+                        <Pagination.Next 
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                        />
+                        <Pagination.Last 
+                            onClick={() => handlePageChange(totalPages)}
+                            disabled={currentPage === totalPages}
+                        />
+                    </Pagination>
+                </div>
+            )}
+
+            {/* Page Info */}
+            {submissions.length > 0 && (
+                <div className="text-center text-muted small mt-2">
+                    Page {currentPage} of {totalPages} • {itemsPerPage} submissions per page
+                </div>
+            )}
 
             {/* Submission Details Modal */}
             <Modal

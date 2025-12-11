@@ -1513,6 +1513,28 @@
   transition: width 0.5s ease-in-out;
 }
 
+
+/* Success message animation */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
 /* Animation for quiz elements */
 @keyframes slideIn {
   from { transform: translateY(-10px); opacity: 0; }

@@ -1,4 +1,4 @@
-/* App.css - UPDATED WITH BOOTSTRAP GRID FOR NAVIGATION */
+/* App.css - COMPLETE UPDATED WITH SUBMISSIONS DASHBOARD */
 
 /* FIX FOR CUT-OFF CONTENT AND NAVIGATION - ADDED AT TOP */
 * {
@@ -7,6 +7,7 @@
 
 :root {
   --primary-orange: #ff6f00;
+  --dark-orange: #e65100;
   --dark-blue-purple: #1a237e;
   --white: #ffffff;
   --gray-light: #f9fafb;
@@ -176,7 +177,7 @@
   text-align: center;
   color: var(--white);
   box-sizing: border-box;
-  padding-bottom: 6rem; /* Reduced from 8rem to move text upward */
+  padding-bottom: 6rem;
   margin-top: 10px;
 }
 
@@ -536,14 +537,14 @@
 
 /* UPDATED: Larger icon and text sizes */
 .nav-icon {
-  font-size: 2rem; /* Increased from 1.75rem */
+  font-size: 2rem;
   color: var(--dark-blue-purple);
   margin-bottom: 0.5rem;
   flex-shrink: 0;
 }
 
 .nav-text {
-  font-size: 0.95rem; /* Increased from 0.85rem */
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-color-dark);
   line-height: 1.2;
@@ -568,12 +569,12 @@
   }
   
   .nav-icon {
-    font-size: 1.75rem; /* Increased from 1.5rem */
+    font-size: 1.75rem;
     margin-bottom: 0.25rem;
   }
   
   .nav-text {
-    font-size: 0.85rem; /* Increased from 0.75rem */
+    font-size: 0.85rem;
   }
 }
 
@@ -585,11 +586,11 @@
   }
   
   .nav-icon {
-    font-size: 2.25rem; /* Increased from 2rem */
+    font-size: 2.25rem;
   }
   
   .nav-text {
-    font-size: 1rem; /* Increased from 0.9rem */
+    font-size: 1rem;
   }
 }
 
@@ -600,7 +601,7 @@
   }
   
   .nav-text {
-    font-size: 1.1rem; /* Increased from 1rem */
+    font-size: 1.1rem;
   }
 }
 
@@ -702,22 +703,30 @@
   margin-bottom: 1rem;
 }
 
-/* FIXED NOTIFICATION BADGES */
+/* --- NOTIFICATION BADGES (UNIFIED & UPDATED) --- */
 .notification-badge {
   position: absolute;
-  top: 2px;
-  right: 4px;
-  background-color: #ff4757;
+  top: -5px;
+  right: -5px;
+  background-color: #dc3545;
   color: white;
   border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
+  padding: 2px 6px;
+  font-size: 11px;
   font-weight: bold;
-  z-index: 5;
+  min-width: 18px;
+  text-align: center;
+  z-index: 10;
+}
+
+/* Mobile menu notification badge */
+.mobile-menu-item .notification-badge {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .nav-superscript {
@@ -776,9 +785,85 @@
   z-index: 1060;
 }
 
-/* src/App.css */
+/* --- SUBMISSIONS DASHBOARD STYLES --- */
+/* Unread row highlighting for submissions */
+.table-warning {
+  background-color: rgba(255, 193, 7, 0.15) !important;
+}
 
-/* App.css - Add these styles */
+.table-warning:hover {
+  background-color: rgba(255, 193, 7, 0.25) !important;
+}
+
+.table-info {
+  background-color: rgba(13, 110, 253, 0.1) !important;
+}
+
+.table-info:hover {
+  background-color: rgba(13, 110, 253, 0.2) !important;
+}
+
+/* Socket connection indicator */
+.socket-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.socket-connected {
+  background-color: #28a745;
+  animation: pulse 2s infinite;
+}
+
+.socket-disconnected {
+  background-color: #dc3545;
+}
+
+/* Submission status badges */
+.badge-status-new {
+  background-color: #dc3545 !important;
+}
+
+.badge-status-viewed {
+  background-color: #17a2b8 !important;
+}
+
+.badge-status-replied {
+  background-color: #28a745 !important;
+}
+
+.badge-status-closed {
+  background-color: #6c757d !important;
+}
+
+/* Dashboard cards */
+.stats-card {
+  transition: transform 0.2s;
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+
+/* Responsive tables for submissions */
+@media (max-width: 768px) {
+  .table-responsive {
+    font-size: 14px;
+  }
+  
+  .admin-submissions-dashboard .btn-group {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .admin-submissions-dashboard .btn-group .btn {
+    border-radius: 4px !important;
+    margin-bottom: 5px;
+  }
+}
 
 /* Community Chat Input Styling */
 .chat-input-container .form-control {
@@ -798,7 +883,6 @@
 .chat-input-container .form-control::placeholder {
   color: #6c757d;
 }
-
 
 /* Hotel Search Specific Styles - Minimal clashes */
 .hotel-search-container {
@@ -833,8 +917,7 @@
   color: white;
 }
 
-
-/* Hotel Search Orange Theme - Add this to App.css */
+/* Hotel Search Orange Theme */
 .hotel-search-container {
   background: linear-gradient(135deg, var(--primary-orange) 0%, var(--dark-orange) 100%) !important;
   min-height: 100vh;
@@ -888,114 +971,111 @@
   transform: translateY(-1px);
 }
 
-
 /* Blog Hero Slider */
 .blog-hero-slider {
-    position: relative;
-    height: 400px;
-    overflow: hidden;
-    border-radius: 0 0 20px 20px;
+  position: relative;
+  height: 400px;
+  overflow: hidden;
+  border-radius: 0 0 20px 20px;
 }
 
 .blog-carousel-wrapper {
-    height: 100%;
+  height: 100%;
 }
 
 .blog-carousel-image {
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    transition: background-image 1s ease-in-out;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  transition: background-image 1s ease-in-out;
 }
 
 .blog-carousel-overlay {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    text-align: center;
-    padding: 2rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  text-align: center;
+  padding: 2rem;
 }
 
 .blog-carousel-title {
-    font-size: 3rem;
-    font-weight: bold;
-    margin-bottom: 1rem;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
 }
 
 .blog-carousel-text {
-    font-size: 1.2rem;
-    max-width: 600px;
-    margin-bottom: 2rem;
+  font-size: 1.2rem;
+  max-width: 600px;
+  margin-bottom: 2rem;
 }
 
 .blog-slider-indicators {
-    position: absolute;
-    bottom: 20px;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
 }
 
 .blog-slider-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.5);
-    cursor: pointer;
-    transition: background 0.3s;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: background 0.3s;
 }
 
 .blog-slider-indicator.active {
-    background: white;
-    transform: scale(1.2);
+  background: white;
+  transform: scale(1.2);
 }
 
 /* Blog Cards */
 .blog-card {
-    transition: transform 0.3s, box-shadow 0.3s;
-    border: 1px solid #e9ecef;
+  transition: transform 0.3s, box-shadow 0.3s;
+  border: 1px solid #e9ecef;
 }
 
 .blog-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
 }
 
 .blog-card-img-container {
-    position: relative;
-    height: 200px;
-    overflow: hidden;
+  position: relative;
+  height: 200px;
+  overflow: hidden;
 }
 
 .blog-card-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.5s;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s;
 }
 
 .blog-card:hover .blog-card-img {
-    transform: scale(1.05);
+  transform: scale(1.05);
 }
 
 .blog-card-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
 }
 
 .cursor-pointer {
-    cursor: pointer;
+  cursor: pointer;
 }
-
-/* Add these styles to travel-tour-frontend/src/App.css */
 
 /* Issue 1 & 2: Summary justification and tag spacing */
 .text-justify {
@@ -1053,152 +1133,91 @@
   cursor: pointer !important;
 }
 
-
-
-/* travel-tour-frontend/src/App.css - ADD THESE STYLES */
-
 /* Justified Text Styles */
 .justified-text-container {
-    text-align: justify;
-    text-justify: inter-word;
-    line-height: 1.8;
-    font-size: 1.1rem;
+  text-align: justify;
+  text-justify: inter-word;
+  line-height: 1.8;
+  font-size: 1.1rem;
 }
 
 .justified-text-container p {
-    margin-bottom: 1.5rem;
-    text-align: justify;
+  margin-bottom: 1.5rem;
+  text-align: justify;
 }
 
 .justified-text-container h1,
 .justified-text-container h2,
 .justified-text-container h3,
 .justified-text-container h4 {
-    margin-top: 2rem;
-    margin-bottom: 1rem;
-    color: #2c3e50;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  color: #2c3e50;
 }
 
 .justified-text-preview {
-    text-align: justify;
-    text-justify: inter-word;
-    line-height: 1.6;
+  text-align: justify;
+  text-justify: inter-word;
+  line-height: 1.6;
 }
 
 /* Admin Blog Dashboard Styles */
 .admin-blog-container {
-    background-color: #f8f9fa;
-    min-height: calc(100vh - 200px);
-}
-
-.stats-card {
-    transition: transform 0.3s ease;
-}
-
-.stats-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-}
-
-.stats-icon {
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 200px);
 }
 
 .admin-blog-table tbody tr {
-    transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
 .admin-blog-table tbody tr:hover {
-    background-color: rgba(0, 123, 255, 0.05);
+  background-color: rgba(0, 123, 255, 0.05);
 }
 
 /* Spinner Animation */
 .spin {
-    animation: spin 1s linear infinite;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Blog Form Styles */
 .image-upload-area {
-    transition: all 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .image-upload-area:hover {
-    background-color: #e9ecef !important;
-    border-color: #0d6efd !important;
+  background-color: #e9ecef !important;
+  border-color: #0d6efd !important;
 }
 
 /* Blog Detail Styles */
 .detail-hero-image {
-    border-radius: 10px 10px 0 0 !important;
+  border-radius: 10px 10px 0 0 !important;
 }
 
 .blog-content {
-    font-size: 1.1rem;
-    line-height: 1.8;
+  font-size: 1.1rem;
+  line-height: 1.8;
 }
 
 .blog-content img {
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 .author-avatar {
-    width: 80px;
-    height: 80px;
-    background-color: #e3f2fd;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    .justified-text-container {
-        font-size: 1rem;
-        line-height: 1.6;
-    }
-    
-    .admin-blog-table td, 
-    .admin-blog-table th {
-        padding: 0.5rem;
-        font-size: 0.9rem;
-    }
-    
-    .stats-icon {
-        width: 50px;
-        height: 50px;
-    }
-}
-
-/* Print Styles for Blog */
-@media print {
-    .blog-detail-container .btn,
-    .blog-detail-container .card-header,
-    .blog-detail-container .breadcrumb,
-    .blog-detail-container .col-lg-4 {
-        display: none !important;
-    }
-    
-    .blog-detail-container .col-lg-8 {
-        width: 100% !important;
-        max-width: 100% !important;
-        flex: 0 0 100% !important;
-    }
-    
-    .justified-text-container {
-        font-size: 12pt !important;
-        line-height: 1.5 !important;
-    }
+  width: 80px;
+  height: 80px;
+  background-color: #e3f2fd;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Mobile optimization for chat input */
@@ -1582,6 +1601,23 @@
     height: 40px;
     max-width: 140px;
   }
+  
+  /* Blog Responsive Adjustments */
+  .justified-text-container {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  
+  .admin-blog-table td, 
+  .admin-blog-table th {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .stats-icon {
+    width: 50px;
+    height: 50px;
+  }
 }
 
 @media (min-width: 769px) {
@@ -1677,4 +1713,37 @@
 body {
   overflow-x: hidden;
   width: 100%;
+}
+
+/* Print Styles for Blog */
+@media print {
+  .blog-detail-container .btn,
+  .blog-detail-container .card-header,
+  .blog-detail-container .breadcrumb,
+  .blog-detail-container .col-lg-4 {
+    display: none !important;
+  }
+  
+  .blog-detail-container .col-lg-8 {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+  
+  .justified-text-container {
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+  }
+}
+
+/* Submissions Dashboard Specific */
+.user-submissions-dashboard,
+.admin-submissions-dashboard {
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 200px);
+}
+
+.empty-state-icon {
+  color: #6c757d;
+  opacity: 0.5;
 }

@@ -50,8 +50,10 @@ import AdminCreateEditBlog from './components/blog/AdminCreateEditBlog';
 import UserBlogPage from './components/blog/UserBlogPage';
 import SingleBlogDetail from './components/blog/SingleBlogDetail';
 
-// 📝 NEW: Import ContactForm
+// 📝 NEW: Import ContactForm and Submission Dashboards
 import ContactForm from './components/blog/ContactForm';
+import AdminSubmissionsDashboard from './components/blog/AdminSubmissionsDashboard';
+import UserSubmissionsDashboard from './components/blog/UserSubmissionsDashboard';
 
 import './App.css';
 
@@ -166,8 +168,6 @@ const App = () => {
         generalVideos: 0,
         masterclassVideos: 0
     });
-
-    // ... [All your existing functions remain the same - validateToken, fetchNotificationCounts, etc.]
 
     const validateToken = (token) => {
         try {
@@ -545,6 +545,11 @@ const App = () => {
         { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
         { name: "Hotels", icon: "fas fa-hotel", action: () => navigateTo('hotel-search') },
         { name: "Blog", icon: "fas fa-newspaper", action: () => navigateTo('blog-list-page') }, 
+        // ADD THIS NEW ITEM
+        { 
+            name: "My Submissions", icon: "fas fa-envelope",
+            action: () => navigateTo('user-submissions')
+        },
         { 
             name: "Quiz and Score", icon: "fa-solid fa-chart-line",
             notificationKey: 'quizScores', notification: notificationCounts.quizScores,
@@ -590,6 +595,11 @@ const App = () => {
         { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
         { name: "Hotels", icon: "fas fa-hotel", action: () => navigateTo('hotel-search') },
         { name: "Blog Management", icon: "fas fa-newspaper", action: () => navigateTo('admin-blog-dashboard') }, 
+        // ADD THIS NEW ITEM
+        { 
+            name: "Submissions", icon: "fas fa-envelope",
+            action: () => navigateTo('admin-submissions-dashboard')
+        },
         { name: "Registered Students", icon: "fa-solid fa-user-graduate", action: () => navigateTo('admin-students') },
         { name: "Message your Students", icon: "fa-solid fa-comments", action: () => navigateTo('admin-message-students') },
         { 
@@ -848,8 +858,27 @@ const App = () => {
                             <AdminCreateEditBlog mode="edit" postId={blogPostId} navigateTo={navigateTo} />
                         )}
 
-                        {/* 📝 NEW: Write for Us Contact Form */}
-                        {currentPage === 'write-for-us' && <ContactForm navigateTo={navigateTo} />}
+                        {/* 📝 NEW: Write for Us Contact Form - UPDATED */}
+                        {currentPage === 'write-for-us' && (
+                            <ContactForm 
+                                navigateTo={navigateTo}
+                                userEmail={userData?.email}
+                                userName={userData?.name}
+                            />
+                        )}
+
+                        {/* 📝 NEW: Submission Dashboards - UPDATED */}
+                        {currentPage === 'admin-submissions-dashboard' && (
+                            <AdminSubmissionsDashboard navigateTo={navigateTo} />
+                        )}
+
+                        {currentPage === 'user-submissions' && (
+                            <UserSubmissionsDashboard 
+                                navigateTo={navigateTo}
+                                userEmail={userData?.email}
+                                userName={userData?.name}
+                            />
+                        )}
 
                         {/* User Pages */}
                         {currentPage === 'general-courses' && <GeneralCourses navigateTo={navigateTo} />}

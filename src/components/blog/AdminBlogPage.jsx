@@ -10,7 +10,7 @@ import {
     FaPlus, FaEye, FaEdit, FaTrash, FaSearch, 
     FaFilter, FaSync, FaCalendarAlt, FaSortAmountDown,
     FaSortAmountUp, FaChevronLeft, FaChevronRight,
-    FaFileAlt, FaChartBar
+    FaFileAlt, FaChartBar, FaEnvelope
 } from 'react-icons/fa';
 import '../../App.css';
 
@@ -380,6 +380,14 @@ const AdminBlogPage = ({ navigateTo }) => {
                         disabled={loading}
                     >
                         <FaSync className={loading ? "spin" : ""} />
+                    </Button>
+                    {/* ADD THIS NEW BUTTON */}
+                    <Button 
+                        variant="outline-primary" 
+                        onClick={() => navigateTo('admin-submissions-dashboard')}
+                        className="d-flex align-items-center"
+                    >
+                        <FaEnvelope className="me-2" /> Submissions
                     </Button>
                     <Button 
                         variant="primary" 

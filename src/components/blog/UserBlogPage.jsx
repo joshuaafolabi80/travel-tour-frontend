@@ -418,13 +418,23 @@ const UserBlogPage = ({ navigateTo }) => {
                             <p className="text-muted mb-4">
                                 Share your travel experiences and tourism insights with our community.
                             </p>
-                            <Button 
-                                variant="outline-primary" 
-                                size="lg"
-                                onClick={() => navigateTo('write-for-us')}
-                            >
-                                <i className="fas fa-pen-fancy me-2"></i> Write for Us
-                            </Button>
+                            <div className="d-flex justify-content-center gap-3 flex-wrap">
+                                <Button 
+                                    variant="outline-primary" 
+                                    size="lg"
+                                    onClick={() => navigateTo('write-for-us')}
+                                >
+                                    <i className="fas fa-pen-fancy me-2"></i> Write for Us
+                                </Button>
+                                {/* ADD THIS NEW BUTTON */}
+                                <Button 
+                                    variant="outline-success" 
+                                    size="lg"
+                                    onClick={() => navigateTo('user-submissions')}
+                                >
+                                    <i className="fas fa-envelope me-2"></i> My Submissions
+                                </Button>
+                            </div>
                         </Card.Body>
                     </Card>
                 )}

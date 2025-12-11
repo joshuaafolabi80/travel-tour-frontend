@@ -3,7 +3,7 @@ import {
     Container, Card, Form, Button, Row, Col,
     Alert, Spinner, Modal
 } from 'react-bootstrap';
-import { FaPaperPlane, FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCheck, FaDashboard } from 'react-icons/fa';
+import { FaPaperPlane, FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaCheck, FaTachometerAlt } from 'react-icons/fa';
 import blogApi from '../../services/blogApi';
 import '../../App.css';
 
@@ -149,7 +149,7 @@ const ContactForm = ({ navigateTo, userEmail = '', userName = '' }) => {
                         onClick={handleCloseSuccessModal}
                         className="w-100"
                     >
-                        <FaDashboard className="me-2" />
+                        <FaTachometerAlt className="me-2" />
                         {userEmail ? 'Go to My Dashboard' : 'Back to Blog'}
                     </Button>
                 </Modal.Body>

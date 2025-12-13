@@ -1352,18 +1352,6 @@
   transform: translateX(2px);
 }
 
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
 /* Ensure menu items have proper spacing for superscript */
 .mobile-menu-item, .desktop-nav-item {
   position: relative;
@@ -1513,26 +1501,25 @@
   transition: width 0.5s ease-in-out;
 }
 
-
 /* Success message animation */
 @keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes fadeOut {
-    from {
-        opacity: 1;
-    }
-    to {
-        opacity: 0;
-    }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 /* Animation for quiz elements */
@@ -1562,6 +1549,75 @@
 .border-primary {
   border-color: #ff6f00 !important;
 }
+
+/* ============================================
+   NEWSLETTER SUCCESS MODAL ANIMATION
+   ============================================ */
+
+/* Newsletter Success Modal Animation - Added with unique classes to avoid conflicts */
+.newsletter-success-modal .modal-content {
+  animation: bounceIn 0.5s ease-out;
+  border: none;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.newsletter-success-modal .success-icon-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.newsletter-success-modal .success-icon-circle {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #28a745, #20c997);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 2s infinite;
+}
+
+/* Bounce In Animation for newsletter modal */
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Pulse Animation for newsletter success icon */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(40, 167, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+  }
+}
+
+/* Copy notification animation - Already exists above, but ensuring it's unique */
+.copy-notification-animation {
+  animation: slideInRight 0.3s ease-out, fadeOut 0.3s ease-out 3.7s;
+}
+
+/* ============================================
+   END NEWSLETTER ANIMATIONS
+   ============================================ */
 
 /* --- Responsive Design --- */
 @media (max-width: 768px) {
@@ -1639,6 +1695,16 @@
   .stats-icon {
     width: 50px;
     height: 50px;
+  }
+  
+  /* Newsletter modal on mobile */
+  .newsletter-success-modal .modal-dialog {
+    margin: 1rem;
+  }
+  
+  .newsletter-success-modal .success-icon-circle {
+    width: 60px;
+    height: 60px;
   }
 }
 
@@ -1769,3 +1835,23 @@ body {
   color: #6c757d;
   opacity: 0.5;
 }
+
+/* Animation keyframes - consolidated to avoid duplicates */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Additional animation for nav-superscript */
+.nav-superscript {
+  animation: pulse 2s infinite;
+}
+
+/* END OF FILE */

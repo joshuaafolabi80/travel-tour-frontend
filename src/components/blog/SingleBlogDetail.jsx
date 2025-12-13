@@ -1,8 +1,8 @@
-// travel-tour-frontend/src/components/blog/SingleBlogDetail.jsx - ENHANCED
 import React, { useState, useEffect } from 'react';
 import { 
     Container, Button, Spinner, Alert, Card, 
-    Row, Col, Badge, Breadcrumb, ButtonGroup, Form
+    Row, Col, Badge, Breadcrumb, ButtonGroup, Form,
+    Modal
 } from 'react-bootstrap';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -11,7 +11,8 @@ import blogApi from '../../services/blogApi';
 import { 
     FaArrowLeft, FaCalendarAlt, FaUser, FaEye, 
     FaShareAlt, FaBookmark, FaPrint, FaFacebook, 
-    FaTwitter, FaLinkedin, FaWhatsapp, FaCopy
+    FaTwitter, FaLinkedin, FaWhatsapp, FaCopy,
+    FaEnvelope, FaCheck, FaTimes
 } from 'react-icons/fa';
 import '../../App.css';
 
@@ -22,6 +23,14 @@ const SingleBlogDetail = ({ navigate, postId }) => {
     const [relatedPosts, setRelatedPosts] = useState([]);
     const [isBookmarked, setIsBookmarked] = useState(false);
     const [views, setViews] = useState(0);
+    
+    // Newsletter states
+    const [newsletterEmail, setNewsletterEmail] = useState('');
+    const [newsletterName, setNewsletterName] = useState('');
+    const [newsletterSubmitting, setNewsletterSubmitting] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     // Helper to format date
     const formatDate = (dateString) => {
@@ -107,6 +116,49 @@ const SingleBlogDetail = ({ navigate, postId }) => {
         fetchPost();
     }, [postId]);
 
+    // Handle newsletter subscription
+    const handleNewsletterSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (!newsletterEmail || !newsletterEmail.includes('@')) {
+            setErrorMessage('Please enter a valid email address');
+            setShowErrorModal(true);
+            return;
+        }
+        
+        setNewsletterSubmitting(true);
+        
+        try {
+            const response = await blogApi.post('/newsletter/subscribe', {
+                name: newsletterName || 'Subscriber',
+                email: newsletterEmail
+            });
+            
+            if (response.data.success) {
+                // Show success modal
+                setShowSuccessModal(true);
+                
+                // Reset form
+                setNewsletterEmail('');
+                setNewsletterName('');
+                
+                // Auto-close success modal after 5 seconds
+                setTimeout(() => {
+                    setShowSuccessModal(false);
+                }, 5000);
+            } else {
+                setErrorMessage(response.data.message || 'Failed to subscribe');
+                setShowErrorModal(true);
+            }
+        } catch (err) {
+            console.error('Newsletter subscription error:', err);
+            setErrorMessage(err.response?.data?.message || 'Failed to subscribe. Please try again.');
+            setShowErrorModal(true);
+        } finally {
+            setNewsletterSubmitting(false);
+        }
+    };
+
     const handleBackClick = () => {
         navigate('blog-list-page');
     };
@@ -165,7 +217,7 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                 marginBottom: '1rem'
             }} />
         ),
-        h1: ({node, ...props}) => <h1 {...props} className="h2 mt-4 mb-3 text-center" />, // Issue 1: Center blog title
+        h1: ({node, ...props}) => <h1 {...props} className="h2 mt-4 mb-3 text-center" />,
         h2: ({node, ...props}) => <h2 {...props} className="h3 mt-4 mb-3" />,
         h3: ({node, ...props}) => <h3 {...props} className="h4 mt-4 mb-2" />,
         code({node, inline, className, children, ...props}) {
@@ -239,6 +291,57 @@ const SingleBlogDetail = ({ navigate, postId }) => {
 
     return (
         <Container fluid="lg" className="py-4 blog-detail-container">
+            {/* Newsletter Success Modal */}
+            <Modal
+                show={showSuccessModal}
+                onHide={() => setShowSuccessModal(false)}
+                centered
+                className="newsletter-success-modal"
+            >
+                <Modal.Body className="text-center p-5">
+                    <div className="success-icon-container mb-4">
+                        <div className="success-icon-circle">
+                            <FaCheck size={40} className="text-white" />
+                        </div>
+                    </div>
+                    <h4 className="text-success mb-3">🎉 Successfully Subscribed!</h4>
+                    <p className="mb-4">
+                        Email successfully added to our newsletter database. 
+                        Look out for our subsequent industry announcements and information. 
+                        Thank you for subscribing!
+                    </p>
+                    <Button 
+                        variant="success" 
+                        onClick={() => setShowSuccessModal(false)}
+                        className="px-4"
+                    >
+                        Close
+                    </Button>
+                </Modal.Body>
+            </Modal>
+
+            {/* Newsletter Error Modal */}
+            <Modal
+                show={showErrorModal}
+                onHide={() => setShowErrorModal(false)}
+                centered
+            >
+                <Modal.Body className="text-center p-4">
+                    <div className="error-icon-container mb-3">
+                        <FaTimes size={40} className="text-danger" />
+                    </div>
+                    <h5 className="text-danger mb-3">Subscription Error</h5>
+                    <p className="mb-4">{errorMessage}</p>
+                    <Button 
+                        variant="secondary" 
+                        onClick={() => setShowErrorModal(false)}
+                        className="me-2"
+                    >
+                        Close
+                    </Button>
+                </Modal.Body>
+            </Modal>
+
             {/* Breadcrumb */}
             <Breadcrumb className="mb-4">
                 <Breadcrumb.Item onClick={handleBackClick} style={{ cursor: 'pointer' }}>
@@ -277,7 +380,6 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                         <Card.Body className="p-4 p-lg-5">
                             {/* Header */}
                             <header className="mb-5">
-                                {/* Issue 1: Blog title centered */}
                                 <h1 className="display-5 fw-bold mb-3 text-center">{post.title}</h1>
                                 
                                 <div className="d-flex flex-wrap align-items-center text-muted mb-4">
@@ -298,7 +400,6 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                     </span>
                                 </div>
                                 
-                                {/* Issue 1: Summary with justified text */}
                                 {post.summary && (
                                     <div className="lead p-3 bg-light rounded mb-4 text-justify" style={{ textAlign: 'justify' }}>
                                         <strong>Summary:</strong> {post.summary}
@@ -315,12 +416,11 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                 </div>
                             </article>
 
-                            {/* Tags - Issue 2: Add vertical spacing */}
+                            {/* Tags */}
                             <div className="mt-5 pt-4 border-top">
                                 <div className="d-flex flex-wrap align-items-center">
                                     <strong className="me-3 mb-2">Tags:</strong>
                                     <div>
-                                        {/* Issue 2: Add margin-bottom for vertical spacing on mobile */}
                                         <Badge bg="secondary" className="me-2 mb-2 p-2">#travel</Badge>
                                         <Badge bg="secondary" className="me-2 mb-2 p-2">#tourism</Badge>
                                         <Badge bg="secondary" className="me-2 mb-2 p-2">#hotels</Badge>
@@ -330,7 +430,7 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                 </div>
                             </div>
 
-                            {/* Share and Action Buttons - Issue 3: Make responsive */}
+                            {/* Share and Action Buttons */}
                             <div className="mt-4 pt-3 border-top">
                                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                                     <div>
@@ -356,7 +456,6 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                     
                                     <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center">
                                         <span className="me-3 text-muted mb-2 mb-md-0">Share:</span>
-                                        {/* Issue 3: Make social media icons responsive and prevent cutoff */}
                                         <div className="d-flex flex-wrap justify-content-center justify-content-md-start social-share-container">
                                             <ButtonGroup className="d-flex flex-wrap">
                                                 <Button 
@@ -514,24 +613,55 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                         </Card.Body>
                     </Card>
 
-                    {/* Newsletter Signup */}
+                    {/* NEWSLETTER Signup - UPDATED */}
                     <Card className="shadow-sm border-0">
                         <Card.Body className="text-center bg-primary text-white rounded">
-                            <h5 className="mb-3">Stay Updated</h5>
-                            <p className="small mb-3">
-                                Subscribe to our newsletter for the latest travel tips and blog posts.
-                            </p>
-                            <Form>
+                            <div className="mb-3">
+                                <FaEnvelope size={32} className="mb-2" />
+                                <h5 className="mb-2">Stay Updated</h5>
+                                <p className="small mb-0 opacity-75">
+                                    Subscribe to our newsletter for the latest travel tips and blog posts.
+                                </p>
+                            </div>
+                            
+                            <Form onSubmit={handleNewsletterSubmit}>
                                 <Form.Group className="mb-3">
                                     <Form.Control 
-                                        type="email" 
-                                        placeholder="Your email address"
+                                        type="text" 
+                                        placeholder="Your name (optional)"
                                         size="sm"
+                                        value={newsletterName}
+                                        onChange={(e) => setNewsletterName(e.target.value)}
+                                        className="mb-2"
+                                    />
+                                    <Form.Control 
+                                        type="email" 
+                                        placeholder="Your email address *"
+                                        size="sm"
+                                        value={newsletterEmail}
+                                        onChange={(e) => setNewsletterEmail(e.target.value)}
+                                        required
                                     />
                                 </Form.Group>
-                                <Button variant="light" size="sm" className="w-100">
-                                    Subscribe
+                                <Button 
+                                    variant="light" 
+                                    size="sm" 
+                                    className="w-100"
+                                    type="submit"
+                                    disabled={newsletterSubmitting}
+                                >
+                                    {newsletterSubmitting ? (
+                                        <>
+                                            <Spinner animation="border" size="sm" className="me-2" />
+                                            Subscribing...
+                                        </>
+                                    ) : (
+                                        'Subscribe Now'
+                                    )}
                                 </Button>
+                                <Form.Text className="d-block text-white-50 mt-2 small">
+                                    We respect your privacy. Unsubscribe at any time.
+                                </Form.Text>
                             </Form>
                         </Card.Body>
                     </Card>

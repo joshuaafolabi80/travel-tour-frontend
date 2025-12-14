@@ -56,6 +56,9 @@ import ContactForm from './components/blog/ContactForm';
 import AdminSubmissionsDashboard from './components/blog/AdminSubmissionsDashboard';
 import UserSubmissionsDashboard from './components/blog/UserSubmissionsDashboard';
 
+// 📝 NEW: Import MyBookmarksPage Component
+import MyBookmarksPage from './components/blog/MyBookmarksPage';
+
 import './App.css';
 
 // Reusable Slider Component
@@ -906,6 +909,11 @@ const App = () => {
                         
                         {currentPage === 'admin-edit-post' && blogPostId && (
                             <AdminCreateEditBlog mode="edit" postId={blogPostId} navigateTo={navigateTo} />
+                        )}
+
+                        {/* 📝 NEW: My Bookmarks Page */}
+                        {currentPage === 'my-bookmarks' && (
+                            <MyBookmarksPage navigate={navigateTo} />
                         )}
 
                         {/* 📝 NEW: Write for Us Contact Form - UPDATED */}

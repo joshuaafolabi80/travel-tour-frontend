@@ -5,6 +5,7 @@ import {
     Badge, Spinner, Alert, Dropdown, DropdownButton 
 } from 'react-bootstrap';
 import blogApi from '../../services/blogApi';
+import { FaBookmark } from 'react-icons/fa';
 import '../../App.css'; 
 
 const UserBlogPage = ({ navigateTo }) => {
@@ -414,25 +415,35 @@ const UserBlogPage = ({ navigateTo }) => {
                 {!loading && posts.length > 0 && (
                     <Card className="mt-5 border-0 bg-light">
                         <Card.Body className="text-center py-4">
-                            <h4 className="mb-3">Want to contribute?</h4>
-                            <p className="text-muted mb-4">
-                                Share your travel experiences and tourism insights with our community.
+                            <h4 className="mb-3" style={{textAlign: 'center'}}><strong>Want to contribute?</strong></h4>
+                            <p className="text-muted mb-4" style={{textAlign: 'justify'}}>
+                                <strong>Share your travel experiences and tourism insights</strong> with our community. Whether you're a professional or an enthusiast, your perspective is valuable.
                             </p>
                             <div className="d-flex justify-content-center gap-3 flex-wrap">
                                 <Button 
                                     variant="outline-primary" 
                                     size="lg"
                                     onClick={() => navigateTo('write-for-us')}
+                                    className="d-flex align-items-center"
                                 >
                                     <i className="fas fa-pen-fancy me-2"></i> Write for Us
                                 </Button>
-                                {/* ADD THIS NEW BUTTON */}
                                 <Button 
                                     variant="outline-success" 
                                     size="lg"
                                     onClick={() => navigateTo('user-submissions')}
+                                    className="d-flex align-items-center"
                                 >
                                     <i className="fas fa-envelope me-2"></i> My Submissions
+                                </Button>
+                                {/* ADD THIS NEW BUTTON */}
+                                <Button 
+                                    variant="outline-warning" 
+                                    size="lg"
+                                    onClick={() => navigateTo('my-bookmarks')}
+                                    className="d-flex align-items-center"
+                                >
+                                    <FaBookmark className="me-2" /> My Bookmarks
                                 </Button>
                             </div>
                         </Card.Body>

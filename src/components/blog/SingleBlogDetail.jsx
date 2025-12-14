@@ -1,3 +1,4 @@
+// travel-tour-frontend/src/components/blog/SingleBlogDetail.jsx
 import React, { useState, useEffect } from 'react';
 import { 
     Container, Button, Spinner, Alert, Card, 
@@ -12,7 +13,7 @@ import {
     FaArrowLeft, FaCalendarAlt, FaUser, FaEye, 
     FaShareAlt, FaBookmark, FaPrint, FaFacebook, 
     FaTwitter, FaLinkedin, FaWhatsapp, FaCopy,
-    FaEnvelope, FaCheck, FaTimes
+    FaEnvelope, FaCheck, FaTimes, FaBookOpen
 } from 'react-icons/fa';
 import '../../App.css';
 
@@ -52,6 +53,12 @@ const SingleBlogDetail = ({ navigate, postId }) => {
         return readingTime;
     };
 
+    // Check if post is bookmarked
+    const checkBookmarkStatus = () => {
+        const bookmarks = JSON.parse(localStorage.getItem('blogBookmarks') || '[]');
+        setIsBookmarked(bookmarks.includes(postId));
+    };
+
     useEffect(() => {
         if (!postId) {
             setError("Error: Post ID not provided.");
@@ -73,8 +80,7 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                     fetchRelatedPosts(fetchedPost.category);
                     
                     // Check if bookmarked
-                    const bookmarks = JSON.parse(localStorage.getItem('blogBookmarks') || '[]');
-                    setIsBookmarked(bookmarks.includes(postId));
+                    checkBookmarkStatus();
                 } else {
                     setError('Blog post not found or not yet published.');
                 }
@@ -167,13 +173,25 @@ const SingleBlogDetail = ({ navigate, postId }) => {
         const bookmarks = JSON.parse(localStorage.getItem('blogBookmarks') || '[]');
         
         if (isBookmarked) {
+            // Remove from bookmarks
             const newBookmarks = bookmarks.filter(id => id !== postId);
             localStorage.setItem('blogBookmarks', JSON.stringify(newBookmarks));
             setIsBookmarked(false);
+            
+            // Show notification
+            setErrorMessage('Post removed from bookmarks');
+            setShowErrorModal(true);
+            setTimeout(() => setShowErrorModal(false), 2000);
         } else {
+            // Add to bookmarks
             bookmarks.push(postId);
             localStorage.setItem('blogBookmarks', JSON.stringify(bookmarks));
             setIsBookmarked(true);
+            
+            // Show notification
+            setErrorMessage('Post added to bookmarks');
+            setShowErrorModal(true);
+            setTimeout(() => setShowErrorModal(false), 2000);
         }
     };
 
@@ -197,7 +215,9 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                 break;
             case 'copy':
                 navigator.clipboard.writeText(url);
-                alert('Link copied to clipboard!');
+                setErrorMessage('Link copied to clipboard!');
+                setShowErrorModal(true);
+                setTimeout(() => setShowErrorModal(false), 2000);
                 return;
         }
         
@@ -208,18 +228,31 @@ const SingleBlogDetail = ({ navigate, postId }) => {
         window.print();
     };
 
-    // Custom renderers for ReactMarkdown with justified text
+    // Navigate to bookmarks page
+    const handleViewBookmarks = () => {
+        navigate('my-bookmarks');
+    };
+
+    // Custom renderers for ReactMarkdown with CENTERED headings and JUSTIFIED text
     const components = {
+        // Center align all headings
+        h1: ({node, ...props}) => <h1 {...props} className="h1 mt-4 mb-3 text-center fw-bold" style={{textAlign: 'center'}} />,
+        h2: ({node, ...props}) => <h2 {...props} className="h2 mt-4 mb-3 text-center fw-bold" style={{textAlign: 'center'}} />,
+        h3: ({node, ...props}) => <h3 {...props} className="h3 mt-4 mb-2 text-center fw-bold" style={{textAlign: 'center'}} />,
+        h4: ({node, ...props}) => <h4 {...props} className="h4 mt-4 mb-2 text-center fw-bold" style={{textAlign: 'center'}} />,
+        h5: ({node, ...props}) => <h5 {...props} className="h5 mt-4 mb-2 text-center fw-bold" style={{textAlign: 'center'}} />,
+        h6: ({node, ...props}) => <h6 {...props} className="h6 mt-4 mb-2 text-center fw-bold" style={{textAlign: 'center'}} />,
+        
+        // Justify all paragraphs
         p: ({node, ...props}) => (
             <p {...props} className="text-justify" style={{ 
                 textAlign: 'justify', 
-                lineHeight: '1.6',
-                marginBottom: '1rem'
+                lineHeight: '1.8',
+                marginBottom: '1.5rem',
+                fontSize: '1.1rem'
             }} />
         ),
-        h1: ({node, ...props}) => <h1 {...props} className="h2 mt-4 mb-3 text-center" />,
-        h2: ({node, ...props}) => <h2 {...props} className="h3 mt-4 mb-3" />,
-        h3: ({node, ...props}) => <h3 {...props} className="h4 mt-4 mb-2" />,
+        
         code({node, inline, className, children, ...props}) {
             const match = /language-(\w+)/.exec(className || '');
             return !inline && match ? (
@@ -237,14 +270,39 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                 </code>
             );
         },
+        
         blockquote: ({node, ...props}) => (
             <blockquote {...props} className="border-start border-3 ps-3 py-2 my-3" style={{
                 backgroundColor: '#f8f9fa',
-                borderLeftColor: '#0d6efd !important'
+                borderLeftColor: '#0d6efd !important',
+                textAlign: 'justify',
+                lineHeight: '1.6'
             }} />
         ),
+        
         img: ({node, ...props}) => (
-            <img {...props} className="img-fluid rounded my-3" style={{ maxWidth: '100%' }} />
+            <img {...props} className="img-fluid rounded my-3" style={{ 
+                maxWidth: '100%',
+                display: 'block',
+                marginLeft: 'auto',
+                marginRight: 'auto'
+            }} />
+        ),
+        
+        ul: ({node, ...props}) => (
+            <ul {...props} className="ps-4" style={{ textAlign: 'left' }} />
+        ),
+        
+        ol: ({node, ...props}) => (
+            <ol {...props} className="ps-4" style={{ textAlign: 'left' }} />
+        ),
+        
+        li: ({node, ...props}) => (
+            <li {...props} style={{ 
+                textAlign: 'left',
+                marginBottom: '0.5rem',
+                lineHeight: '1.6'
+            }} />
         )
     };
 
@@ -263,13 +321,15 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                 <Alert variant="danger" className="d-flex align-items-center">
                     <FaEye className="me-3" size={24} />
                     <div>
-                        <h5 className="alert-heading">Post Not Found</h5>
-                        <p className="mb-0">{error}</p>
+                        <h5 className="alert-heading text-center">Post Not Found</h5>
+                        <p className="mb-0 text-center">{error}</p>
                     </div>
                 </Alert>
-                <Button variant="secondary" onClick={handleBackClick} className="mt-3">
-                    <FaArrowLeft className="me-2" /> Back to Blog
-                </Button>
+                <div className="text-center">
+                    <Button variant="secondary" onClick={handleBackClick} className="mt-3">
+                        <FaArrowLeft className="me-2" /> Back to Blog
+                    </Button>
+                </div>
             </Container>
         );
     }
@@ -278,7 +338,8 @@ const SingleBlogDetail = ({ navigate, postId }) => {
         return (
             <Container className="py-5 text-center">
                 <Alert variant="info">
-                    No post data to display.
+                    <h5 className="alert-heading">No Post Data</h5>
+                    <p className="mb-0">No post data to display.</p>
                 </Alert>
                 <Button variant="secondary" onClick={handleBackClick}>
                     <FaArrowLeft className="me-2" /> Back to Blog
@@ -304,11 +365,9 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                             <FaCheck size={40} className="text-white" />
                         </div>
                     </div>
-                    <h4 className="text-success mb-3">🎉 Successfully Subscribed!</h4>
-                    <p className="mb-4">
-                        Email successfully added to our newsletter database. 
-                        Look out for our subsequent industry announcements and information. 
-                        Thank you for subscribing!
+                    <h4 className="text-success mb-3" style={{textAlign: 'center'}}>🎉 Successfully Subscribed!</h4>
+                    <p className="mb-4" style={{textAlign: 'justify'}}>
+                        <strong>Email successfully added to our newsletter database.</strong> Look out for our subsequent industry announcements and information. Thank you for subscribing!
                     </p>
                     <Button 
                         variant="success" 
@@ -320,25 +379,35 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                 </Modal.Body>
             </Modal>
 
-            {/* Newsletter Error Modal */}
+            {/* Bookmark/Error Modal (dual purpose) */}
             <Modal
                 show={showErrorModal}
                 onHide={() => setShowErrorModal(false)}
                 centered
+                size="sm"
             >
                 <Modal.Body className="text-center p-4">
-                    <div className="error-icon-container mb-3">
-                        <FaTimes size={40} className="text-danger" />
-                    </div>
-                    <h5 className="text-danger mb-3">Subscription Error</h5>
-                    <p className="mb-4">{errorMessage}</p>
-                    <Button 
-                        variant="secondary" 
-                        onClick={() => setShowErrorModal(false)}
-                        className="me-2"
-                    >
-                        Close
-                    </Button>
+                    {errorMessage.includes('bookmark') ? (
+                        <>
+                            <FaBookmark size={32} className={`mb-3 ${errorMessage.includes('added') ? 'text-success' : 'text-warning'}`} />
+                            <h5 className={`mb-3 ${errorMessage.includes('added') ? 'text-success' : 'text-warning'}`}>
+                                {errorMessage}
+                            </h5>
+                        </>
+                    ) : (
+                        <>
+                            <FaTimes size={32} className="text-danger mb-3" />
+                            <h5 className="text-danger mb-3">Subscription Error</h5>
+                            <p className="mb-4" style={{textAlign: 'justify'}}>{errorMessage}</p>
+                            <Button 
+                                variant="secondary" 
+                                onClick={() => setShowErrorModal(false)}
+                                className="me-2"
+                            >
+                                Close
+                            </Button>
+                        </>
+                    )}
                 </Modal.Body>
             </Modal>
 
@@ -378,11 +447,11 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                         )}
                         
                         <Card.Body className="p-4 p-lg-5">
-                            {/* Header */}
+                            {/* Header - Title is centered */}
                             <header className="mb-5">
                                 <h1 className="display-5 fw-bold mb-3 text-center">{post.title}</h1>
                                 
-                                <div className="d-flex flex-wrap align-items-center text-muted mb-4">
+                                <div className="d-flex flex-wrap align-items-center text-muted mb-4 justify-content-center">
                                     <span className="me-3 d-flex align-items-center">
                                         <FaUser className="me-1" size={14} />
                                         By Admin
@@ -401,13 +470,13 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                 </div>
                                 
                                 {post.summary && (
-                                    <div className="lead p-3 bg-light rounded mb-4 text-justify" style={{ textAlign: 'justify' }}>
+                                    <div className="lead p-3 bg-light rounded mb-4" style={{ textAlign: 'justify' }}>
                                         <strong>Summary:</strong> {post.summary}
                                     </div>
                                 )}
                             </header>
 
-                            {/* Content with justified text */}
+                            {/* Content with centered headings and justified text */}
                             <article className="blog-content">
                                 <div className="justified-text-container">
                                     <ReactMarkdown components={components}>
@@ -419,8 +488,8 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                             {/* Tags */}
                             <div className="mt-5 pt-4 border-top">
                                 <div className="d-flex flex-wrap align-items-center">
-                                    <strong className="me-3 mb-2">Tags:</strong>
-                                    <div>
+                                    <strong className="me-3 mb-2" style={{textAlign: 'left'}}>Tags:</strong>
+                                    <div style={{textAlign: 'left'}}>
                                         <Badge bg="secondary" className="me-2 mb-2 p-2">#travel</Badge>
                                         <Badge bg="secondary" className="me-2 mb-2 p-2">#tourism</Badge>
                                         <Badge bg="secondary" className="me-2 mb-2 p-2">#hotels</Badge>
@@ -445,6 +514,14 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                             </Button>
                                             <Button 
                                                 variant="outline-secondary"
+                                                onClick={handleViewBookmarks}
+                                                className="mb-2 me-2"
+                                            >
+                                                <FaBookOpen className="me-2" />
+                                                View Bookmarks
+                                            </Button>
+                                            <Button 
+                                                variant="outline-secondary"
                                                 onClick={handlePrint}
                                                 className="mb-2"
                                             >
@@ -455,7 +532,7 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                     </div>
                                     
                                     <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center">
-                                        <span className="me-3 text-muted mb-2 mb-md-0">Share:</span>
+                                        <span className="me-3 text-muted mb-2 mb-md-0" style={{textAlign: 'left'}}>Share:</span>
                                         <div className="d-flex flex-wrap justify-content-center justify-content-md-start social-share-container">
                                             <ButtonGroup className="d-flex flex-wrap">
                                                 <Button 
@@ -521,14 +598,24 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                             <FaArrowLeft className="me-2" /> Back to Blog
                         </Button>
                         
-                        {relatedPosts.length > 0 && (
+                        <div>
                             <Button 
-                                variant="primary"
-                                onClick={() => navigate('blog-detail', { postId: relatedPosts[0]._id })}
+                                variant="outline-warning" 
+                                onClick={handleViewBookmarks}
+                                className="me-2"
                             >
-                                Next Post <FaArrowLeft className="ms-2 rotate-180" />
+                                <FaBookOpen className="me-2" /> My Bookmarks
                             </Button>
-                        )}
+                            
+                            {relatedPosts.length > 0 && (
+                                <Button 
+                                    variant="primary"
+                                    onClick={() => navigate('blog-detail', { postId: relatedPosts[0]._id })}
+                                >
+                                    Next Post <FaArrowLeft className="ms-2 rotate-180" />
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </Col>
 
@@ -541,10 +628,10 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                 <div className="author-avatar mx-auto mb-3">
                                     <FaUser size={48} className="text-primary" />
                                 </div>
-                                <h5 className="mb-1">The Conclave Academy</h5>
-                                <p className="text-muted small mb-3">Travel & Tourism Experts</p>
-                                <p className="text-muted small">
-                                    Providing expert insights and guides for travel enthusiasts and professionals.
+                                <h5 className="mb-1" style={{textAlign: 'center'}}><strong>The Conclave Academy</strong></h5>
+                                <p className="text-muted small mb-3" style={{textAlign: 'center'}}>Travel & Tourism Experts</p>
+                                <p className="text-muted small" style={{textAlign: 'justify'}}>
+                                    <strong>Providing expert insights and guides</strong> for travel enthusiasts and professionals worldwide. Our mission is to educate and inspire through quality content.
                                 </p>
                             </div>
                         </Card.Body>
@@ -554,7 +641,7 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                     {relatedPosts.length > 0 && (
                         <Card className="shadow-sm border-0 mb-4">
                             <Card.Header className="bg-light">
-                                <h5 className="mb-0">Related Posts</h5>
+                                <h5 className="mb-0" style={{textAlign: 'center'}}><strong>Related Posts</strong></h5>
                             </Card.Header>
                             <Card.Body>
                                 {relatedPosts.map(relatedPost => (
@@ -574,8 +661,8 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                                 />
                                             )}
                                             <div>
-                                                <h6 className="mb-1">{relatedPost.title}</h6>
-                                                <small className="text-muted">
+                                                <h6 className="mb-1" style={{textAlign: 'left'}}><strong>{relatedPost.title}</strong></h6>
+                                                <small className="text-muted" style={{textAlign: 'left'}}>
                                                     {new Date(relatedPost.updatedAt).toLocaleDateString()}
                                                 </small>
                                             </div>
@@ -589,38 +676,38 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                     {/* Reading Stats */}
                     <Card className="shadow-sm border-0 mb-4">
                         <Card.Header className="bg-light">
-                            <h5 className="mb-0">Reading Statistics</h5>
+                            <h5 className="mb-0" style={{textAlign: 'center'}}><strong>Reading Statistics</strong></h5>
                         </Card.Header>
                         <Card.Body>
                             <ul className="list-unstyled mb-0">
                                 <li className="mb-2 d-flex justify-content-between">
-                                    <span className="text-muted">Reading Time:</span>
+                                    <span className="text-muted" style={{textAlign: 'left'}}><strong>Reading Time:</strong></span>
                                     <span className="fw-bold">{readingTime} minutes</span>
                                 </li>
                                 <li className="mb-2 d-flex justify-content-between">
-                                    <span className="text-muted">Word Count:</span>
+                                    <span className="text-muted" style={{textAlign: 'left'}}><strong>Word Count:</strong></span>
                                     <span className="fw-bold">{post.content.split(/\s+/).length} words</span>
                                 </li>
                                 <li className="mb-2 d-flex justify-content-between">
-                                    <span className="text-muted">Last Updated:</span>
+                                    <span className="text-muted" style={{textAlign: 'left'}}><strong>Last Updated:</strong></span>
                                     <span className="fw-bold">{formatDate(post.updatedAt)}</span>
                                 </li>
                                 <li className="d-flex justify-content-between">
-                                    <span className="text-muted">Category:</span>
+                                    <span className="text-muted" style={{textAlign: 'left'}}><strong>Category:</strong></span>
                                     <Badge bg="primary">{post.category}</Badge>
                                 </li>
                             </ul>
                         </Card.Body>
                     </Card>
 
-                    {/* NEWSLETTER Signup - UPDATED */}
+                    {/* NEWSLETTER Signup */}
                     <Card className="shadow-sm border-0">
                         <Card.Body className="text-center bg-primary text-white rounded">
                             <div className="mb-3">
                                 <FaEnvelope size={32} className="mb-2" />
-                                <h5 className="mb-2">Stay Updated</h5>
-                                <p className="small mb-0 opacity-75">
-                                    Subscribe to our newsletter for the latest travel tips and blog posts.
+                                <h5 className="mb-2" style={{textAlign: 'center'}}><strong>Stay Updated</strong></h5>
+                                <p className="small mb-0 opacity-75" style={{textAlign: 'justify'}}>
+                                    <strong>Subscribe to our newsletter</strong> for the latest travel tips, industry news, and exclusive blog posts delivered directly to your inbox.
                                 </p>
                             </div>
                             
@@ -659,8 +746,8 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                         'Subscribe Now'
                                     )}
                                 </Button>
-                                <Form.Text className="d-block text-white-50 mt-2 small">
-                                    We respect your privacy. Unsubscribe at any time.
+                                <Form.Text className="d-block text-white-50 mt-2 small" style={{textAlign: 'justify'}}>
+                                    <strong>We respect your privacy.</strong> Unsubscribe at any time. No spam, ever.
                                 </Form.Text>
                             </Form>
                         </Card.Body>

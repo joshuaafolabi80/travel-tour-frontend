@@ -11,9 +11,18 @@ const CompanyCard = ({ company }) => {
     }
   };
 
+  // Get the Bootstrap color class
+  const typeColor = getTypeColor(company.type);
+  
   return (
-    <Card className="h-100 shadow-sm border-0 hover-lift">
-      <Card.Header className={`bg-${getTypeColor(company.type)} bg-opacity-10 border-0`}>
+    <Card className="h-100 shadow-sm border-0" style={{ 
+      transition: 'transform 0.2s, box-shadow 0.2s',
+      height: '100%'
+    }}>
+      <Card.Header 
+        className={`bg-${typeColor} bg-opacity-10 border-0`}
+        style={{ padding: '1.25rem' }}
+      >
         <div className="d-flex align-items-center">
           <div className="flex-grow-1">
             <div className="d-flex align-items-center mb-2">
@@ -26,11 +35,11 @@ const CompanyCard = ({ company }) => {
               </h5>
             </div>
             <div className="d-flex flex-wrap gap-2">
-              <Badge bg="light" text="dark">
+              <Badge bg="light" text="dark" className="d-flex align-items-center">
                 <i className="fas fa-map-marker-alt me-1"></i>
                 {company.country}
               </Badge>
-              <Badge bg={getTypeColor(company.type)}>
+              <Badge bg={typeColor} className="d-flex align-items-center">
                 {company.type.charAt(0).toUpperCase() + company.type.slice(1)}
               </Badge>
             </div>
@@ -40,11 +49,15 @@ const CompanyCard = ({ company }) => {
               <img 
                 src={company.logo} 
                 alt={`${company.name} logo`}
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'contain' 
+                }}
                 onError={(e) => {
                   e.target.style.display = 'none';
                   e.target.parentElement.innerHTML = 
-                    `<div class="rounded-circle bg-${getTypeColor(company.type)} bg-opacity-25 d-flex align-items-center justify-content-center" style="width:60px;height:60px">
+                    `<div class="rounded-circle bg-${typeColor} bg-opacity-25 d-flex align-items-center justify-content-center" style="width:60px;height:60px">
                        <span class="fs-4">${getTypeIcon(company.type)}</span>
                      </div>`;
                 }}
@@ -54,7 +67,7 @@ const CompanyCard = ({ company }) => {
         </div>
       </Card.Header>
 
-      <Card.Body>
+      <Card.Body style={{ padding: '1.25rem' }}>
         <p className="text-muted mb-3" style={{ lineHeight: '1.6' }}>
           {company.description}
         </p>
@@ -62,19 +75,32 @@ const CompanyCard = ({ company }) => {
         <div className="mb-3">
           <h6 className="mb-2">
             <i className="fas fa-briefcase me-2"></i>
-            <strong>Opportunities:</strong>
+            <strong>Common Opportunities:</strong>
           </h6>
           <div className="d-flex flex-wrap gap-1">
-            {company.opportunities?.map((opp, index) => (
-              <Badge key={index} bg="light" text="dark" className="px-2 py-1" style={{ fontSize: '0.8rem' }}>
+            {company.opportunities && company.opportunities.map((opp, index) => (
+              <Badge 
+                key={index} 
+                bg="light" 
+                text="dark" 
+                className="px-2 py-1"
+                style={{ fontSize: '0.8rem' }}
+              >
                 {opp}
               </Badge>
             ))}
           </div>
         </div>
+
+        <div className="mb-3">
+          <small className="text-muted">
+            <i className="fas fa-clock me-1"></i>
+            Last updated: {company.lastUpdated}
+          </small>
+        </div>
       </Card.Body>
 
-      <Card.Footer className="bg-white border-top-0">
+      <Card.Footer className="bg-white border-top-0" style={{ padding: '1.25rem' }}>
         <div className="d-grid gap-2">
           <Button 
             variant="primary" 

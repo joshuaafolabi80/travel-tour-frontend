@@ -589,20 +589,22 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                     </Card>
 
                     {/* Navigation */}
-                    <div className="d-flex justify-content-between mt-4">
+                    <div className="d-flex justify-content-between align-items-center mt-4">
                         <Button 
                             variant="outline-primary" 
                             onClick={handleBackClick}
                             className="d-flex align-items-center"
+                            size="sm"
                         >
                             <FaArrowLeft className="me-2" /> Back to Blog
                         </Button>
                         
-                        <div>
+                        <div className="d-flex align-items-center">
                             <Button 
                                 variant="outline-warning" 
                                 onClick={handleViewBookmarks}
-                                className="me-2"
+                                className="me-3"
+                                size="sm"
                             >
                                 <FaBookOpen className="me-2" /> My Bookmarks
                             </Button>
@@ -611,6 +613,7 @@ const SingleBlogDetail = ({ navigate, postId }) => {
                                 <Button 
                                     variant="primary"
                                     onClick={() => navigate('blog-detail', { postId: relatedPosts[0]._id })}
+                                    size="sm"
                                 >
                                     Next Post <FaArrowLeft className="ms-2 rotate-180" />
                                 </Button>

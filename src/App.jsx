@@ -45,6 +45,9 @@ import HotelSearchHome from './components/hotel-search/HomePage';
 import HotelSearchResults from './components/hotel-search/SearchResultsPage';
 import HotelDetailPage from './components/hotel-search/HotelDetailPage';
 
+// --- Experiences Components ---
+import ExperiencesPage from './components/experiences/ExperiencesPage'; // ADD THIS IMPORT
+
 // 📝 BLOG COMPONENTS
 import AdminBlogPage from './components/blog/AdminBlogPage';
 import AdminCreateEditBlog from './components/blog/AdminCreateEditBlog';
@@ -727,14 +730,18 @@ const App = () => {
                                 </div>
                             </div>
                             <div className="col-4">
-                                <div className="nav-grid-item">
-                                    <i className="fas fa-coffee nav-icon"></i>
+                                <div 
+                                    className="nav-grid-item" 
+                                    onClick={() => navigateTo('experiences')}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <i className="fas fa-briefcase nav-icon"></i>
                                     <span className="nav-text">Experiences</span>
                                 </div>
                             </div>
                             <div className="col-4">
                                 <div className="nav-grid-item">
-                                    <i className="fas fa-briefcase nav-icon"></i>
+                                    <i className="fas fa-coffee nav-icon"></i>
                                     <span className="nav-text">Business Course</span>
                                 </div>
                             </div>
@@ -937,6 +944,9 @@ const App = () => {
                                 userName={userData?.name}
                             />
                         )}
+
+                        {/* EXPERIENCES PAGE */}
+                        {currentPage === 'experiences' && <ExperiencesPage navigateTo={navigateTo} />}
 
                         {/* User Pages */}
                         {currentPage === 'general-courses' && <GeneralCourses navigateTo={navigateTo} />}

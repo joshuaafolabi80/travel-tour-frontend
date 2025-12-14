@@ -157,8 +157,15 @@ const UserBlogPage = ({ navigateTo }) => {
                     </div>
                 </div>
                 <Card.Body className="d-flex flex-column">
-                    <Card.Title className="h5 mb-3">{post.title}</Card.Title>
-                    <Card.Text className="text-muted flex-grow-1">
+                    {/* Centered Card Title */}
+                    <Card.Title className="h5 mb-3 text-center" style={{textAlign: 'center'}}>
+                        <strong>{post.title}</strong>
+                    </Card.Title>
+                    {/* Justified Card Text */}
+                    <Card.Text 
+                        className="text-muted flex-grow-1" 
+                        style={{textAlign: 'justify', lineHeight: '1.6'}}
+                    >
                         {post.summary || post.content.substring(0, 120) + '...'}
                     </Card.Text>
                     <div className="d-flex justify-content-between align-items-center mt-3">

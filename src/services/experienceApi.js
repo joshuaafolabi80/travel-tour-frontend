@@ -42,19 +42,15 @@ experienceApi.interceptors.response.use(
       message: error.message
     });
     
-    // Enhanced error handling
     if (error.response) {
-      // Server responded with error status
       const serverError = error.response.data?.error || 'Server error';
       const enhancedError = new Error(serverError);
       enhancedError.status = error.response.status;
       enhancedError.data = error.response.data;
       return Promise.reject(enhancedError);
     } else if (error.request) {
-      // Request made but no response
       return Promise.reject(new Error('Network error. Please check your connection.'));
     } else {
-      // Something else happened
       return Promise.reject(error);
     }
   }
@@ -95,7 +91,6 @@ export const getExperienceById = (id) => {
  * @returns {Promise} Axios response
  */
 export const submitExperience = (data) => {
-  // Validate required fields
   const requiredFields = ['title', 'type', 'duration', 'location', 'description', 'user.name', 'user.role'];
   const missingFields = requiredFields.filter(field => {
     const parts = field.split('.');
@@ -114,24 +109,42 @@ export const submitExperience = (data) => {
   const processedData = { ...data };
   if (typeof processedData.skillsLearned === 'string') {
     processedData.skillsLearned = processedData.skillsLearned
-      .split(',')
+      .split(/[,\n]/)
       .map(skill => skill.trim())
-      .filter(skill => skill.length > 0);
+      .filter(skill => skill.length > 0)
+      .map(skill => skill.replace(/^[•\-\*]\s*/, ''));
   }
 
   return experienceApi.post('/experiences', processedData);
 };
 
 /**
- * Like an experience
+ * Like/unlike an experience
  * @param {string} id - Experience ID
+ * @param {string} userId - User ID or email
  * @returns {Promise} Axios response
  */
-export const likeExperience = (id) => {
+export const likeExperience = (id, userId) => {
   if (!id) {
     return Promise.reject(new Error('Experience ID is required'));
   }
-  return experienceApi.put(`/experiences/${id}/like`);
+  if (!userId) {
+    return Promise.reject(new Error('User ID is required'));
+  }
+  return experienceApi.put(`/experiences/${id}/like`, { userId });
+};
+
+/**
+ * Check if user liked an experience
+ * @param {string} id - Experience ID
+ * @param {string} userId - User ID or email
+ * @returns {Promise} Axios response
+ */
+export const checkIfLiked = (id, userId) => {
+  if (!id || !userId) {
+    return Promise.reject(new Error('Experience ID and User ID are required'));
+  }
+  return experienceApi.get(`/experiences/${id}/liked/${userId}`);
 };
 
 /**

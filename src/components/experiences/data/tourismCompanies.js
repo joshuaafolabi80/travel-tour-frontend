@@ -1,7 +1,7 @@
 // tourismCompanies.js - REAL companies with DIRECT links (no iframes)
 export const tourismCompanies = {
   // 🏨 HOTELS & RESORTS
-  hotels: [
+  hotel: [ // CHANGED from "hotels" to "hotel"
     {
       id: 1,
       name: "Marriott International",
@@ -44,7 +44,7 @@ export const tourismCompanies = {
   ],
 
   // ✈️ TRAVEL AGENCIES
-  travel: [
+  travel: [ // KEPT as "travel"
     {
       id: 4,
       name: "Wakanow",
@@ -73,7 +73,7 @@ export const tourismCompanies = {
   ],
 
   // 🛫 AIRLINES
-  airlines: [
+  airline: [ // CHANGED from "airlines" to "airline"
     {
       id: 6,
       name: "Air Peace",
@@ -102,7 +102,7 @@ export const tourismCompanies = {
   ],
 
   // 🚌 TOUR OPERATORS
-  tours: [
+  tour: [ // CHANGED from "tours" to "tour"
     {
       id: 8,
       name: "Travel Counselors Nigeria",
@@ -130,7 +130,7 @@ export const tourismCompanies = {
   ]
 };
 
-// ✅ FIXED: Helper functions - ALL functions must be exported
+// ✅ FIXED: Helper functions
 export const getTypeIcon = (type) => {
   const icons = {
     hotel: "🏨",
@@ -151,7 +151,6 @@ export const getTypeName = (type) => {
   return names[type] || "Company";
 };
 
-// ✅ FIXED: Added missing getTypeColor function
 export const getTypeColor = (type) => {
   const colors = {
     hotel: "primary",

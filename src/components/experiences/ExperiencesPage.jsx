@@ -31,10 +31,10 @@ const ExperiencesPage = ({ navigateTo }) => {
       {/* Header */}
       <div className="text-center mb-5">
         <h1 className="display-5 fw-bold mb-3">
-          <span className="text-primary">🎯</span> Tourism Experiences Hub
+          <span className="text-primary">🎯</span> Welcome to the Conclave Travels, Hotels, Tourism and Tours Experiences Hub.
         </h1>
         <p className="lead text-muted mb-4">
-          Explore job opportunities and share real experiences from the tourism industry
+          Explore job opportunities and share real experiences from the Travels, Hotels, Tourism and Tours industries.
         </p>
       </div>
 
@@ -53,7 +53,7 @@ const ExperiencesPage = ({ navigateTo }) => {
                   </div>
                   <h5 className="mb-2">🏢 Workplace Experiences</h5>
                   <p className="text-muted small mb-3">
-                    Find job opportunities from leading tourism companies
+                    Find job opportunities from leading Travels, Hotels, Tourism and Tours companies
                   </p>
                   <Button 
                     variant={activeSection === 'workplace' ? "primary" : "outline-primary"}

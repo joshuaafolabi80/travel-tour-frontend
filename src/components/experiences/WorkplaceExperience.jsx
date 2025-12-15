@@ -88,35 +88,14 @@ const WorkplaceExperience = () => {
       <div className="text-center mb-4">
         <h2 className="fw-bold mb-3">
           <i className="fas fa-building me-2"></i>
-          Tourism Company Opportunities
+          Travels, Hotels, Tourism and Tours Company Opportunities
         </h2>
         <p className="text-muted mb-4">
-          Direct links to career pages of verified tourism companies
+          Direct links to career pages of verified Travels, Hotels, Tourism and Tours  companies
         </p>
       </div>
 
-      {/* Stats Bar */}
-      <Card className="mb-4 border-0 shadow-sm">
-        <Card.Body className="p-3">
-          <Row className="text-center">
-            {Object.entries(tourismCompanies).map(([key, companies]) => {
-              const tabColor = getTypeColor(key);
-              return (
-                <Col key={key} xs={6} md={3} className="mb-2 mb-md-0">
-                  <div className="d-flex flex-column">
-                    <span className="fs-3 fw-bold" style={{ color: `var(--bs-${tabColor})` }}>
-                      {companies.length}
-                    </span>
-                    <small className="text-muted">
-                      {getTypeIcon(key)} {getTypeName(key)}
-                    </small>
-                  </div>
-                </Col>
-              );
-            })}
-          </Row>
-        </Card.Body>
-      </Card>
+      
 
       {/* Controls */}
       <Card className="mb-4 border-0 shadow-sm">

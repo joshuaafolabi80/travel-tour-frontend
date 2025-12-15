@@ -109,8 +109,8 @@ const ExperiencesPage = ({ navigateTo }) => {
         <TraditionalExperience />
       )}
 
-      {/* Footer Note - Justified content */}
-      <Alert variant="light" className="mt-5" style={{ textAlign: 'justify' }}>
+      {/* Footer Note - Justified content WITH SPACING */}
+      <Alert variant="light" className="mt-5 mb-5" style={{ textAlign: 'justify' }}>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-center">
           <div className="mb-3 mb-md-0">
             <h6 className="mb-2 text-center">Need career guidance?</h6>
@@ -124,7 +124,7 @@ const ExperiencesPage = ({ navigateTo }) => {
           <Button 
             variant="outline-primary"
             onClick={() => navigateTo('contact-us')}
-            className="mt-3 mt-md-0"
+            className="mt-3 mt-md-0 ms-md-3"
           >
             <i className="fas fa-comments me-2"></i>
             Get Career Advice

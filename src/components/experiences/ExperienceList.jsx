@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Badge, Button, Pagination, Alert, Dropdown, Spinner } from 'react-bootstrap';
-import { getExperiences, likeExperience } from '../../services/experienceApi';
+import { Card, Row, Col, Badge, Button, Pagination, Alert, Dropdown, Spinner, Modal } from 'react-bootstrap';
+import { getExperiences, likeExperience, viewExperience } from '../../services/experienceApi';
 import socketService from '../../utils/socketService';
 import { getTypeIcon, getTypeColor } from './data/tourismCompanies';
 
@@ -11,6 +11,8 @@ const ExperienceList = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [filterType, setFilterType] = useState('all');
   const [sortBy, setSortBy] = useState('-createdAt');
+  const [selectedExperience, setSelectedExperience] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const itemsPerPage = 9;
 
   const fetchExperiences = async () => {
@@ -79,6 +81,30 @@ const ExperienceList = () => {
       socketService.emitExperienceLiked(experienceId, newLikeCount);
     } catch (error) {
       console.error('Error liking experience:', error);
+    }
+  };
+
+  const handleViewExperience = async (experience) => {
+    try {
+      // Increment view count on the server
+      const response = await viewExperience(experience._id);
+      
+      // Update local state with new view count
+      setExperiences(prev => prev.map(exp => 
+        exp._id === experience._id ? { ...exp, views: response.data.views } : exp
+      ));
+      
+      // Show the detail modal
+      setSelectedExperience(experience);
+      setShowDetailModal(true);
+      
+      // Emit real-time update for views
+      socketService.emitExperienceViewed(experience._id);
+    } catch (error) {
+      console.error('Error viewing experience:', error);
+      // Still show the modal even if view count fails
+      setSelectedExperience(experience);
+      setShowDetailModal(true);
     }
   };
 
@@ -222,14 +248,18 @@ const ExperienceList = () => {
                       </small>
                     </div>
                     
-                    {/* Challenges Faced - Justified */}
-                    {experience.challenges && (
-                      <div className="mb-3">
-                        <small className="text-muted" style={{ textAlign: 'justify' }}>
-                          <strong>Challenge:</strong> {experience.challenges.substring(0, 80)}...
-                        </small>
-                      </div>
-                    )}
+                    {/* Read More Button */}
+                    <div className="text-center mt-3">
+                      <Button 
+                        variant="outline-primary" 
+                        size="sm"
+                        onClick={() => handleViewExperience(experience)}
+                        className="px-4"
+                      >
+                        <i className="fas fa-book-reader me-2"></i>
+                        Read Full Story
+                      </Button>
+                    </div>
                   </Card.Body>
                   
                   <Card.Footer className="bg-white border-top-0">
@@ -253,10 +283,16 @@ const ExperienceList = () => {
                           <i className="fas fa-heart me-1"></i>
                           {experience.likes}
                         </Button>
-                        <small className="text-muted">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => handleViewExperience(experience)}
+                          className="text-info p-0"
+                          title="View full story"
+                        >
                           <i className="fas fa-eye me-1"></i>
                           {experience.views}
-                        </small>
+                        </Button>
                       </div>
                     </div>
                   </Card.Footer>
@@ -264,6 +300,128 @@ const ExperienceList = () => {
               </Col>
             ))}
           </Row>
+
+          {/* Experience Detail Modal */}
+          <Modal 
+            show={showDetailModal} 
+            onHide={() => setShowDetailModal(false)} 
+            size="lg"
+            centered
+            scrollable
+          >
+            <Modal.Header closeButton className={`bg-${selectedExperience ? getTypeColor(selectedExperience.type) : 'primary'} bg-opacity-10`}>
+              <Modal.Title>
+                <span className="me-2">{selectedExperience ? getTypeIcon(selectedExperience.type) : ''}</span>
+                {selectedExperience?.title}
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              {selectedExperience && (
+                <div>
+                  <div className="text-center mb-4">
+                    <Badge bg={getTypeColor(selectedExperience.type)} className="me-2">
+                      {selectedExperience.type.charAt(0).toUpperCase() + selectedExperience.type.slice(1)}
+                    </Badge>
+                    <Badge bg="secondary" className="me-2">
+                      <i className="fas fa-clock me-1"></i>
+                      {selectedExperience.duration}
+                    </Badge>
+                    <Badge bg="secondary">
+                      <i className="fas fa-map-marker-alt me-1"></i>
+                      {selectedExperience.location}
+                    </Badge>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <h6 className="text-primary mb-2">Experience Description</h6>
+                    <p className="text-justify" style={{ lineHeight: '1.8' }}>
+                      {selectedExperience.description}
+                    </p>
+                  </div>
+                  
+                  {selectedExperience.skillsLearned && selectedExperience.skillsLearned.length > 0 && (
+                    <div className="mb-4">
+                      <h6 className="text-primary mb-2">Skills Learned</h6>
+                      <div className="d-flex flex-wrap gap-2">
+                        {selectedExperience.skillsLearned.map((skill, index) => (
+                          <Badge key={index} bg="light" text="dark" className="px-3 py-2">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedExperience.challenges && (
+                    <div className="mb-4">
+                      <h6 className="text-primary mb-2">Challenges Faced</h6>
+                      <p className="text-justify" style={{ lineHeight: '1.8' }}>
+                        {selectedExperience.challenges}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {selectedExperience.advice && (
+                    <div className="mb-4">
+                      <h6 className="text-primary mb-2">Advice for Others</h6>
+                      <p className="text-justify" style={{ lineHeight: '1.8' }}>
+                        {selectedExperience.advice}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <Card className="border-0 bg-light">
+                    <Card.Body>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <h6 className="mb-1">Shared by:</h6>
+                          <p className="mb-0">
+                            <i className="fas fa-user me-2"></i>
+                            {selectedExperience.isAnonymous ? 'Anonymous' : selectedExperience.user.name}
+                            <span className="mx-2">•</span>
+                            {selectedExperience.user.role}
+                          </p>
+                          {selectedExperience.user.email && !selectedExperience.isAnonymous && (
+                            <small className="text-muted">
+                              <i className="fas fa-envelope me-1"></i>
+                              {selectedExperience.user.email}
+                            </small>
+                          )}
+                        </div>
+                        <div className="text-end">
+                          <small className="text-muted d-block">
+                            <i className="far fa-calendar me-1"></i>
+                            {new Date(selectedExperience.createdAt).toLocaleDateString()}
+                          </small>
+                          <small className="text-muted d-block">
+                            <i className="fas fa-eye me-1"></i> {selectedExperience.views} views
+                            <span className="mx-2">•</span>
+                            <i className="fas fa-heart me-1"></i> {selectedExperience.likes} likes
+                          </small>
+                        </div>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </div>
+              )}
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={() => setShowDetailModal(false)}>
+                Close
+              </Button>
+              <Button 
+                variant="primary"
+                onClick={() => {
+                  if (selectedExperience) {
+                    handleLike(selectedExperience._id, selectedExperience.likes);
+                  }
+                }}
+              >
+                <i className="fas fa-heart me-2"></i>
+                Like this Story
+              </Button>
+            </Modal.Footer>
+          </Modal>
 
           {/* Pagination */}
           {totalPages > 1 && (

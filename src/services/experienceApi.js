@@ -135,6 +135,18 @@ export const likeExperience = (id) => {
 };
 
 /**
+ * Increment view count for an experience
+ * @param {string} id - Experience ID
+ * @returns {Promise} Axios response
+ */
+export const viewExperience = (id) => {
+  if (!id) {
+    return Promise.reject(new Error('Experience ID is required'));
+  }
+  return experienceApi.put(`/experiences/${id}/view`);
+};
+
+/**
  * Search experiences
  * @param {string} query - Search query
  * @param {Object} options - Search options

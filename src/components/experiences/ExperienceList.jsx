@@ -108,8 +108,8 @@ const ExperienceList = () => {
         <Card.Body>
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3">
             <div>
-              <h5 className="mb-0">Real Student/User Experiences</h5>
-              <p className="text-muted mb-0 small">
+              <h5 className="mb-0 text-center w-100">Real Student/User Experiences</h5>
+              <p className="text-muted mb-0 small text-center w-100">
                 Live from MongoDB database • {experiences.length} experiences loaded
               </p>
             </div>
@@ -181,9 +181,9 @@ const ExperienceList = () => {
             {experiences.map(experience => (
               <Col key={experience._id} xs={12} md={6} lg={4}>
                 <Card className="h-100 shadow-sm hover-lift">
-                  <Card.Header className={`bg-${getTypeColor(experience.type)} bg-opacity-10 border-0`}>
+                  <Card.Header className={`bg-${getTypeColor(experience.type)} bg-opacity-10 border-0 text-center`}>
                     <div className="d-flex justify-content-between align-items-center">
-                      <Badge bg={getTypeColor(experience.type)}>
+                      <Badge bg={getTypeColor(experience.type)} className="mx-auto">
                         {getTypeIcon(experience.type)} {experience.type.charAt(0).toUpperCase() + experience.type.slice(1)}
                       </Badge>
                       <small className="text-muted">
@@ -194,11 +194,13 @@ const ExperienceList = () => {
                   </Card.Header>
                   
                   <Card.Body>
-                    <h6 className="mb-2">
+                    {/* Experience Title - Centered */}
+                    <h6 className="mb-2 text-center">
                       <strong>{experience.title}</strong>
                     </h6>
                     
-                    <div className="text-muted small mb-3">
+                    {/* Duration & Location - Centered */}
+                    <div className="text-muted small mb-3 text-center">
                       <div className="mb-1">
                         <i className="fas fa-clock me-1"></i>
                         {experience.duration}
@@ -208,19 +210,22 @@ const ExperienceList = () => {
                       </div>
                     </div>
                     
-                    <p className="small mb-3" style={{ lineHeight: '1.6' }}>
+                    {/* Experience Description - Justified */}
+                    <p className="small mb-3" style={{ textAlign: 'justify', lineHeight: '1.6' }}>
                       {experience.description.substring(0, 120)}...
                     </p>
                     
+                    {/* Skills Learned - Justified */}
                     <div className="mb-3">
-                      <small className="text-muted">
+                      <small className="text-muted" style={{ textAlign: 'justify' }}>
                         <strong>Skills:</strong> {experience.skillsLearned?.join(', ')}
                       </small>
                     </div>
                     
+                    {/* Challenges Faced - Justified */}
                     {experience.challenges && (
                       <div className="mb-3">
-                        <small className="text-muted">
+                        <small className="text-muted" style={{ textAlign: 'justify' }}>
                           <strong>Challenge:</strong> {experience.challenges.substring(0, 80)}...
                         </small>
                       </div>
@@ -230,7 +235,7 @@ const ExperienceList = () => {
                   <Card.Footer className="bg-white border-top-0">
                     <div className="d-flex justify-content-between align-items-center">
                       <div>
-                        <small className="text-muted">
+                        <small className="text-muted text-center w-100 d-block">
                           <i className="fas fa-user me-1"></i>
                           {experience.isAnonymous ? 'Anonymous' : experience.user.name}
                           <span className="mx-2">•</span>

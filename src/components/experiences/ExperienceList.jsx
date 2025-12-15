@@ -36,26 +36,33 @@ const ExperienceList = () => {
   useEffect(() => {
     fetchExperiences();
     
-    // Listen for new experiences via Socket.IO
-    const handleNewExperience = (data) => {
-      console.log('New experience received:', data);
-      fetchExperiences(); // Refresh list
-    };
+    // ✅ FIXED: Check if socketService has the method
+    if (socketService && typeof socketService.onNewExperience === 'function') {
+      // Listen for new experiences via Socket.IO
+      const handleNewExperience = (data) => {
+        console.log('New experience received:', data);
+        fetchExperiences(); // Refresh list
+      };
 
-    const handleLikeUpdate = (data) => {
-      setExperiences(prev => prev.map(exp => 
-        exp._id === data.experienceId ? { ...exp, likes: data.newLikeCount } : exp
-      ));
-    };
+      const handleLikeUpdate = (data) => {
+        setExperiences(prev => prev.map(exp => 
+          exp._id === data.experienceId ? { ...exp, likes: data.newLikeCount } : exp
+        ));
+      };
 
-    const socket = socketService.connect();
-    socketService.onNewExperience(handleNewExperience);
-    socketService.onLikeUpdated(handleLikeUpdate);
+      socketService.onNewExperience(handleNewExperience);
+      socketService.onLikeUpdated(handleLikeUpdate);
 
-    return () => {
-      socketService.removeListener('new-experience', handleNewExperience);
-      socketService.removeListener('experience-like-updated', handleLikeUpdate);
-    };
+      return () => {
+        if (socketService.removeListener) {
+          socketService.removeListener('new-experience', handleNewExperience);
+          socketService.removeListener('experience-like-updated', handleLikeUpdate);
+        }
+      };
+    } else {
+      console.error('❌ socketService.onNewExperience is not a function');
+      console.log('socketService object:', socketService);
+    }
   }, [currentPage, filterType, sortBy]);
 
   const handleLike = async (experienceId, currentLikes) => {

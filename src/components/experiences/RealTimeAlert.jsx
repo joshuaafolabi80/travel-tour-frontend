@@ -8,6 +8,12 @@ const RealTimeAlert = () => {
   const [flyInMessage, setFlyInMessage] = useState('');
 
   useEffect(() => {
+    // ✅ FIXED: Check if methods exist before using
+    if (!socketService || typeof socketService.onNewExperience !== 'function') {
+      console.error('❌ socketService methods not available');
+      return;
+    }
+
     // Listen for new experiences
     const handleNewExperience = (data) => {
       const newNotification = {
@@ -36,13 +42,14 @@ const RealTimeAlert = () => {
       setNotifications(prev => [newNotification, ...prev.slice(0, 4)]);
     };
 
-    const socket = socketService.connect();
     socketService.onNewExperience(handleNewExperience);
     socketService.onLikeUpdated(handleLikeUpdate);
 
     return () => {
-      socketService.removeListener('new-experience', handleNewExperience);
-      socketService.removeListener('experience-like-updated', handleLikeUpdate);
+      if (socketService.removeListener) {
+        socketService.removeListener('new-experience', handleNewExperience);
+        socketService.removeListener('experience-like-updated', handleLikeUpdate);
+      }
     };
   }, []);
 

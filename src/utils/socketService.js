@@ -259,6 +259,36 @@ class SocketService {
     }
   }
 
+  // ==================== NEW METHODS ADDED ====================
+
+  /**
+   * Listen for new experience events
+   * @param {Function} callback - Callback function for new experiences
+   */
+  onNewExperience(callback) {
+    if (this.socket) {
+      this.socket.on('new-experience', callback);
+    } else {
+      // Store the callback for when socket connects
+      console.log('⚠️ Socket not connected yet, storing callback');
+      this.addListener('new-experience', callback);
+    }
+  }
+
+  /**
+   * Listen for experience like updated events
+   * @param {Function} callback - Callback function for like updates
+   */
+  onLikeUpdated(callback) {
+    if (this.socket) {
+      this.socket.on('experience-like-updated', callback);
+    } else {
+      this.addListener('experience-like-updated', callback);
+    }
+  }
+
+  // ==================== UTILITY METHODS ====================
+
   /**
    * Get the raw socket instance
    * @returns {Socket|null} Socket instance or null

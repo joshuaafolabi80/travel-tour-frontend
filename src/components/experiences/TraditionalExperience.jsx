@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Card, Button, Modal, Alert, Row, Col } from 'react-bootstrap';
 import ExperienceForm from './ExperienceForm';
 import ExperienceList from './ExperienceList';
@@ -8,10 +8,25 @@ const TraditionalExperience = () => {
   const [showForm, setShowForm] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
 
+  useEffect(() => {
+    // Initialize socket connection
+    const socket = socketService.connect();
+    
+    // Test if methods exist
+    console.log('Socket methods available:', {
+      onNewExperience: typeof socketService.onNewExperience,
+      onLikeUpdated: typeof socketService.onLikeUpdated,
+      addListener: typeof socketService.addListener
+    });
+    
+    return () => {
+      // Cleanup if needed
+    };
+  }, []);
+
   const handleSubmitExperience = async (experienceData) => {
     try {
-      // Socket notification
-      const socket = socketService.connect();
+      // ✅ FIXED: Use correct method
       socketService.emitExperienceSubmitted(experienceData);
       
       setFormSubmitted(true);

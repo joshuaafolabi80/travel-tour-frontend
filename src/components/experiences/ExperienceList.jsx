@@ -38,12 +38,10 @@ const ExperienceList = () => {
   useEffect(() => {
     fetchExperiences();
     
-    // ✅ FIXED: Check if socketService has the method
     if (socketService && typeof socketService.onNewExperience === 'function') {
-      // Listen for new experiences via Socket.IO
       const handleNewExperience = (data) => {
         console.log('New experience received:', data);
-        fetchExperiences(); // Refresh list
+        fetchExperiences();
       };
 
       const handleLikeUpdate = (data) => {
@@ -63,7 +61,6 @@ const ExperienceList = () => {
       };
     } else {
       console.error('❌ socketService.onNewExperience is not a function');
-      console.log('socketService object:', socketService);
     }
   }, [currentPage, filterType, sortBy]);
 
@@ -72,12 +69,10 @@ const ExperienceList = () => {
       const response = await likeExperience(experienceId);
       const newLikeCount = response.data.likes;
       
-      // Update local state
       setExperiences(prev => prev.map(exp => 
         exp._id === experienceId ? { ...exp, likes: newLikeCount } : exp
       ));
       
-      // Emit real-time update
       socketService.emitExperienceLiked(experienceId, newLikeCount);
     } catch (error) {
       console.error('Error liking experience:', error);
@@ -86,26 +81,30 @@ const ExperienceList = () => {
 
   const handleViewExperience = async (experience) => {
     try {
-      // Increment view count on the server
       const response = await viewExperience(experience._id);
       
-      // Update local state with new view count
       setExperiences(prev => prev.map(exp => 
         exp._id === experience._id ? { ...exp, views: response.data.views } : exp
       ));
       
-      // Show the detail modal
       setSelectedExperience(experience);
       setShowDetailModal(true);
       
-      // Emit real-time update for views
       socketService.emitExperienceViewed(experience._id);
     } catch (error) {
       console.error('Error viewing experience:', error);
-      // Still show the modal even if view count fails
       setSelectedExperience(experience);
       setShowDetailModal(true);
     }
+  };
+
+  const formatSkillsForDisplay = (skills) => {
+    if (!skills || !Array.isArray(skills)) return [];
+    
+    return skills.map(skill => {
+      // Remove bullet points if already present
+      return skill.replace(/^[•\-\*]\s*/, '').trim();
+    });
   };
 
   const experienceTypes = [
@@ -204,101 +203,115 @@ const ExperienceList = () => {
       ) : (
         <>
           <Row className="g-4 mb-4">
-            {experiences.map(experience => (
-              <Col key={experience._id} xs={12} md={6} lg={4}>
-                <Card className="h-100 shadow-sm hover-lift">
-                  <Card.Header className={`bg-${getTypeColor(experience.type)} bg-opacity-10 border-0 text-center`}>
-                    <div className="d-flex justify-content-between align-items-center">
-                      <Badge bg={getTypeColor(experience.type)} className="">
-                        {getTypeIcon(experience.type)} {experience.type.charAt(0).toUpperCase() + experience.type.slice(1)}
-                      </Badge>
-                      <small className="text-muted">
-                        <i className="far fa-calendar me-1"></i>
-                        {new Date(experience.createdAt).toLocaleDateString()}
-                      </small>
-                    </div>
-                  </Card.Header>
-                  
-                  <Card.Body>
-                    {/* Experience Title - Centered */}
-                    <h6 className="mb-2 text-center">
-                      <strong>{experience.title}</strong>
-                    </h6>
-                    
-                    {/* Duration & Location - Centered */}
-                    <div className="text-muted small mb-3 text-center">
-                      <div className="mb-1">
-                        <i className="fas fa-clock me-1"></i>
-                        {experience.duration}
-                        <span className="mx-2">•</span>
-                        <i className="fas fa-map-marker-alt me-1"></i>
-                        {experience.location}
-                      </div>
-                    </div>
-                    
-                    {/* Experience Description - Justified */}
-                    <p className="small mb-3" style={{ textAlign: 'justify', lineHeight: '1.6' }}>
-                      {experience.description.substring(0, 120)}...
-                    </p>
-                    
-                    {/* Skills Learned - Justified */}
-                    <div className="mb-3">
-                      <small className="text-muted" style={{ textAlign: 'justify' }}>
-                        <strong>Skills:</strong> {experience.skillsLearned?.join(', ')}
-                      </small>
-                    </div>
-                    
-                    {/* Read More Button */}
-                    <div className="text-center mt-3">
-                      <Button 
-                        variant="outline-primary" 
-                        size="sm"
-                        onClick={() => handleViewExperience(experience)}
-                        className="px-4"
-                      >
-                        <i className="fas fa-book-reader me-2"></i>
-                        Read Full Story
-                      </Button>
-                    </div>
-                  </Card.Body>
-                  
-                  <Card.Footer className="bg-white border-top-0">
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div>
-                        <small className="text-muted text-center w-100 d-block">
-                          <i className="fas fa-user me-1"></i>
-                          {experience.isAnonymous ? 'Anonymous' : experience.user.name}
-                          <span className="mx-2">•</span>
-                          {experience.user.role}
+            {experiences.map(experience => {
+              const formattedSkills = formatSkillsForDisplay(experience.skillsLearned);
+              
+              return (
+                <Col key={experience._id} xs={12} md={6} lg={4}>
+                  <Card className="h-100 shadow-sm hover-lift">
+                    <Card.Header className={`bg-${getTypeColor(experience.type)} bg-opacity-10 border-0 text-center`}>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <Badge bg={getTypeColor(experience.type)} className="">
+                          {getTypeIcon(experience.type)} {experience.type.charAt(0).toUpperCase() + experience.type.slice(1)}
+                        </Badge>
+                        <small className="text-muted">
+                          <i className="far fa-calendar me-1"></i>
+                          {new Date(experience.createdAt).toLocaleDateString()}
                         </small>
                       </div>
+                    </Card.Header>
+                    
+                    <Card.Body>
+                      <h6 className="mb-2 text-center">
+                        <strong>{experience.title}</strong>
+                      </h6>
                       
-                      <div className="d-flex align-items-center">
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={() => handleLike(experience._id, experience.likes)}
-                          className="text-danger p-0 me-3"
-                        >
-                          <i className="fas fa-heart me-1"></i>
-                          {experience.likes}
-                        </Button>
-                        <Button
-                          variant="link"
+                      <div className="text-muted small mb-3 text-center">
+                        <div className="mb-1">
+                          <i className="fas fa-clock me-1"></i>
+                          {experience.duration}
+                          <span className="mx-2">•</span>
+                          <i className="fas fa-map-marker-alt me-1"></i>
+                          {experience.location}
+                        </div>
+                      </div>
+                      
+                      <p className="small mb-3" style={{ textAlign: 'justify', lineHeight: '1.6' }}>
+                        {experience.description.substring(0, 120)}...
+                      </p>
+                      
+                      {/* Skills Learned - Bulleted Format */}
+                      {formattedSkills.length > 0 && (
+                        <div className="mb-3">
+                          <small className="text-muted d-block mb-1">
+                            <strong>Skills Learned:</strong>
+                          </small>
+                          <ul className="mb-0 ps-3" style={{ fontSize: '0.85rem' }}>
+                            {formattedSkills.slice(0, 3).map((skill, index) => (
+                              <li key={index} className="mb-1" style={{ textAlign: 'justify' }}>
+                                {skill}
+                              </li>
+                            ))}
+                            {formattedSkills.length > 3 && (
+                              <li className="text-muted fst-italic">
+                                +{formattedSkills.length - 3} more skills...
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      <div className="text-center mt-3">
+                        <Button 
+                          variant="outline-primary" 
                           size="sm"
                           onClick={() => handleViewExperience(experience)}
-                          className="text-info p-0"
-                          title="View full story"
+                          className="px-4"
                         >
-                          <i className="fas fa-eye me-1"></i>
-                          {experience.views}
+                          <i className="fas fa-book-reader me-2"></i>
+                          Read Full Story
                         </Button>
                       </div>
-                    </div>
-                  </Card.Footer>
-                </Card>
-              </Col>
-            ))}
+                    </Card.Body>
+                    
+                    <Card.Footer className="bg-white border-top-0">
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <small className="text-muted text-center w-100 d-block">
+                            <i className="fas fa-user me-1"></i>
+                            {experience.isAnonymous ? 'Anonymous' : experience.user.name}
+                            <span className="mx-2">•</span>
+                            {experience.user.role}
+                          </small>
+                        </div>
+                        
+                        <div className="d-flex align-items-center">
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => handleLike(experience._id, experience.likes)}
+                            className="text-danger p-0 me-3"
+                          >
+                            <i className="fas fa-heart me-1"></i>
+                            {experience.likes}
+                          </Button>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => handleViewExperience(experience)}
+                            className="text-info p-0"
+                            title="View full story"
+                          >
+                            <i className="fas fa-eye me-1"></i>
+                            {experience.views}
+                          </Button>
+                        </div>
+                      </div>
+                    </Card.Footer>
+                  </Card>
+                </Col>
+              );
+            })}
           </Row>
 
           {/* Experience Detail Modal */}
@@ -342,13 +355,13 @@ const ExperienceList = () => {
                   {selectedExperience.skillsLearned && selectedExperience.skillsLearned.length > 0 && (
                     <div className="mb-4">
                       <h6 className="text-primary mb-2">Skills Learned</h6>
-                      <div className="d-flex flex-wrap gap-2">
-                        {selectedExperience.skillsLearned.map((skill, index) => (
-                          <Badge key={index} bg="light" text="dark" className="px-3 py-2">
+                      <ul className="mb-0 ps-4" style={{ lineHeight: '1.8' }}>
+                        {formatSkillsForDisplay(selectedExperience.skillsLearned).map((skill, index) => (
+                          <li key={index} className="mb-2">
                             {skill}
-                          </Badge>
+                          </li>
                         ))}
-                      </div>
+                      </ul>
                     </div>
                   )}
                   

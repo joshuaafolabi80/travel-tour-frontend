@@ -159,13 +159,21 @@ const ExperienceForm = ({ onSubmit, onCancel }) => {
             
             <FloatingLabel label="Skills Learned*" className="mb-3">
               <Form.Control
-                type="text"
+                as="textarea"
                 name="skillsLearned"
                 value={formData.skillsLearned}
                 onChange={handleChange}
-                placeholder="e.g., 'Customer service, tour guiding, reservation systems'"
+                placeholder="Enter each skill on a new line (bulleted format):
+• Customer service
+• Tour guiding  
+• Reservation systems
+• Event planning"
+                style={{ height: '120px' }}
                 required
               />
+              <Form.Text className="text-muted">
+                Enter each skill on a new line. Use bullet points (•) or dashes (-) for better formatting.
+              </Form.Text>
             </FloatingLabel>
             
             <Row className="g-3">

@@ -1,7 +1,6 @@
-// tourismCompanies.js - REAL companies with DIRECT links (no iframes)
-// tourismCompanies.js - Updated with verified URLs (as of Nov 2024)
+// tourismCompanies.js - Updated with verified URLs
 export const tourismCompanies = {
-  // 🏨 HOTELS & RESORTS
+  // 🏨 HOTELS & RESORTS (Updated URLs as of 2025-12-10)
   hotel: [
     {
       id: 1,
@@ -9,12 +8,12 @@ export const tourismCompanies = {
       type: "hotel",
       country: "Global",
       website: "https://www.marriott.com/",
-      careerPage: "https://careers.marriott.com/marriott/search-jobs",
+      careerPage: "https://jobs.marriott.com/",
       description: "World's largest hotel chain with 30+ brands, offering global opportunities.",
       logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Marriott_Logo.svg/2560px-Marriott_Logo.svg.png",
       verified: true,
       opportunities: ["Internships", "Management Training", "Front Desk", "Food & Beverage", "Revenue Management"],
-      lastUpdated: "2024-11-22"
+      lastUpdated: "2025-12-10"
     },
     {
       id: 2,
@@ -22,25 +21,25 @@ export const tourismCompanies = {
       type: "hotel",
       country: "Global",
       website: "https://www.hilton.com/",
-      careerPage: "https://jobs.hilton.com/us/en",
+      careerPage: "https://www.linkedin.com/company/hilton/jobs",
       description: "Leading global hospitality company managing 18 world-class brands.",
       logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Hilton_Hotels_%26_Resorts_logo.svg/2560px-Hilton_Hotels_%26_Resorts_logo.svg.png",
       verified: true,
       opportunities: ["Graduate Programs", "Hotel Operations", "Sales & Marketing", "Culinary", "Engineering"],
-      lastUpdated: "2024-11-22"
+      lastUpdated: "2025-12-10"
     },
     {
       id: 3,
       name: "Transcorp Hilton Abuja",
       type: "hotel",
       country: "Nigeria",
-      website: "https://www.hilton.com/en/hotels/abjhitw-transcorp-hilton-abuja/",
-      careerPage: "https://jobs.hilton.com/us/en/location/nigeria/24678/24678/125",
+      website: "https://www.hilton.com/en/hotels/abuhitw-transcorp-hilton-abuja/",
+      careerPage: "https://www.transcorphotels.com/career/",
       description: "5-star luxury hotel in Nigeria's capital, managed by Hilton Worldwide.",
       logo: "https://upload.wikimedia.org/wikipedia/en/thumb/3/3d/Transcorp_Hilton_Abuja_logo.png/220px-Transcorp_Hilton_Abuja_logo.png",
       verified: true,
       opportunities: ["Front Office", "Housekeeping", "Kitchen", "Event Management", "Guest Relations"],
-      lastUpdated: "2024-11-22"
+      lastUpdated: "2025-12-10"
     }
   ],
 
@@ -156,7 +155,6 @@ export const getTypeName = (type) => {
   return names[type] || "Company";
 };
 
-// ✅ Added missing getTypeColor function
 export const getTypeColor = (type) => {
   const colors = {
     hotel: "primary",

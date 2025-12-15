@@ -736,7 +736,7 @@ const App = () => {
                                     style={{ cursor: 'pointer' }}
                                 >
                                     <i className="fas fa-briefcase nav-icon"></i>
-                                    <span className="nav-text">Experiences</span>
+                                    <span className="nav-text">Jobs and Experiences</span>
                                 </div>
                             </div>
                             <div className="col-4">

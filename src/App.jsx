@@ -599,6 +599,11 @@ const App = () => {
         { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
         { name: "Hotels", icon: "fas fa-hotel", action: () => navigateTo('hotel-search') },
         { name: "Blog", icon: "fas fa-newspaper", action: () => navigateTo('blog-list-page') }, 
+        // NEW: Added Jobs and Experiences for Users Only
+        { 
+            name: "Jobs and Experiences", icon: "fas fa-briefcase",
+            action: () => navigateTo('experiences')
+        },
         // UPDATED: Added notification badge for user submissions
         { 
             name: "My Submissions", icon: "fas fa-envelope",

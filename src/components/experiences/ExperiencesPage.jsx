@@ -28,13 +28,14 @@ const ExperiencesPage = ({ navigateTo }) => {
       {/* Real-time Alert Component */}
       <RealTimeAlert />
       
-      {/* Header */}
+      {/* Header - Centered */}
       <div className="text-center mb-5">
         <h1 className="display-5 fw-bold mb-3">
-          <span className="text-primary">🎯</span> Welcome to the Conclave Jobs and Experiences Hub.
+          <span className="text-primary">🎯</span> Welcome to the Conclave Jobs and Experiences Hub
         </h1>
-        <p className="lead text-muted mb-4">
-          Explore job opportunities and share real experiences from the Travels, Hotels, Tourism and Tours industries.
+        <p className="lead text-muted mb-4" style={{ textAlign: 'justify', textAlignLast: 'center' }}>
+          Explore job opportunities and share real experiences from the Travels, Hotels, Tourism and Tours industries. 
+          Connect with industry professionals and gain valuable insights to advance your career in hospitality and tourism.
         </p>
       </div>
 
@@ -51,9 +52,11 @@ const ExperiencesPage = ({ navigateTo }) => {
                       <i className="fas fa-building fa-2x"></i>
                     </div>
                   </div>
-                  <h5 className="mb-2">🏢 Workplace Experiences</h5>
-                  <p className="text-muted small mb-3">
-                    Find job opportunities from leading Travels, Hotels, Tourism and Tours companies.
+                  <h5 className="mb-2 text-center">🏢 Workplace Experiences</h5>
+                  <p className="text-muted small mb-3" style={{ textAlign: 'justify' }}>
+                    Find job opportunities from leading Travels, Hotels, Tourism and Tours companies. 
+                    Browse career pages, discover internship programs, and connect with potential employers 
+                    in the hospitality industry.
                   </p>
                   <Button 
                     variant={activeSection === 'workplace' ? "primary" : "outline-primary"}
@@ -71,9 +74,11 @@ const ExperiencesPage = ({ navigateTo }) => {
                       <i className="fas fa-users fa-2x"></i>
                     </div>
                   </div>
-                  <h5 className="mb-2">📖 Traditional Experiences</h5>
-                  <p className="text-muted small mb-3">
-                    Share and learn from student stories
+                  <h5 className="mb-2 text-center">📖 Traditional Experiences</h5>
+                  <p className="text-muted small mb-3" style={{ textAlign: 'justify' }}>
+                    Share and learn from real student stories and industry experiences. 
+                    Read about internships, volunteer work, and career journeys from fellow 
+                    tourism students and professionals.
                     {unreadCount > 0 && (
                       <Badge bg="danger" className="ms-2">
                         {unreadCount} new
@@ -104,18 +109,22 @@ const ExperiencesPage = ({ navigateTo }) => {
         <TraditionalExperience />
       )}
 
-      {/* Footer Note */}
-      <Alert variant="light" className="mt-5 text-center">
+      {/* Footer Note - Justified content */}
+      <Alert variant="light" className="mt-5" style={{ textAlign: 'justify' }}>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-center">
           <div className="mb-3 mb-md-0">
-            <h6 className="mb-2">Need career guidance?</h6>
-            <p className="text-muted mb-0 small">
-              Contact our career counseling team for personalized advice
+            <h6 className="mb-2 text-center">Need career guidance?</h6>
+            <p className="text-muted mb-0 small" style={{ textAlign: 'justify' }}>
+              Our career counseling team is available to provide personalized advice tailored to your 
+              interests in the travels, hotels, tourism, and tours industries. Whether you're seeking 
+              internship opportunities, career path guidance, or industry insights, we're here to help 
+              you navigate your professional journey.
             </p>
           </div>
           <Button 
             variant="outline-primary"
             onClick={() => navigateTo('contact-us')}
+            className="mt-3 mt-md-0"
           >
             <i className="fas fa-comments me-2"></i>
             Get Career Advice

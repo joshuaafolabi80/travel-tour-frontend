@@ -31,7 +31,7 @@ const ExperiencesPage = ({ navigateTo }) => {
       {/* Header */}
       <div className="text-center mb-5">
         <h1 className="display-5 fw-bold mb-3">
-          <span className="text-primary">🎯</span> Welcome to the Conclave Travels, Hotels, Tourism and Tours Experiences Hub.
+          <span className="text-primary">🎯</span> Welcome to the Conclave Jobs and Experiences Hub.
         </h1>
         <p className="lead text-muted mb-4">
           Explore job opportunities and share real experiences from the Travels, Hotels, Tourism and Tours industries.

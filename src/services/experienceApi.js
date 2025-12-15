@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// ✅ UPDATED: Use Vite environment variable
 const API_URL = import.meta.env.VITE_EXPERIENCES_API_URL || 'http://localhost:5002/api';
 
 const experienceApi = axios.create({
@@ -105,7 +104,6 @@ export const submitExperience = (data) => {
     return Promise.reject(new Error(`Missing required fields: ${missingFields.join(', ')}`));
   }
 
-  // Process skillsLearned if it's a string
   const processedData = { ...data };
   if (typeof processedData.skillsLearned === 'string') {
     processedData.skillsLearned = processedData.skillsLearned
@@ -125,11 +123,8 @@ export const submitExperience = (data) => {
  * @returns {Promise} Axios response
  */
 export const likeExperience = (id, userId) => {
-  if (!id) {
-    return Promise.reject(new Error('Experience ID is required'));
-  }
-  if (!userId) {
-    return Promise.reject(new Error('User ID is required'));
+  if (!id || !userId) {
+    return Promise.reject(new Error('Experience ID and User ID are required'));
   }
   return experienceApi.put(`/experiences/${id}/like`, { userId });
 };
@@ -148,15 +143,29 @@ export const checkIfLiked = (id, userId) => {
 };
 
 /**
- * Increment view count for an experience
+ * Increment view count for an experience (ONCE PER USER)
  * @param {string} id - Experience ID
+ * @param {string} userId - User ID or email
  * @returns {Promise} Axios response
  */
-export const viewExperience = (id) => {
-  if (!id) {
-    return Promise.reject(new Error('Experience ID is required'));
+export const viewExperience = (id, userId) => {
+  if (!id || !userId) {
+    return Promise.reject(new Error('Experience ID and User ID are required'));
   }
-  return experienceApi.put(`/experiences/${id}/view`);
+  return experienceApi.put(`/experiences/${id}/view`, { userId });
+};
+
+/**
+ * Check if user viewed an experience
+ * @param {string} id - Experience ID
+ * @param {string} userId - User ID or email
+ * @returns {Promise} Axios response
+ */
+export const checkIfViewed = (id, userId) => {
+  if (!id || !userId) {
+    return Promise.reject(new Error('Experience ID and User ID are required'));
+  }
+  return experienceApi.get(`/experiences/${id}/viewed/${userId}`);
 };
 
 /**

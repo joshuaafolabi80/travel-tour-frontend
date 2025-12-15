@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Badge, Button, Pagination, Alert, Dropdown, Spinner, Modal } from 'react-bootstrap';
-import { getExperiences, likeExperience, viewExperience, checkIfLiked } from '../../services/experienceApi';
+import { getExperiences, likeExperience, viewExperience, checkIfLiked, checkIfViewed } from '../../services/experienceApi';
 import socketService from '../../utils/socketService';
 import { getTypeIcon, getTypeColor } from './data/tourismCompanies';
 
@@ -14,6 +14,7 @@ const ExperienceList = () => {
   const [selectedExperience, setSelectedExperience] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [userLikes, setUserLikes] = useState({});
+  const [userViews, setUserViews] = useState({}); // Track which experiences user has viewed
   const [currentUser, setCurrentUser] = useState(null);
   
   const itemsPerPage = 9;
@@ -41,19 +42,30 @@ const ExperienceList = () => {
       setExperiences(response.data.data);
       setTotalPages(response.data.totalPages);
       
-      // Check which experiences user has liked
+      // Check which experiences user has liked and viewed
       if (currentUser) {
+        const userId = currentUser.id || currentUser.email;
         const likesMap = {};
+        const viewsMap = {};
+        
         for (const exp of response.data.data) {
           try {
-            const likeCheck = await checkIfLiked(exp._id, currentUser.id || currentUser.email);
+            // Check like status
+            const likeCheck = await checkIfLiked(exp._id, userId);
             likesMap[exp._id] = likeCheck.data.liked;
+            
+            // Check view status
+            const viewCheck = await checkIfViewed(exp._id, userId);
+            viewsMap[exp._id] = viewCheck.data.viewed;
           } catch (error) {
-            console.log('Error checking like status:', error);
+            console.log('Error checking status:', error);
             likesMap[exp._id] = false;
+            viewsMap[exp._id] = false;
           }
         }
+        
         setUserLikes(likesMap);
+        setUserViews(viewsMap);
       }
       
     } catch (error) {
@@ -84,13 +96,21 @@ const ExperienceList = () => {
         }
       };
 
+      const handleViewUpdate = (data) => {
+        setExperiences(prev => prev.map(exp => 
+          exp._id === data.experienceId ? { ...exp, views: data.newViewCount } : exp
+        ));
+      };
+
       socketService.onNewExperience(handleNewExperience);
       socketService.onLikeUpdated(handleLikeUpdate);
+      socketService.addListener('experience-view-updated', handleViewUpdate);
 
       return () => {
         if (socketService.removeListener) {
           socketService.removeListener('new-experience', handleNewExperience);
           socketService.removeListener('experience-like-updated', handleLikeUpdate);
+          socketService.removeListener('experience-view-updated', handleViewUpdate);
         }
       };
     }
@@ -145,21 +165,42 @@ const ExperienceList = () => {
   };
 
   const handleViewExperience = async (experience) => {
-    try {
-      setSelectedExperience(experience);
-      setShowDetailModal(true);
-      
-      const response = await viewExperience(experience._id);
-      setExperiences(prev => prev.map(exp => 
-        exp._id === experience._id ? { ...exp, views: response.data.views } : exp
-      ));
-      
-      socketService.emitExperienceViewed(experience._id);
-      
-    } catch (error) {
-      console.error('Error viewing experience:', error);
-      setSelectedExperience(experience);
-      setShowDetailModal(true);
+    if (!currentUser) {
+      alert('Please log in to view experiences');
+      return;
+    }
+    
+    const userId = currentUser.id || currentUser.email;
+    const alreadyViewed = userViews[experience._id] || false;
+    
+    // Show modal immediately
+    setSelectedExperience(experience);
+    setShowDetailModal(true);
+    
+    // Only send view request if user hasn't viewed before
+    if (!alreadyViewed) {
+      try {
+        const response = await viewExperience(experience._id, userId);
+        
+        // Update local state
+        setExperiences(prev => prev.map(exp => 
+          exp._id === experience._id ? { ...exp, views: response.data.views } : exp
+        ));
+        
+        // Mark as viewed locally
+        setUserViews(prev => ({
+          ...prev,
+          [experience._id]: true
+        }));
+        
+        // Emit socket event only if it was a first view
+        if (response.data.firstView) {
+          socketService.emitExperienceViewed(experience._id, response.data.views);
+        }
+        
+      } catch (error) {
+        console.error('Error tracking view:', error);
+      }
     }
   };
 
@@ -269,6 +310,7 @@ const ExperienceList = () => {
             {experiences.map(experience => {
               const formattedSkills = formatSkillsForDisplay(experience.skillsLearned);
               const isLikedByUser = userLikes[experience._id] || false;
+              const hasViewed = userViews[experience._id] || false;
               
               return (
                 <Col key={experience._id} xs={12} md={6} lg={4}>
@@ -330,9 +372,10 @@ const ExperienceList = () => {
                           size="sm"
                           onClick={() => handleViewExperience(experience)}
                           className="px-4"
+                          disabled={!currentUser}
                         >
                           <i className="fas fa-book-reader me-2"></i>
-                          Read Full Story
+                          {hasViewed ? 'View Again' : 'Read Full Story'}
                         </Button>
                       </div>
                     </Card.Body>
@@ -355,6 +398,7 @@ const ExperienceList = () => {
                             onClick={() => handleLike(experience._id, experience.likes)}
                             className={`p-0 me-3 ${isLikedByUser ? 'text-danger' : 'text-secondary'}`}
                             title={isLikedByUser ? 'Unlike this story' : 'Like this story'}
+                            disabled={!currentUser}
                           >
                             <i className={`fas fa-heart me-1`}></i>
                             {experience.likes}
@@ -364,7 +408,8 @@ const ExperienceList = () => {
                             size="sm"
                             onClick={() => handleViewExperience(experience)}
                             className="text-info p-0"
-                            title="View full story"
+                            title={hasViewed ? 'Already viewed' : 'View full story'}
+                            disabled={!currentUser}
                           >
                             <i className="fas fa-eye me-1"></i>
                             {experience.views}
@@ -470,10 +515,16 @@ const ExperienceList = () => {
                             {new Date(selectedExperience.createdAt).toLocaleDateString()}
                           </small>
                           <small className="text-muted d-block">
-                            <i className="fas fa-eye me-1"></i> {selectedExperience.views} views
+                            <i className="fas fa-eye me-1"></i> {selectedExperience.views} unique views
                             <span className="mx-2">•</span>
                             <i className="fas fa-heart me-1"></i> {selectedExperience.likes} likes
                           </small>
+                          {currentUser && (
+                            <small className="text-muted d-block">
+                              <i className={`fas fa-${userViews[selectedExperience._id] ? 'check text-success' : 'times text-secondary'} me-1`}></i>
+                              {userViews[selectedExperience._id] ? 'You have viewed this' : 'You haven\'t viewed this yet'}
+                            </small>
+                          )}
                         </div>
                       </div>
                     </Card.Body>

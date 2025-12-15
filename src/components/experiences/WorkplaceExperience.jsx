@@ -88,10 +88,10 @@ const WorkplaceExperience = () => {
       <div className="text-center mb-4">
         <h2 className="fw-bold mb-3">
           <i className="fas fa-building me-2"></i>
-          Travels, Hotels, Tourism and Tours Company Opportunities
+          Travels, Hotels, Tourism and Tours Company Opportunities.
         </h2>
         <p className="text-muted mb-4">
-          Direct links to career pages of verified Travels, Hotels, Tourism and Tours  companies
+          Direct links to career pages of verified Travels, Hotels, Tourism and Tours  companies.
         </p>
       </div>
 
@@ -287,7 +287,7 @@ const WorkplaceExperience = () => {
               target="_blank"
               className="d-flex align-items-center"
             >
-              <i className="fas fa-umbrella-beach me-2"></i> Tourism Jobs NG
+              <i className="fas fa-umbrella-beach me-2"></i> Travel, Hotel, Tourism and Tour Jobs NG
             </Button>
           </div>
         </Card.Body>

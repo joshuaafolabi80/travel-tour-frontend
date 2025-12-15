@@ -53,7 +53,7 @@ const ExperiencesPage = ({ navigateTo }) => {
                   </div>
                   <h5 className="mb-2">🏢 Workplace Experiences</h5>
                   <p className="text-muted small mb-3">
-                    Find job opportunities from leading Travels, Hotels, Tourism and Tours companies
+                    Find job opportunities from leading Travels, Hotels, Tourism and Tours companies.
                   </p>
                   <Button 
                     variant={activeSection === 'workplace' ? "primary" : "outline-primary"}

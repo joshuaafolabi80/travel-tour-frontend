@@ -58,10 +58,10 @@ const TraditionalExperience = () => {
         <Card.Body className="p-4">
           <Row className="align-items-center">
             <Col md={8}>
-              <h5 className="mb-2">Share Your Tourism Experience</h5>
+              <h5 className="mb-2">Share Your Travel, Hotel, Tourism and Tour Experience</h5>
               <p className="text-muted mb-0">
-                Help other students learn from your real-world experiences. 
-                Share internships, jobs, or volunteer work in tourism.
+                Help other students/users learn from your real-world experiences. 
+                Share internships, jobs, or volunteer work in travel, hotel, tourism and tour.
               </p>
             </Col>
             <Col md={4} className="text-md-end mt-3 mt-md-0">
@@ -89,7 +89,7 @@ const TraditionalExperience = () => {
               </div>
               <h5 className="mb-2">1. Share</h5>
               <p className="text-muted small">
-                Tell us about your tourism experience
+                Tell us about your travel, hotel, tourism and tour experience.
               </p>
             </Card.Body>
           </Card>
@@ -117,7 +117,7 @@ const TraditionalExperience = () => {
               </div>
               <h5 className="mb-2">3. Inspire</h5>
               <p className="text-muted small">
-                Help fellow students learn from you
+                Help fellow students/users learn from you.
               </p>
             </Card.Body>
           </Card>

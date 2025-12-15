@@ -108,7 +108,7 @@ const ExperienceList = () => {
         <Card.Body>
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3">
             <div>
-              <h5 className="mb-0">Real Student Experiences</h5>
+              <h5 className="mb-0">Real Student/User Experiences</h5>
               <p className="text-muted mb-0 small">
                 Live from MongoDB database • {experiences.length} experiences loaded
               </p>
@@ -168,7 +168,7 @@ const ExperienceList = () => {
           <div className="display-1 mb-3">📝</div>
           <h5>No experiences yet</h5>
           <p className="text-muted">
-            Be the first to share your tourism experience!
+            Be the first to share your travel, hotel, tourism and tour experience!
           </p>
           <Button variant="primary" onClick={() => window.location.reload()}>
             <i className="fas fa-sync-alt me-2"></i>

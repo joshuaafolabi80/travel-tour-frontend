@@ -183,7 +183,7 @@ const ExperienceList = () => {
                 <Card className="h-100 shadow-sm hover-lift">
                   <Card.Header className={`bg-${getTypeColor(experience.type)} bg-opacity-10 border-0 text-center`}>
                     <div className="d-flex justify-content-between align-items-center">
-                      <Badge bg={getTypeColor(experience.type)} className="mx-auto">
+                      <Badge bg={getTypeColor(experience.type)} className="">
                         {getTypeIcon(experience.type)} {experience.type.charAt(0).toUpperCase() + experience.type.slice(1)}
                       </Badge>
                       <small className="text-muted">

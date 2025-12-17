@@ -379,11 +379,11 @@ const MasterclassCourses = ({ navigateTo }) => {
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="Enter 8-digit access code"
+                      placeholder="Enter your 1 to 20-digit access code"
                       value={accessCode}
                       onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
                       disabled={validating}
-                      maxLength={8}
+                      maxLength={20}
                       style={{ letterSpacing: '2px', fontFamily: 'monospace' }}
                     />
                     <small className="text-muted">Enter the code provided by the administrator</small>

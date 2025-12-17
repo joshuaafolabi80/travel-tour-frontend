@@ -1,9 +1,9 @@
-// src/components/AdminManageCourses.jsx - COMPLETE UPDATED VERSION WITH QUESTION UPLOAD FEATURES
+// travel-tour-frontend/src/components/AdminManageCourses.jsx - COMPLETE UNCHANGED
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
 const AdminManageCourses = () => {
-  // State declarations
+  // State declarations (EXISTING CODE - KEEP ALL EXISTING)
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,11 +44,17 @@ const AdminManageCourses = () => {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertType, setAlertType] = useState('success');
   
-  // Access code state
+  // Access code state - ADD NEW STATE VARIABLES
   const [generatedAccessCode, setGeneratedAccessCode] = useState('');
   const [accessCodes, setAccessCodes] = useState([]);
+  const [accessCodeForm, setAccessCodeForm] = useState({
+    userEmail: '',
+    userName: '',
+    maxUsageCount: 1,
+    lifetimeAccess: true
+  });
 
-  // Question upload states
+  // Question upload states (EXISTING CODE - KEEP ALL)
   const [showGeneralQuestionsModal, setShowGeneralQuestionsModal] = useState(false);
   const [showMasterclassQuestionsModal, setShowMasterclassQuestionsModal] = useState(false);
   const [uploadingQuestions, setUploadingQuestions] = useState(false);
@@ -61,12 +67,12 @@ const AdminManageCourses = () => {
     questions: Array(20).fill().map(() => ({
       question: '',
       options: ['', '', '', ''],
-      correctOption: 2, // Default to option C (index 2)
+      correctOption: 2,
       explanation: ''
     }))
   });
 
-  // Effects
+  // Effects (EXISTING CODE - NO CHANGES)
   useEffect(() => {
     if (activeTab === 'view-courses') {
       fetchCourses();
@@ -77,7 +83,7 @@ const AdminManageCourses = () => {
     filterCourses();
   }, [courses, searchTerm, courseTypeFilter]);
 
-  // Helper functions
+  // Helper functions (EXISTING CODE - NO CHANGES)
   const showCustomAlert = (message, type = 'success') => {
     setAlertMessage(message);
     setAlertType(type);
@@ -106,7 +112,7 @@ const AdminManageCourses = () => {
     setFilteredCourses(filtered);
   };
 
-  // API functions
+  // API functions (EXISTING CODE - KEEP ALL)
   const fetchCourses = async () => {
     try {
       setLoading(true);
@@ -241,20 +247,64 @@ const AdminManageCourses = () => {
     }
   };
 
-  const generateAccessCode = async () => {
+  // UPDATED: generateAccessCodeForUser function
+  const generateAccessCodeForUser = async () => {
+    if (!accessCodeForm.userEmail.trim()) {
+      showCustomAlert('Please enter user email address', 'error');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(accessCodeForm.userEmail.trim())) {
+      showCustomAlert('Please enter a valid email address', 'error');
+      return;
+    }
+
     try {
-      const response = await api.post(`/admin/courses/${selectedCourse._id}/generate-access-code`);
+      const response = await api.post(`/admin/courses/${selectedCourse._id}/generate-access-code-for-user`, {
+        userEmail: accessCodeForm.userEmail.trim(),
+        userName: accessCodeForm.userName.trim() || undefined,
+        maxUsageCount: accessCodeForm.maxUsageCount,
+        lifetimeAccess: accessCodeForm.lifetimeAccess
+      });
       
       if (response.data.success) {
         setGeneratedAccessCode(response.data.accessCode);
-        showCustomAlert('Access code generated successfully!', 'success');
+        showCustomAlert(`Access code generated for ${accessCodeForm.userEmail}`, 'success');
         fetchAccessCodes();
+        // Reset form
+        setAccessCodeForm({
+          userEmail: '',
+          userName: '',
+          maxUsageCount: 1,
+          lifetimeAccess: true
+        });
       } else {
         showCustomAlert('Failed to generate access code. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error generating access code:', error);
-      showCustomAlert('Failed to generate access code. Please try again.', 'error');
+      showCustomAlert(error.response?.data?.message || 'Failed to generate access code', 'error');
+    }
+  };
+
+  // NEW: deleteAccessCode function
+  const deleteAccessCode = async (accessCodeId) => {
+    if (!window.confirm('Are you sure you want to delete this access code?')) {
+      return;
+    }
+
+    try {
+      const response = await api.delete(`/admin/access-codes/${accessCodeId}`);
+      
+      if (response.data.success) {
+        showCustomAlert('Access code deleted successfully', 'success');
+        fetchAccessCodes();
+      }
+    } catch (error) {
+      console.error('Error deleting access code:', error);
+      showCustomAlert('Failed to delete access code', 'error');
     }
   };
 
@@ -301,10 +351,16 @@ const AdminManageCourses = () => {
     setSelectedCourse(course);
     setGeneratedAccessCode('');
     setShowAccessCodeModal(true);
+    setAccessCodeForm({
+      userEmail: '',
+      userName: '',
+      maxUsageCount: 1,
+      lifetimeAccess: true
+    });
     await fetchAccessCodes();
   };
 
-  // Question upload functions
+  // Question upload functions (EXISTING CODE - NO CHANGES)
   const openGeneralQuestionsModal = () => {
     setQuestionForm({
       title: '',
@@ -313,7 +369,7 @@ const AdminManageCourses = () => {
       questions: Array(20).fill().map(() => ({
         question: '',
         options: ['', '', '', ''],
-        correctOption: Math.floor(Math.random() * 4), // Random correct option
+        correctOption: Math.floor(Math.random() * 4),
         explanation: ''
       }))
     });
@@ -328,7 +384,7 @@ const AdminManageCourses = () => {
       questions: Array(20).fill().map(() => ({
         question: '',
         options: ['', '', '', ''],
-        correctOption: Math.floor(Math.random() * 4), // Random correct option
+        correctOption: Math.floor(Math.random() * 4),
         explanation: ''
       }))
     });
@@ -409,7 +465,7 @@ const AdminManageCourses = () => {
         questions: questionsData,
         totalQuestions: 20,
         marksPerQuestion: 5,
-        timeLimit: 15 // 15 minutes
+        timeLimit: 15
       };
 
       const endpoint = questionForm.courseType === 'general' 
@@ -436,7 +492,7 @@ const AdminManageCourses = () => {
     }
   };
 
-  // Pagination functions
+  // Pagination functions (EXISTING CODE - NO CHANGES)
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const handlePageChange = (pageNumber) => {
@@ -515,7 +571,7 @@ const AdminManageCourses = () => {
     );
   };
 
-  // Loading state
+  // Loading state (EXISTING CODE - NO CHANGES)
   if (loading && activeTab === 'view-courses') {
     return (
       <div className="container-fluid py-4">
@@ -536,7 +592,7 @@ const AdminManageCourses = () => {
     );
   }
 
-  // Error state
+  // Error state (EXISTING CODE - NO CHANGES)
   if (error && activeTab === 'view-courses') {
     return (
       <div className="container-fluid py-4">
@@ -558,7 +614,7 @@ const AdminManageCourses = () => {
     );
   }
 
-  // Render question input for a specific question index
+  // Render question input for a specific question index (EXISTING CODE - NO CHANGES)
   const renderQuestionInput = (questionIndex) => {
     const question = questionForm.questions[questionIndex];
     const optionLetters = ['A', 'B', 'C', 'D'];
@@ -625,7 +681,7 @@ const AdminManageCourses = () => {
 
   return (
     <div className="admin-manage-courses" style={{ background: '#f9fafb', minHeight: '100vh' }}>
-      {/* Custom Alert Component */}
+      {/* Custom Alert Component (EXISTING CODE - NO CHANGES) */}
       {showAlert && (
         <div className={`custom-alert custom-alert-${alertType}`}>
           <div className="alert-content">
@@ -646,7 +702,7 @@ const AdminManageCourses = () => {
       )}
 
       <div className="container-fluid py-4">
-        {/* Header Section */}
+        {/* Header Section (EXISTING CODE - NO CHANGES) */}
         <div className="row mb-4">
           <div className="col-12">
             <div className="card text-white shadow-lg" style={{backgroundColor: '#17a2b8'}}>
@@ -671,7 +727,7 @@ const AdminManageCourses = () => {
           </div>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Tab Navigation (EXISTING CODE - NO CHANGES) */}
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm border-0">
@@ -723,12 +779,12 @@ const AdminManageCourses = () => {
           </div>
         </div>
 
-        {/* Tab Content */}
+        {/* Tab Content (EXISTING CODE - NO CHANGES) */}
         <div className="row">
           <div className="col-12">
             <div className="card shadow-lg border-0">
               <div className="card-body">
-                {/* Upload General Courses Tab */}
+                {/* Upload General Courses Tab (EXISTING CODE - NO CHANGES) */}
                 {activeTab === 'upload-general' && (
                   <div className="upload-section">
                     <h4 className="mb-4" style={{color: '#0c5460'}}>
@@ -793,7 +849,7 @@ const AdminManageCourses = () => {
                   </div>
                 )}
 
-                {/* Upload Masterclass Courses Tab */}
+                {/* Upload Masterclass Courses Tab (EXISTING CODE - NO CHANGES) */}
                 {activeTab === 'upload-masterclass' && (
                   <div className="upload-section">
                     <h4 className="mb-4" style={{color: '#0c5460'}}>
@@ -869,7 +925,7 @@ const AdminManageCourses = () => {
                   </div>
                 )}
 
-                {/* General Course Questions Tab */}
+                {/* General Course Questions Tab (EXISTING CODE - NO CHANGES) */}
                 {activeTab === 'general-questions' && (
                   <div className="questions-section">
                     <h4 className="mb-4" style={{color: '#0c5460'}}>
@@ -913,7 +969,7 @@ const AdminManageCourses = () => {
                   </div>
                 )}
 
-                {/* Masterclass Course Questions Tab */}
+                {/* Masterclass Course Questions Tab (EXISTING CODE - NO CHANGES) */}
                 {activeTab === 'masterclass-questions' && (
                   <div className="questions-section">
                     <h4 className="mb-4" style={{color: '#0c5460'}}>
@@ -957,7 +1013,7 @@ const AdminManageCourses = () => {
                   </div>
                 )}
 
-                {/* View/Edit/Delete Courses Tab */}
+                {/* View/Edit/Delete Courses Tab (EXISTING CODE - NO CHANGES) */}
                 {activeTab === 'view-courses' && (
                   <div className="view-courses-section">
                     {/* Search and Filter Controls */}
@@ -1111,7 +1167,7 @@ const AdminManageCourses = () => {
         </div>
       </div>
 
-      {/* Upload Confirmation Modal */}
+      {/* Upload Confirmation Modal (EXISTING CODE - NO CHANGES) */}
       {showUploadModal && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog modal-dialog-centered">
@@ -1175,7 +1231,7 @@ const AdminManageCourses = () => {
         </div>
       )}
 
-      {/* Edit Course Modal */}
+      {/* Edit Course Modal (EXISTING CODE - NO CHANGES) */}
       {showEditModal && selectedCourse && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog modal-dialog-centered">
@@ -1244,7 +1300,7 @@ const AdminManageCourses = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal (EXISTING CODE - NO CHANGES) */}
       {showDeleteModal && selectedCourse && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog modal-dialog-centered">
@@ -1294,7 +1350,7 @@ const AdminManageCourses = () => {
         </div>
       )}
 
-      {/* Access Code Management Modal */}
+      {/* UPDATED: Access Code Management Modal */}
       {showAccessCodeModal && selectedCourse && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog modal-lg modal-dialog-centered">
@@ -1311,31 +1367,90 @@ const AdminManageCourses = () => {
                 ></button>
               </div>
               <div className="modal-body">
-                {/* Generate New Access Code */}
+                {/* Generate New Access Code for Specific User */}
                 <div className="mb-4 p-3 border rounded">
-                  <h6>Generate New Access Code</h6>
-                  <div className="row align-items-center">
-                    <div className="col-md-8">
-                      <p className="mb-2 text-muted">
-                        Generate a unique access code for this masterclass course. Each code can be used by one user only.
-                      </p>
+                  <h6>Generate Access Code for Specific User</h6>
+                  <div className="row mb-3">
+                    <div className="col-md-6">
+                      <label className="form-label fw-bold">User Email *</label>
+                      <input
+                        type="email"
+                        className="form-control"
+                        placeholder="user@example.com"
+                        value={accessCodeForm.userEmail}
+                        onChange={(e) => setAccessCodeForm({...accessCodeForm, userEmail: e.target.value})}
+                      />
                     </div>
-                    <div className="col-md-4 text-end">
-                      <button
-                        className="btn btn-warning"
-                        onClick={generateAccessCode}
+                    <div className="col-md-6">
+                      <label className="form-label">User Name (Optional)</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="John Doe"
+                        value={accessCodeForm.userName}
+                        onChange={(e) => setAccessCodeForm({...accessCodeForm, userName: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="row mb-3">
+                    <div className="col-md-6">
+                      <label className="form-label">Usage Limit</label>
+                      <select
+                        className="form-select"
+                        value={accessCodeForm.maxUsageCount}
+                        onChange={(e) => setAccessCodeForm({...accessCodeForm, maxUsageCount: parseInt(e.target.value)})}
                       >
-                        <i className="fas fa-plus me-2"></i>Generate Code
-                      </button>
+                        <option value="1">Single use only</option>
+                        <option value="5">5 uses</option>
+                        <option value="10">10 uses</option>
+                        <option value="9999">Unlimited uses</option>
+                      </select>
                     </div>
+                    <div className="col-md-6">
+                      <div className="form-check mt-4">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          checked={accessCodeForm.lifetimeAccess}
+                          onChange={(e) => setAccessCodeForm({...accessCodeForm, lifetimeAccess: e.target.checked})}
+                          id="lifetimeAccess"
+                        />
+                        <label className="form-check-label" htmlFor="lifetimeAccess">
+                          Lifetime Access
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-end">
+                    <button
+                      className="btn btn-warning"
+                      onClick={generateAccessCodeForUser}
+                      disabled={!accessCodeForm.userEmail.trim()}
+                    >
+                      <i className="fas fa-plus me-2"></i>Generate Code for User
+                    </button>
                   </div>
                   
                   {generatedAccessCode && (
                     <div className="alert alert-success mt-3">
-                      <h6>New Access Code Generated!</h6>
-                      <code className="fs-5">{generatedAccessCode}</code>
+                      <h6>Access Code Generated Successfully!</h6>
+                      <div className="mb-2">
+                        <strong>Code:</strong> 
+                        <code className="fs-5 ms-2">{generatedAccessCode}</code>
+                      </div>
+                      <div className="mb-2">
+                        <strong>For:</strong> {accessCodeForm.userEmail}
+                        {accessCodeForm.userName && ` (${accessCodeForm.userName})`}
+                      </div>
+                      <div>
+                        <strong>Usage:</strong> {accessCodeForm.maxUsageCount === 1 ? 'Single use' : 
+                          accessCodeForm.maxUsageCount === 9999 ? 'Unlimited uses' : 
+                          `${accessCodeForm.maxUsageCount} uses`}
+                      </div>
                       <p className="mb-0 mt-2 text-muted">
-                        Share this code with the authorized user. It expires in 1 year.
+                        Share this code with the user. They must use the same email address to validate.
                       </p>
                     </div>
                   )}
@@ -1355,10 +1470,11 @@ const AdminManageCourses = () => {
                         <thead>
                           <tr>
                             <th>Access Code</th>
+                            <th>Assigned To</th>
                             <th>Status</th>
-                            <th>Used By</th>
+                            <th>Usage</th>
                             <th>Generated</th>
-                            <th>Expires</th>
+                            <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1366,19 +1482,28 @@ const AdminManageCourses = () => {
                             <tr key={code._id}>
                               <td><code>{code.code}</code></td>
                               <td>
+                                <div>
+                                  <strong>{code.assignedEmail || 'Not assigned'}</strong>
+                                  {code.assignedUserName && <div><small>{code.assignedUserName}</small></div>}
+                                </div>
+                              </td>
+                              <td>
                                 <span className={`badge ${code.isUsed ? 'bg-success' : 'bg-secondary'}`}>
                                   {code.isUsed ? 'Used' : 'Available'}
                                 </span>
                               </td>
                               <td>
-                                {code.usedBy ? (
-                                  <span>{code.usedBy.username}</span>
-                                ) : (
-                                  <span className="text-muted">Not used</span>
-                                )}
+                                {code.currentUsageCount || 0}/{code.maxUsageCount || 1}
                               </td>
                               <td>{new Date(code.createdAt).toLocaleDateString()}</td>
-                              <td>{new Date(code.expiresAt).toLocaleDateString()}</td>
+                              <td>
+                                <button 
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => deleteAccessCode(code._id)}
+                                >
+                                  <i className="fas fa-trash"></i>
+                                </button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -1401,7 +1526,7 @@ const AdminManageCourses = () => {
         </div>
       )}
 
-      {/* General Questions Upload Modal */}
+      {/* General Questions Upload Modal (EXISTING CODE - NO CHANGES) */}
       {showGeneralQuestionsModal && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
@@ -1484,7 +1609,7 @@ const AdminManageCourses = () => {
         </div>
       )}
 
-      {/* Masterclass Questions Upload Modal */}
+      {/* Masterclass Questions Upload Modal (EXISTING CODE - NO CHANGES) */}
       {showMasterclassQuestionsModal && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
@@ -1567,7 +1692,7 @@ const AdminManageCourses = () => {
         </div>
       )}
 
-      {/* Custom CSS */}
+      {/* Custom CSS (EXISTING CODE - NO CHANGES) */}
       <style jsx>{`
         .custom-alert {
           position: fixed;

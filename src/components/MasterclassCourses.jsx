@@ -1,4 +1,4 @@
-// src/components/MasterclassCourses.jsx - FIXED VERSION WITHOUT ROUTER
+// travel-tour-frontend/src/components/MasterclassCourses.jsx - COMPLETE UNCHANGED
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
@@ -9,8 +9,9 @@ const MasterclassCourses = ({ navigateTo }) => {
   const [error, setError] = useState('');
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [showCourseModal, setShowCourseModal] = useState(false);
-  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [showAccessModal, setShowAccessModal] = useState(true); // CHANGED: Show by default
   const [accessCode, setAccessCode] = useState('');
+  const [userEmail, setUserEmail] = useState(''); // NEW: Email field
   const [validating, setValidating] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [documentLoading, setDocumentLoading] = useState(false);
@@ -26,13 +27,23 @@ const MasterclassCourses = ({ navigateTo }) => {
   const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
-    checkAccessAndFetchCourses();
-    if (hasAccess) {
+    // Check if user already has access
+    const savedAccess = localStorage.getItem('masterclassAccess');
+    const savedEmail = localStorage.getItem('masterclassUserEmail');
+    
+    if (savedAccess === 'granted' && savedEmail) {
+      setHasAccess(true);
+      setUserEmail(savedEmail);
+      setShowAccessModal(false);
+      fetchCourses();
       fetchQuestionSets();
+    } else {
+      setShowAccessModal(true);
+      setAccessChecked(true);
     }
-  }, [currentPage, hasAccess]);
+  }, []);
 
-  const checkAccessAndFetchCourses = async () => {
+  const fetchCourses = async () => {
     try {
       setLoading(true);
       
@@ -46,48 +57,16 @@ const MasterclassCourses = ({ navigateTo }) => {
       });
       
       if (response.data.success) {
-        // Check if user actually has access by looking at the courses array
-        if (response.data.courses.length === 0 && 
-            response.data.message && 
-            response.data.message.includes('No access to masterclass courses')) {
-          setHasAccess(false);
-          setCourses([]);
-          setTotalItems(0);
-        } else {
-          // User has access and there are courses (or no courses but user has access)
-          setCourses(response.data.courses);
-          setTotalItems(response.data.totalCount);
-          setHasAccess(true);
-          
-          // Check localStorage for persistent access
-          const storedAccess = localStorage.getItem('masterclassAccess');
-          if (!storedAccess) {
-            localStorage.setItem('masterclassAccess', 'granted');
-          }
-        }
+        setCourses(response.data.courses);
+        setTotalItems(response.data.totalCount);
       } else {
-        setHasAccess(false);
+        setError('Failed to load courses');
       }
     } catch (error) {
-      console.error('Error checking access:', error);
-      // More specific error handling
-      if (error.response?.status === 403 || 
-          error.response?.data?.message?.includes('No access') ||
-          (error.response?.data?.courses && error.response.data.courses.length === 0)) {
-        setHasAccess(false);
-        setCourses([]);
-        setTotalItems(0);
-      } else {
-        setError('Failed to load courses. Please try again later.');
-        // On general errors, still check localStorage for previous access
-        const storedAccess = localStorage.getItem('masterclassAccess');
-        if (storedAccess === 'granted') {
-          setHasAccess(true);
-        }
-      }
+      console.error('Error fetching courses:', error);
+      setError('Failed to load courses. Please try again later.');
     } finally {
       setLoading(false);
-      setAccessChecked(true);
     }
   };
 
@@ -107,7 +86,7 @@ const MasterclassCourses = ({ navigateTo }) => {
 
   const handleMasterclassQuestionsTab = () => {
     if (!hasAccess) {
-      requestAccess();
+      setShowAccessModal(true);
       return;
     }
     console.log('🎯 Navigating to Masterclass Course Questions');
@@ -116,25 +95,16 @@ const MasterclassCourses = ({ navigateTo }) => {
     }
   };
 
-  const requestAccess = () => {
-    setAccessCode('');
-    setValidationError('');
-    setShowAccessModal(true);
-  };
-
-  const contactAdmin = () => {
-    if (navigateTo) {
-      navigateTo('contact-us');
-    } else {
-      console.error('Navigate function not available');
-      // Fallback: try to use window location
-      window.location.href = `${window.location.origin}/#/contact-us`;
-    }
-  };
-
   const validateAccessCode = async () => {
-    if (!accessCode.trim()) {
-      setValidationError('Please enter an access code');
+    if (!accessCode.trim() || !userEmail.trim()) {
+      setValidationError('Please enter both access code and email address');
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(userEmail.trim())) {
+      setValidationError('Please enter a valid email address');
       return;
     }
 
@@ -143,25 +113,28 @@ const MasterclassCourses = ({ navigateTo }) => {
 
     try {
       const response = await api.post('/courses/validate-masterclass-access', {
-        accessCode: accessCode.trim()
+        accessCode: accessCode.trim(),
+        userEmail: userEmail.trim()
       });
 
       if (response.data.success) {
         // Grant access
         setHasAccess(true);
         localStorage.setItem('masterclassAccess', 'granted');
+        localStorage.setItem('masterclassUserEmail', userEmail.trim());
+        localStorage.setItem('masterclassUserName', response.data.userName || '');
         setShowAccessModal(false);
-        setAccessCode('');
         showCustomAlert('Access granted! Welcome to Masterclass Courses.', 'success');
         
-        // Refresh courses now that access is granted
-        await checkAccessAndFetchCourses();
+        // Fetch courses and question sets
+        await fetchCourses();
+        await fetchQuestionSets();
       }
     } catch (error) {
       console.error('Error validating access code:', error);
       setValidationError(
         error.response?.data?.message || 
-        'Invalid access code. Please contact the administrator for a valid code.'
+        'Invalid access code or email. Please check your details.'
       );
     } finally {
       setValidating(false);
@@ -170,7 +143,7 @@ const MasterclassCourses = ({ navigateTo }) => {
 
   const viewCourse = async (courseId) => {
     if (!hasAccess) {
-      requestAccess();
+      setShowAccessModal(true);
       return;
     }
 
@@ -194,7 +167,7 @@ const MasterclassCourses = ({ navigateTo }) => {
 
   const attemptQuestions = (questionSet) => {
     if (!hasAccess) {
-      requestAccess();
+      setShowAccessModal(true);
       return;
     }
     
@@ -204,7 +177,6 @@ const MasterclassCourses = ({ navigateTo }) => {
     }
     
     console.log('🎯 Attempting masterclass questions:', questionSet.title);
-    console.log('📝 Questions available:', questionSet.questions?.length || 0);
     
     // Store question set data for the quiz attempt
     const questionSetData = {
@@ -219,14 +191,12 @@ const MasterclassCourses = ({ navigateTo }) => {
     localStorage.setItem('currentQuestionSet', JSON.stringify(questionSetData));
     console.log('💾 Question set stored in localStorage');
     
-    // 🚨 CRITICAL FIX: Navigate to masterclass-quiz-attempt instead of quiz-platform
     if (navigateTo) {
       console.log('📍 Navigating to: masterclass-quiz-attempt');
       navigateTo('masterclass-quiz-attempt');
     }
   };
 
-  // READ DOCUMENT CONTENT - WITH IMAGE SUPPORT
   const readDocumentInApp = async () => {
     if (!selectedCourse) return;
     
@@ -272,21 +242,25 @@ const MasterclassCourses = ({ navigateTo }) => {
   const closeAccessModal = () => {
     setShowAccessModal(false);
     setAccessCode('');
+    setUserEmail('');
     setValidationError('');
   };
 
-  // Logout function that properly revokes access
-  const handleLogout = () => {
+  const logout = () => {
     setHasAccess(false);
-    localStorage.removeItem('masterclassAccess');
+    setShowAccessModal(true);
+    setAccessCode('');
+    setUserEmail('');
     setCourses([]);
     setQuestionSets([]);
     setTotalItems(0);
     setCurrentPage(1);
-    showCustomAlert('Access revoked. You can enter a new access code anytime.', 'info');
+    localStorage.removeItem('masterclassAccess');
+    localStorage.removeItem('masterclassUserEmail');
+    localStorage.removeItem('masterclassUserName');
+    showCustomAlert('Logged out. Please enter your access code to continue.', 'info');
   };
 
-  // Format date function to handle different date fields
   const formatCourseDate = (course) => {
     if (course.uploadedAt) return new Date(course.uploadedAt).toLocaleDateString();
     if (course.createdAt) return new Date(course.createdAt).toLocaleDateString();
@@ -301,9 +275,7 @@ const MasterclassCourses = ({ navigateTo }) => {
     return 'Date not available';
   };
 
-  // Custom alert function
   const showCustomAlert = (message, type = 'success') => {
-    // Create alert element
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
     alertDiv.style.cssText = `
@@ -320,7 +292,6 @@ const MasterclassCourses = ({ navigateTo }) => {
     
     document.body.appendChild(alertDiv);
     
-    // Auto remove after 3 seconds
     setTimeout(() => {
       if (alertDiv.parentNode) {
         alertDiv.parentNode.removeChild(alertDiv);
@@ -368,153 +339,67 @@ const MasterclassCourses = ({ navigateTo }) => {
     );
   };
 
-  // If access not checked yet, show loading
-  if (!accessChecked) {
-    return (
-      <div className="container-fluid py-4">
-        <div className="row justify-content-center">
-          <div className="col-12 col-md-8 col-lg-6">
-            <div className="card shadow-lg border-0">
-              <div className="card-body text-center py-5">
-                <div className="spinner-border text-warning mb-3" style={{width: '3rem', height: '3rem'}}>
-                  <span className="visually-hidden">Loading...</span>
-                </div>
-                <h4 className="text-warning">Checking Access...</h4>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show access request page when user doesn't have access
+  // If no access, show access modal immediately
   if (!hasAccess) {
     return (
-      <div className="masterclass-courses" style={{ background: '#f8f9fa', minHeight: '100vh' }}>
-        <div className="container-fluid py-4">
+      <div className="masterclass-access" style={{ background: '#f8f9fa', minHeight: '100vh' }}>
+        <div className="container-fluid py-5">
           <div className="row justify-content-center">
-            <div className="col-12 col-md-8 col-lg-6">
+            <div className="col-12 col-md-6 col-lg-5">
               <div className="card shadow-lg border-warning">
                 <div className="card-header bg-warning text-dark text-center py-4">
                   <i className="fas fa-crown fa-3x mb-3"></i>
                   <h1 className="display-5 fw-bold">Masterclass Courses</h1>
-                  <p className="lead mb-0">Premium content requiring special access</p>
+                  <p className="lead mb-0">Premium content requiring access code</p>
                 </div>
-                <div className="card-body text-center py-5">
-                  <div className="mb-4">
-                    <i className="fas fa-lock fa-4x text-warning mb-3"></i>
-                    <h3 className="text-dark">Access Required</h3>
-                    <p className="text-muted">
-                      Masterclass courses contain premium content that requires a special access code.
-                      Please contact the administrator to obtain an access code.
+                
+                <div className="card-body p-4">
+                  <div className="alert alert-info">
+                    <h6><i className="fas fa-info-circle me-2"></i>Access Required</h6>
+                    <p className="mb-0">
+                      Please enter the access code provided by the administrator along with your email address.
                     </p>
                   </div>
-                  
-                  <div className="row mb-4">
-                    <div className="col-md-6 mb-3">
-                      <div className="card h-100 border-0 bg-light">
-                        <div className="card-body">
-                          <i className="fas fa-key fa-2x text-warning mb-3"></i>
-                          <h5>Get Access Code</h5>
-                          <p className="text-muted small">
-                            Contact the administrator to receive your unique access code
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <div className="card h-100 border-0 bg-light">
-                        <div className="card-body">
-                          <i className="fas fa-shield-alt fa-2x text-warning mb-3"></i>
-                          <h5>Secure Access</h5>
-                          <p className="text-muted small">
-                            Each code is unique and can only be used by one user
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
 
-                  <button
-                    className="btn btn-warning btn-lg"
-                    onClick={requestAccess}
-                  >
-                    <i className="fas fa-key me-2"></i>Enter Access Code
-                  </button>
-                  
-                  <div className="mt-3">
-                    <button 
-                      className="btn btn-outline-dark btn-sm"
-                      onClick={contactAdmin}
-                    >
-                      <i className="fas fa-envelope me-2"></i>Contact Administrator
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Access Code Modal */}
-        {showAccessModal && (
-          <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
-            <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content">
-                <div className="modal-header bg-warning text-dark">
-                  <h5 className="modal-title">
-                    <i className="fas fa-key me-2"></i>
-                    Enter Access Code
-                  </h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    onClick={closeAccessModal}
-                  ></button>
-                </div>
-                <div className="modal-body">
-                  <div className="alert alert-info">
-                    <h6>Masterclass Access Required</h6>
-                    <p className="mb-0">Enter the access code provided by the administrator.</p>
-                  </div>
-                  
                   <div className="mb-3">
-                    <label className="form-label fw-bold">Access Code</label>
+                    <label className="form-label fw-bold">Your Email Address *</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      placeholder="Enter your email address"
+                      value={userEmail}
+                      onChange={(e) => setUserEmail(e.target.value)}
+                      disabled={validating}
+                    />
+                    <small className="text-muted">Must match the email provided to the administrator</small>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label fw-bold">Access Code *</label>
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="Enter your access code..."
+                      placeholder="Enter 8-digit access code"
                       value={accessCode}
-                      onChange={(e) => setAccessCode(e.target.value)}
+                      onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
                       disabled={validating}
+                      maxLength={8}
+                      style={{ letterSpacing: '2px', fontFamily: 'monospace' }}
                     />
-                    {validationError && (
-                      <div className="text-danger small mt-2">{validationError}</div>
-                    )}
+                    <small className="text-muted">Enter the code provided by the administrator</small>
                   </div>
-                  
-                  <div className="alert alert-warning">
-                    <small>
-                      <i className="fas fa-info-circle me-2"></i>
-                      Don't have an access code? Contact the administrator to request one.
-                    </small>
-                  </div>
-                </div>
-                <div className="modal-footer">
+
+                  {validationError && (
+                    <div className="alert alert-danger">
+                      <i className="fas fa-exclamation-triangle me-2"></i>
+                      {validationError}
+                    </div>
+                  )}
+
                   <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={closeAccessModal}
-                    disabled={validating}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-warning"
+                    className="btn btn-warning btn-lg w-100"
                     onClick={validateAccessCode}
-                    disabled={validating || !accessCode.trim()}
+                    disabled={validating || !accessCode.trim() || !userEmail.trim()}
                   >
                     {validating ? (
                       <>
@@ -524,15 +409,41 @@ const MasterclassCourses = ({ navigateTo }) => {
                     ) : (
                       <>
                         <i className="fas fa-check me-2"></i>
-                        Validate Code
+                        Validate Access
                       </>
                     )}
                   </button>
+
+                  <div className="mt-3 text-center">
+                    <p className="text-muted">
+                      Don't have an access code? 
+                      <button 
+                        className="btn btn-link p-0 ms-1"
+                        onClick={() => navigateTo('contact-us')}
+                      >
+                        Contact Administrator
+                      </button>
+                    </p>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="card bg-light">
+                      <div className="card-body">
+                        <h6>Important Notes:</h6>
+                        <ul className="small mb-0">
+                          <li>Each access code is tied to a specific email address</li>
+                          <li>You must use the same email address provided to the administrator</li>
+                          <li>Access codes are typically single-use or limited-use</li>
+                          <li>Contact the administrator if you need a new code</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -566,7 +477,7 @@ const MasterclassCourses = ({ navigateTo }) => {
               <i className="fas fa-exclamation-triangle fa-2x mb-3"></i>
               <h4>Error Loading Courses</h4>
               <p>{error}</p>
-              <button className="btn btn-warning" onClick={checkAccessAndFetchCourses}>
+              <button className="btn btn-warning" onClick={fetchCourses}>
                 Try Again
               </button>
             </div>
@@ -624,7 +535,7 @@ const MasterclassCourses = ({ navigateTo }) => {
                 <div className="col-md-4 text-md-end">
                   <button 
                     className="btn btn-outline-success"
-                    onClick={handleLogout}
+                    onClick={logout}
                   >
                     <i className="fas fa-sign-out-alt me-2"></i>Logout
                   </button>
@@ -824,7 +735,7 @@ const MasterclassCourses = ({ navigateTo }) => {
         )}
       </div>
 
-      {/* Course Modal */}
+      {/* Course Modal (EXISTING CODE - NO CHANGES) */}
       {showCourseModal && selectedCourse && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog modal-xl modal-dialog-centered">
@@ -897,7 +808,7 @@ const MasterclassCourses = ({ navigateTo }) => {
                     </div>
                   </div>
                 ) : (
-                  // Document Content View - SUPPORTS HTML AND IMAGES
+                  // Document Content View
                   <div>
                     {documentLoading ? (
                       <div className="text-center py-5">

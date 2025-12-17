@@ -74,6 +74,36 @@ const AdminManageCourses = () => {
     }))
   });
 
+  // NEW: Fetch total courses count on component mount
+  useEffect(() => {
+    fetchTotalCoursesCount();
+  }, []);
+
+  // Add this function after the other useEffect functions:
+  const fetchTotalCoursesCount = async () => {
+    try {
+      console.log('📊 Fetching total courses count on component mount...');
+      const response = await api.get('/admin/courses', {
+        params: {
+          page: 1,
+          limit: 1, // Just to get the stats
+          courseType: '',
+          search: ''
+        }
+      });
+      
+      if (response.data.success) {
+        console.log('✅ Total courses count loaded:', response.data.stats?.total || 0);
+        // Set total items from the stats
+        if (response.data.stats) {
+          setTotalItems(response.data.stats.total || 0);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching courses count:', error);
+    }
+  };
+
   // Effects
   useEffect(() => {
     if (activeTab === 'view-courses') {
@@ -130,7 +160,8 @@ const AdminManageCourses = () => {
       
       if (response.data.success) {
         setCourses(response.data.courses);
-        setTotalItems(response.data.totalCount);
+        // CHANGE 2: Updated the setTotalItems line
+        setTotalItems(response.data.stats?.total || response.data.totalCount || 0);
       } else {
         setError('Failed to load courses data');
       }
@@ -904,30 +935,32 @@ const AdminManageCourses = () => {
                             onChange={(e) => setUploadForm({...uploadForm, description: e.target.value})}
                           />
                         </div>
+                        {/* CHANGE 3: Updated Access Code input */}
                         <div className="mb-3">
                           <label className="form-label fw-bold">Access Code *</label>
                           <input
                             type="text"
                             className="form-control"
-                            placeholder="Enter access code (will be provided to specific users)..."
+                            placeholder="Enter access code (any letters/numbers, e.g., 12345 or ABC123)..."
                             value={uploadForm.accessCode}
                             onChange={(e) => setUploadForm({...uploadForm, accessCode: e.target.value})}
                           />
-                          <small className="text-muted">This code will be required for users to access the course</small>
+                          <small className="text-muted">Enter any combination of letters and numbers (3-20 characters)</small>
                         </div>
                         
-                        {/* NEW: Email field for access code assignment */}
+                        {/* CHANGE 4: Updated Email field to be REQUIRED */}
                         <div className="mb-3">
-                          <label className="form-label fw-bold">Assign to Email (Optional)</label>
+                          <label className="form-label fw-bold">Assign to Email *</label>
                           <input
                             type="email"
                             className="form-control"
                             placeholder="user@example.com"
                             value={uploadForm.accessCodeEmail}
                             onChange={(e) => setUploadForm({...uploadForm, accessCodeEmail: e.target.value})}
+                            required
                           />
                           <small className="text-muted">
-                            Optional: Assign this access code to a specific user. If left empty, it becomes a generic code that any user can claim with their email.
+                            Required: This access code will be assigned to this specific email address. Only this user can use it.
                           </small>
                         </div>
                         
@@ -957,13 +990,14 @@ const AdminManageCourses = () => {
                           />
                           <small className="text-muted">Supported formats: .doc, .docx, .txt (Max 10MB)</small>
                         </div>
+                        {/* CHANGE 6: Updated upload button validation */}
                         <button
                           className="btn btn-warning btn-lg"
                           onClick={() => {
                             setUploadForm({...uploadForm, courseType: 'masterclass'});
                             setShowUploadModal(true);
                           }}
-                          disabled={!uploadForm.title || !uploadForm.description || !uploadForm.accessCode || !selectedFile}
+                          disabled={!uploadForm.title || !uploadForm.description || !uploadForm.accessCode || !uploadForm.accessCodeEmail || !selectedFile}
                         >
                           <i className="fas fa-crown me-2"></i>Upload Masterclass Course
                         </button>
@@ -979,13 +1013,15 @@ const AdminManageCourses = () => {
                             <li>Premium content for authorized users</li>
                           </ul>
                         </div>
-                        <div className="card bg-light">
+                        {/* CHANGE 5: Replaced generic code information card */}
+                        <div className="card bg-warning">
                           <div className="card-body">
-                            <h6>Access Code Types:</h6>
+                            <h6>Access Code Information:</h6>
                             <ul className="small mb-0">
-                              <li><strong>Generic Code:</strong> No email assigned. First user to claim it with their email gets it.</li>
-                              <li><strong>Assigned Code:</strong> Tied to specific email. Only that user can use it.</li>
-                              <li>You can assign codes later from the Access Code Management modal.</li>
+                              <li><strong>Assigned Code Only:</strong> Each code is tied to a specific email address</li>
+                              <li><strong>Unique Access:</strong> Only the assigned user can use the code</li>
+                              <li><strong>Email Required:</strong> Must provide a valid email for assignment</li>
+                              <li><strong>Code Format:</strong> Any combination of letters/numbers (3-20 characters)</li>
                             </ul>
                           </div>
                         </div>
@@ -1270,12 +1306,11 @@ const AdminManageCourses = () => {
                     </>
                   )}
                 </div>
+                {/* CHANGE 7: Updated confirmation modal message */}
                 <p className="text-muted">
                   {uploadForm.courseType === 'general' 
                     ? 'This course will be immediately available to all users.' 
-                    : uploadForm.accessCodeEmail
-                      ? `This access code will be assigned to ${uploadForm.accessCodeEmail} and only that user can use it.`
-                      : 'This is a generic access code. The first user to enter this code with their email will claim it.'}
+                    : `This access code (${uploadForm.accessCode}) will be assigned to ${uploadForm.accessCodeEmail} and only that user can use it.`}
                 </p>
               </div>
               <div className="modal-footer">

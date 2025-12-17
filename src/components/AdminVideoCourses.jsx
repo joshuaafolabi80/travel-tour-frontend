@@ -30,13 +30,14 @@ const AdminVideoCourses = () => {
     masterclassVideos: 0
   });
   
-  // Upload form state
+  // CHANGE 3: Updated uploadForm state to include accessCodeEmail
   const [uploadForm, setUploadForm] = useState({
     title: '',
     description: '',
     videoType: 'general',
     category: '',
-    accessCode: ''
+    accessCode: '',
+    accessCodeEmail: '' // ADD THIS
   });
   const [selectedFile, setSelectedFile] = useState(null);
   
@@ -62,7 +63,7 @@ const AdminVideoCourses = () => {
     }
   };
 
-  // Effects
+  // CHANGE 1: Add fetchVideoCounts on component mount
   useEffect(() => {
     fetchVideoCounts();
     if (activeTab === 'view-videos') {
@@ -186,6 +187,21 @@ const AdminVideoCourses = () => {
       return;
     }
 
+    // CHANGE 4: Update the handleUpload function to require email for masterclass
+    if (uploadForm.videoType === 'masterclass' && !uploadForm.accessCodeEmail) {
+      showCustomAlert('Please provide an email address for masterclass video access codes', 'error');
+      return;
+    }
+
+    // Validate email format if provided
+    if (uploadForm.accessCodeEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(uploadForm.accessCodeEmail.trim())) {
+        showCustomAlert('Please provide a valid email address for the access code', 'error');
+        return;
+      }
+    }
+
     setUploading(true);
     
     try {
@@ -196,7 +212,14 @@ const AdminVideoCourses = () => {
       formData.append('description', uploadForm.description.trim());
       formData.append('videoType', uploadForm.videoType);
       formData.append('category', uploadForm.category.trim());
+      
+      // CHANGE 5: Update the FormData in handleUpload
       formData.append('accessCode', uploadForm.accessCode.trim());
+      // ADD THIS LINE:
+      if (uploadForm.videoType === 'masterclass' && uploadForm.accessCodeEmail) {
+        formData.append('accessCodeEmail', uploadForm.accessCodeEmail.trim());
+      }
+      
       formData.append('videoFile', selectedFile);
 
       // Log FormData contents for debugging
@@ -206,6 +229,7 @@ const AdminVideoCourses = () => {
         videoType: uploadForm.videoType,
         category: uploadForm.category,
         accessCode: uploadForm.accessCode,
+        accessCodeEmail: uploadForm.accessCodeEmail,
         fileName: selectedFile.name,
         fileSize: selectedFile.size,
         fileType: selectedFile.type
@@ -315,7 +339,8 @@ const AdminVideoCourses = () => {
       description: '',
       videoType: 'general',
       category: '',
-      accessCode: ''
+      accessCode: '',
+      accessCodeEmail: '' // Reset email field too
     });
     setSelectedFile(null);
   };
@@ -694,6 +719,23 @@ const AdminVideoCourses = () => {
                           />
                           <small className="text-muted">This code will be required for users to access the video</small>
                         </div>
+                        
+                        {/* CHANGE 2: In the masterclass video upload section, add Email field */}
+                        <div className="mb-3">
+                          <label className="form-label fw-bold">Assign to Email *</label>
+                          <input
+                            type="email"
+                            className="form-control"
+                            placeholder="user@example.com"
+                            value={uploadForm.accessCodeEmail || ''}
+                            onChange={(e) => setUploadForm({...uploadForm, accessCodeEmail: e.target.value})}
+                            required
+                          />
+                          <small className="text-muted">
+                            Required: This access code will be assigned to this specific email address. Only this user can use it.
+                          </small>
+                        </div>
+                        
                         <div className="mb-3">
                           <label className="form-label fw-bold">Video File</label>
                           <input
@@ -710,7 +752,7 @@ const AdminVideoCourses = () => {
                             setUploadForm({...uploadForm, videoType: 'masterclass'});
                             setShowUploadModal(true);
                           }}
-                          disabled={!uploadForm.title || !uploadForm.description || !uploadForm.accessCode || !selectedFile}
+                          disabled={!uploadForm.title || !uploadForm.description || !uploadForm.accessCode || !uploadForm.accessCodeEmail || !selectedFile}
                         >
                           <i className="fas fa-crown me-2"></i>Upload Masterclass Video
                         </button>
@@ -923,7 +965,10 @@ const AdminVideoCourses = () => {
                   <p><strong>Category:</strong> {uploadForm.category}</p>
                   <p><strong>File:</strong> {selectedFile?.name} ({Math.round(selectedFile?.size / (1024 * 1024))}MB)</p>
                   {uploadForm.videoType === 'masterclass' && (
-                    <p><strong>Access Code:</strong> {uploadForm.accessCode}</p>
+                    <>
+                      <p><strong>Access Code:</strong> {uploadForm.accessCode}</p>
+                      <p><strong>Assigned to:</strong> {uploadForm.accessCodeEmail}</p>
+                    </>
                   )}
                 </div>
                 <div className="alert alert-warning">

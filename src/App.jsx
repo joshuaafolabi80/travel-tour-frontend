@@ -624,9 +624,9 @@ const App = () => {
             action: () => navigateTo('masterclass-courses')
         },
         { 
-            name: "Masterclass Videos", icon: "fas fa-video",
-            notificationKey: 'masterclassVideos', notification: notificationCounts.masterclassVideos,
-            action: () => navigateTo('masterclass-videos')
+            //name: "Masterclass Videos", icon: "fas fa-video",
+            //notificationKey: 'masterclassVideos', notification: notificationCounts.masterclassVideos,
+            //action: () => navigateTo('masterclass-videos')
         },
         { 
             name: "Video Courses", icon: "fas fa-video",

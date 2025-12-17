@@ -1,9 +1,9 @@
-// travel-tour-frontend/src/App.jsx - UPDATED
+// travel-tour-frontend/src/App.jsx - UPDATED WITH BUSINESS COURSE
 import React, { useState, useEffect } from 'react';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { jwtDecode } from 'jwt-decode';
 import api from './services/api';
-import blogApi from './services/blogApi'; // ADD THIS IMPORT
+import blogApi from './services/blogApi';
 
 // --- Core Components ---
 import LoginRegister from './LoginRegister';
@@ -46,21 +46,24 @@ import HotelSearchResults from './components/hotel-search/SearchResultsPage';
 import HotelDetailPage from './components/hotel-search/HotelDetailPage';
 
 // --- Experiences Components ---
-import ExperiencesPage from './components/experiences/ExperiencesPage'; // ADD THIS IMPORT
+import ExperiencesPage from './components/experiences/ExperiencesPage';
 
-// 📝 BLOG COMPONENTS
+// --- Blog Components ---
 import AdminBlogPage from './components/blog/AdminBlogPage';
 import AdminCreateEditBlog from './components/blog/AdminCreateEditBlog';
 import UserBlogPage from './components/blog/UserBlogPage';
 import SingleBlogDetail from './components/blog/SingleBlogDetail';
 
-// 📝 NEW: Import ContactForm and Submission Dashboards
+// --- Contact and Submission Components ---
 import ContactForm from './components/blog/ContactForm';
 import AdminSubmissionsDashboard from './components/blog/AdminSubmissionsDashboard';
 import UserSubmissionsDashboard from './components/blog/UserSubmissionsDashboard';
 
-// 📝 NEW: Import MyBookmarksPage Component
+// --- Bookmarks Component ---
 import MyBookmarksPage from './components/blog/MyBookmarksPage';
+
+// --- NEW: Business Course Component ---
+import BusinessCourse from './components/BusinessCourse';
 
 import './App.css';
 
@@ -174,7 +177,6 @@ const App = () => {
         videoCourses: 0,
         generalVideos: 0,
         masterclassVideos: 0,
-        // NEW: Add submission notification counts
         adminSubmissions: 0,
         userSubmissions: 0
     });
@@ -191,13 +193,11 @@ const App = () => {
         }
     };
 
-    // NEW FUNCTION: Fetch submission notification counts
     const fetchSubmissionCounts = async () => {
         if (!isLoggedIn || !userData) return;
         
         try {
             if (userRole === 'admin') {
-                // Fetch admin unread submissions
                 const response = await blogApi.get('/submissions/admin/unread-count');
                 if (response.data.success) {
                     setNotificationCounts(prev => ({
@@ -206,7 +206,6 @@ const App = () => {
                     }));
                 }
             } else if (userRole === 'student') {
-                // Fetch user unread submissions
                 const response = await blogApi.get(`/submissions/user/${userData.email}/unread-count`);
                 if (response.data.success) {
                     setNotificationCounts(prev => ({
@@ -233,7 +232,6 @@ const App = () => {
                 
                 const updatedCounts = { ...response.data.counts };
 
-                // Fetch video counts
                 try {
                     const videoCountsResponse = await api.get('/videos/count');
                     if (videoCountsResponse.data.success) {
@@ -286,7 +284,6 @@ const App = () => {
                     ...updatedCounts
                 }));
                 
-                // Fetch submission counts
                 fetchSubmissionCounts();
             }
         } catch (error) {
@@ -326,12 +323,8 @@ const App = () => {
             } else if (notificationType === 'messagesFromStudents' && userRole === 'admin') {
                 await api.put('/notifications/mark-admin-messages-read');
             } else if (notificationType === 'adminSubmissions' && userRole === 'admin') {
-                // Mark all submissions as read by admin
-                // This would require a new endpoint or you can handle it differently
                 console.log('Marking admin submissions as read');
             } else if (notificationType === 'userSubmissions' && userRole === 'student') {
-                // Mark all user submissions as read
-                // This would require a new endpoint
                 console.log('Marking user submissions as read');
             }
         } catch (error) {
@@ -595,16 +588,16 @@ const App = () => {
         return null;
     };
 
+    // UPDATED: Added Business Course to user menu items (positioned appropriately)
     const userMenuItems = [
         { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
+        { name: "Business Course", icon: "fas fa-briefcase", action: () => navigateTo('business-course') }, // NEW: Business Course added
         { name: "Hotels", icon: "fas fa-hotel", action: () => navigateTo('hotel-search') },
         { name: "Blog", icon: "fas fa-newspaper", action: () => navigateTo('blog-list-page') }, 
-        // NEW: Added Jobs and Experiences for Users Only
         { 
             name: "Jobs and Experiences", icon: "fas fa-briefcase",
             action: () => navigateTo('experiences')
         },
-        // UPDATED: Added notification badge for user submissions
         { 
             name: "My Submissions", icon: "fas fa-envelope",
             notificationKey: 'userSubmissions', notification: notificationCounts.userSubmissions,
@@ -631,6 +624,11 @@ const App = () => {
             action: () => navigateTo('masterclass-courses')
         },
         { 
+            name: "Masterclass Videos", icon: "fas fa-video",
+            notificationKey: 'masterclassVideos', notification: notificationCounts.masterclassVideos,
+            action: () => navigateTo('masterclass-videos')
+        },
+        { 
             name: "Video Courses", icon: "fas fa-video",
             notificationKey: 'videoCourses', notification: notificationCounts.videoCourses,
             action: () => navigateTo('video-courses')
@@ -655,7 +653,6 @@ const App = () => {
         { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
         { name: "Hotels", icon: "fas fa-hotel", action: () => navigateTo('hotel-search') },
         { name: "Blog Management", icon: "fas fa-newspaper", action: () => navigateTo('admin-blog-dashboard') }, 
-        // UPDATED: Added notification badge for admin submissions
         { 
             name: "Submissions", icon: "fas fa-envelope",
             notificationKey: 'adminSubmissions', notification: notificationCounts.adminSubmissions,
@@ -745,8 +742,12 @@ const App = () => {
                                 </div>
                             </div>
                             <div className="col-4">
-                                <div className="nav-grid-item">
-                                    <i className="fas fa-coffee nav-icon"></i>
+                                <div 
+                                    className="nav-grid-item" 
+                                    onClick={() => navigateTo('business-course')} // UPDATED: Now clickable
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <i className="fas fa-briefcase nav-icon"></i> {/* Changed from fa-coffee to fa-briefcase */}
                                     <span className="nav-text">Business Course</span>
                                 </div>
                             </div>
@@ -885,6 +886,7 @@ const App = () => {
                     <main className="main-content-area">
                         {/* SIMPLE STATE-BASED PAGE RENDERING */}
                         {currentPage === 'home' && <HomePage />}
+                        {currentPage === 'business-course' && <BusinessCourse navigateTo={navigateTo} />} {/* NEW: Business Course */}
                         {currentPage === 'destinations' && <DestinationsPage onSelectDestination={handleSelectDestination} />}
                         {currentPage === 'destination-overview' && selectedCourse && (
                             <DestinationOverview course={selectedCourse} onStartCourse={handleStartCourse} />
@@ -928,7 +930,7 @@ const App = () => {
                             <MyBookmarksPage navigate={navigateTo} />
                         )}
 
-                        {/* 📝 NEW: Write for Us Contact Form - UPDATED */}
+                        {/* 📝 NEW: Write for Us Contact Form */}
                         {currentPage === 'write-for-us' && (
                             <ContactForm 
                                 navigateTo={navigateTo}
@@ -937,7 +939,7 @@ const App = () => {
                             />
                         )}
 
-                        {/* 📝 NEW: Submission Dashboards - UPDATED */}
+                        {/* 📝 NEW: Submission Dashboards */}
                         {currentPage === 'admin-submissions-dashboard' && (
                             <AdminSubmissionsDashboard navigateTo={navigateTo} />
                         )}

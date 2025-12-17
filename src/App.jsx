@@ -588,10 +588,10 @@ const App = () => {
         return null;
     };
 
-    // UPDATED: Added Business Course to user menu items (positioned appropriately)
+    // UPDATED: Removed "Masterclass Videos" from user menu, kept all items with equal spacing
     const userMenuItems = [
         { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
-        { name: "Business Course", icon: "fas fa-briefcase", action: () => navigateTo('business-course') }, // NEW: Business Course added
+        { name: "Business Course", icon: "fas fa-briefcase", action: () => navigateTo('business-course') },
         { name: "Hotels", icon: "fas fa-hotel", action: () => navigateTo('hotel-search') },
         { name: "Blog", icon: "fas fa-newspaper", action: () => navigateTo('blog-list-page') }, 
         { 
@@ -622,11 +622,6 @@ const App = () => {
             name: "Masterclass Courses", icon: "fa-solid fa-crown",
             notificationKey: 'masterclassCourses', notification: notificationCounts.masterclassCourses,
             action: () => navigateTo('masterclass-courses')
-        },
-        { 
-            //name: "Masterclass Videos", icon: "fas fa-video",
-            //notificationKey: 'masterclassVideos', notification: notificationCounts.masterclassVideos,
-            //action: () => navigateTo('masterclass-videos')
         },
         { 
             name: "Video Courses", icon: "fas fa-video",
@@ -744,10 +739,10 @@ const App = () => {
                             <div className="col-4">
                                 <div 
                                     className="nav-grid-item" 
-                                    onClick={() => navigateTo('business-course')} // UPDATED: Now clickable
+                                    onClick={() => navigateTo('business-course')}
                                     style={{ cursor: 'pointer' }}
                                 >
-                                    <i className="fas fa-briefcase nav-icon"></i> {/* Changed from fa-coffee to fa-briefcase */}
+                                    <i className="fas fa-briefcase nav-icon"></i>
                                     <span className="nav-text">Business Course</span>
                                 </div>
                             </div>
@@ -886,7 +881,7 @@ const App = () => {
                     <main className="main-content-area">
                         {/* SIMPLE STATE-BASED PAGE RENDERING */}
                         {currentPage === 'home' && <HomePage />}
-                        {currentPage === 'business-course' && <BusinessCourse navigateTo={navigateTo} />} {/* NEW: Business Course */}
+                        {currentPage === 'business-course' && <BusinessCourse navigateTo={navigateTo} />}
                         {currentPage === 'destinations' && <DestinationsPage onSelectDestination={handleSelectDestination} />}
                         {currentPage === 'destination-overview' && selectedCourse && (
                             <DestinationOverview course={selectedCourse} onStartCourse={handleStartCourse} />

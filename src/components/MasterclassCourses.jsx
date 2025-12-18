@@ -381,7 +381,7 @@ const MasterclassCourses = ({ navigateTo }) => {
                       className="form-control"
                       placeholder="Enter your 1 to 20-digit access code"
                       value={accessCode}
-                      onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                      onChange={(e) => setAccessCode(e.target.value)}
                       disabled={validating}
                       maxLength={20}
                       style={{ letterSpacing: '2px', fontFamily: 'monospace' }}

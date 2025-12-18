@@ -23,14 +23,15 @@ const AdminManageCourses = () => {
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [totalItems, setTotalItems] = useState(0);
   
-  // Upload form state - UPDATED WITH EMAIL FIELD
+  // UPDATED: Upload form state with allowedEmails field
   const [uploadForm, setUploadForm] = useState({
     title: '',
     description: '',
     courseType: 'general',
     accessCode: '',
-    accessCodeEmail: '', // NEW: Email field for access code assignment
-    maxUsageCount: 1 // NEW: Usage limit field
+    accessCodeEmail: '', // Email field for access code assignment
+    allowedEmails: '', // NEW: Textarea for multiple emails
+    maxUsageCount: 1 // Usage limit field
   });
   const [selectedFile, setSelectedFile] = useState(null);
   
@@ -195,7 +196,7 @@ const AdminManageCourses = () => {
     }
   };
 
-  // UPDATED: handleUpload function with email validation
+  // UPDATED: handleUpload function with allowedEmails support
   const handleUpload = async () => {
     if (!uploadForm.title.trim() || !uploadForm.description.trim() || !selectedFile) {
       showCustomAlert('Please fill all fields and select a file', 'error');
@@ -231,6 +232,11 @@ const AdminManageCourses = () => {
       // Append email if provided
       if (uploadForm.accessCodeEmail.trim()) {
         formData.append('accessCodeEmail', uploadForm.accessCodeEmail.trim());
+      }
+      
+      // Append allowed emails if provided
+      if (uploadForm.allowedEmails.trim()) {
+        formData.append('allowedEmails', uploadForm.allowedEmails.trim());
       }
       
       // Append max usage count
@@ -377,6 +383,7 @@ const AdminManageCourses = () => {
     }
   };
 
+  // UPDATED: resetUploadForm function with allowedEmails
   const resetUploadForm = () => {
     setUploadForm({
       title: '',
@@ -384,6 +391,7 @@ const AdminManageCourses = () => {
       courseType: 'general',
       accessCode: '',
       accessCodeEmail: '',
+      allowedEmails: '', // Reset this too
       maxUsageCount: 1
     });
     setSelectedFile(null);
@@ -906,7 +914,7 @@ const AdminManageCourses = () => {
                   </div>
                 )}
 
-                {/* UPDATED: Upload Masterclass Courses Tab - ADDED EMAIL FIELD */}
+                {/* UPDATED: Upload Masterclass Courses Tab - WITH ALLOWED EMAILS FIELD */}
                 {activeTab === 'upload-masterclass' && (
                   <div className="upload-section">
                     <h4 className="mb-4" style={{color: '#0c5460'}}>
@@ -935,7 +943,7 @@ const AdminManageCourses = () => {
                             onChange={(e) => setUploadForm({...uploadForm, description: e.target.value})}
                           />
                         </div>
-                        {/* CHANGE 3: Updated Access Code input */}
+                        {/* Access Code input */}
                         <div className="mb-3">
                           <label className="form-label fw-bold">Access Code *</label>
                           <input
@@ -948,7 +956,7 @@ const AdminManageCourses = () => {
                           <small className="text-muted">Enter any combination of letters and numbers (3-20 characters)</small>
                         </div>
                         
-                        {/* CHANGE 4: Updated Email field to be REQUIRED */}
+                        {/* Email field - REQUIRED */}
                         <div className="mb-3">
                           <label className="form-label fw-bold">Assign to Email *</label>
                           <input
@@ -964,7 +972,25 @@ const AdminManageCourses = () => {
                           </small>
                         </div>
                         
-                        {/* NEW: Max usage count */}
+                        {/* 🔥 NEW: Allowed emails textarea for multiple users */}
+                        {uploadForm.courseType === 'masterclass' && (
+                          <div className="mb-3">
+                            <label className="form-label fw-bold">Allowed Emails (Optional - for team access)</label>
+                            <textarea
+                              className="form-control"
+                              rows="3"
+                              placeholder="Enter additional emails (one per line or comma-separated):&#10;team.member1@company.com&#10;team.member2@company.com&#10;team.member3@company.com"
+                              value={uploadForm.allowedEmails}
+                              onChange={(e) => setUploadForm({...uploadForm, allowedEmails: e.target.value})}
+                            />
+                            <small className="text-muted">
+                              Optional: Add multiple email addresses to allow team access with the same code.
+                              The primary email above is still required.
+                            </small>
+                          </div>
+                        )}
+                        
+                        {/* Max usage count */}
                         <div className="mb-3">
                           <label className="form-label fw-bold">Max Usage Count</label>
                           <select
@@ -990,7 +1016,7 @@ const AdminManageCourses = () => {
                           />
                           <small className="text-muted">Supported formats: .doc, .docx, .txt (Max 10MB)</small>
                         </div>
-                        {/* CHANGE 6: Updated upload button validation */}
+                        {/* Upload button validation */}
                         <button
                           className="btn btn-warning btn-lg"
                           onClick={() => {
@@ -1013,15 +1039,16 @@ const AdminManageCourses = () => {
                             <li>Premium content for authorized users</li>
                           </ul>
                         </div>
-                        {/* CHANGE 5: Replaced generic code information card */}
+                        {/* Access Code Information card */}
                         <div className="card bg-warning">
                           <div className="card-body">
                             <h6>Access Code Information:</h6>
                             <ul className="small mb-0">
                               <li><strong>Assigned Code Only:</strong> Each code is tied to a specific email address</li>
-                              <li><strong>Unique Access:</strong> Only the assigned user can use the code</li>
+                              <li><strong>Team Access:</strong> Add multiple emails in the "Allowed Emails" field</li>
                               <li><strong>Email Required:</strong> Must provide a valid email for assignment</li>
                               <li><strong>Code Format:</strong> Any combination of letters/numbers (3-20 characters)</li>
+                              <li><strong>Team Sharing:</strong> Use allowed emails to share access with team members</li>
                             </ul>
                           </div>
                         </div>
@@ -1272,7 +1299,7 @@ const AdminManageCourses = () => {
         </div>
       </div>
 
-      {/* UPDATED: Upload Confirmation Modal - SHOWS EMAIL INFO */}
+      {/* UPDATED: Upload Confirmation Modal - SHOWS ALLOWED EMAILS INFO */}
       {showUploadModal && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog modal-dialog-centered">
@@ -1299,18 +1326,20 @@ const AdminManageCourses = () => {
                       <p><strong>Access Code:</strong> {uploadForm.accessCode}</p>
                       <p><strong>Max Usage:</strong> {uploadForm.maxUsageCount === 9999 ? 'Unlimited' : uploadForm.maxUsageCount} time(s)</p>
                       {uploadForm.accessCodeEmail ? (
-                        <p><strong>Assigned to:</strong> {uploadForm.accessCodeEmail} (Assigned Code)</p>
+                        <p><strong>Primary Email:</strong> {uploadForm.accessCodeEmail} (Assigned Code)</p>
                       ) : (
                         <p><strong>Assignment:</strong> Generic Code (can be claimed by any user)</p>
+                      )}
+                      {uploadForm.allowedEmails.trim() && (
+                        <p><strong>Additional Allowed Emails:</strong> {uploadForm.allowedEmails.split(/[\n,]/).filter(e => e.trim()).length} email(s) added for team access</p>
                       )}
                     </>
                   )}
                 </div>
-                {/* CHANGE 7: Updated confirmation modal message */}
                 <p className="text-muted">
                   {uploadForm.courseType === 'general' 
                     ? 'This course will be immediately available to all users.' 
-                    : `This access code (${uploadForm.accessCode}) will be assigned to ${uploadForm.accessCodeEmail} and only that user can use it.`}
+                    : `This access code (${uploadForm.accessCode}) will be assigned to ${uploadForm.accessCodeEmail} ${uploadForm.allowedEmails.trim() ? 'and additional team members' : ''}.`}
                 </p>
               </div>
               <div className="modal-footer">
@@ -1601,6 +1630,9 @@ const AdminManageCourses = () => {
                                 <div>
                                   <strong>{code.assignedEmail || 'Not assigned (Generic)'}</strong>
                                   {code.assignedUserName && <div><small>{code.assignedUserName}</small></div>}
+                                  {code.allowedEmails && code.allowedEmails.length > 0 && (
+                                    <div><small className="text-muted">+{code.allowedEmails.length} additional email(s)</small></div>
+                                  )}
                                 </div>
                               </td>
                               <td>

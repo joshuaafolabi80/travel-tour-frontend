@@ -30,14 +30,15 @@ const AdminVideoCourses = () => {
     masterclassVideos: 0
   });
   
-  // CHANGE 3: Updated uploadForm state to include accessCodeEmail
+  // UPDATED: uploadForm state with allowedEmails field
   const [uploadForm, setUploadForm] = useState({
     title: '',
     description: '',
     videoType: 'general',
     category: '',
     accessCode: '',
-    accessCodeEmail: '' // ADD THIS
+    accessCodeEmail: '', // Email field for access code assignment
+    allowedEmails: '' // NEW: Textarea for multiple emails
   });
   const [selectedFile, setSelectedFile] = useState(null);
   
@@ -175,7 +176,7 @@ const AdminVideoCourses = () => {
     }
   };
 
-  // FIXED: handleUpload function with INCREASED TIMEOUT and GLOBAL UPDATES
+  // UPDATED: handleUpload function with allowedEmails support
   const handleUpload = async () => {
     if (!uploadForm.title.trim() || !uploadForm.description.trim() || !selectedFile) {
       showCustomAlert('Please fill all fields and select a video file', 'error');
@@ -187,7 +188,7 @@ const AdminVideoCourses = () => {
       return;
     }
 
-    // CHANGE 4: Update the handleUpload function to require email for masterclass
+    // Email validation for masterclass
     if (uploadForm.videoType === 'masterclass' && !uploadForm.accessCodeEmail) {
       showCustomAlert('Please provide an email address for masterclass video access codes', 'error');
       return;
@@ -219,6 +220,10 @@ const AdminVideoCourses = () => {
       if (uploadForm.videoType === 'masterclass' && uploadForm.accessCodeEmail) {
         formData.append('accessCodeEmail', uploadForm.accessCodeEmail.trim());
       }
+      // ADD THIS LINE TOO:
+      if (uploadForm.videoType === 'masterclass' && uploadForm.allowedEmails) {
+        formData.append('allowedEmails', uploadForm.allowedEmails.trim());
+      }
       
       formData.append('videoFile', selectedFile);
 
@@ -230,6 +235,7 @@ const AdminVideoCourses = () => {
         category: uploadForm.category,
         accessCode: uploadForm.accessCode,
         accessCodeEmail: uploadForm.accessCodeEmail,
+        allowedEmails: uploadForm.allowedEmails,
         fileName: selectedFile.name,
         fileSize: selectedFile.size,
         fileType: selectedFile.type
@@ -340,7 +346,8 @@ const AdminVideoCourses = () => {
       videoType: 'general',
       category: '',
       accessCode: '',
-      accessCodeEmail: '' // Reset email field too
+      accessCodeEmail: '', // Reset email field too
+      allowedEmails: '' // Reset allowed emails too
     });
     setSelectedFile(null);
   };
@@ -720,7 +727,7 @@ const AdminVideoCourses = () => {
                           <small className="text-muted">This code will be required for users to access the video</small>
                         </div>
                         
-                        {/* CHANGE 2: In the masterclass video upload section, add Email field */}
+                        {/* Email field - REQUIRED */}
                         <div className="mb-3">
                           <label className="form-label fw-bold">Assign to Email *</label>
                           <input
@@ -735,6 +742,24 @@ const AdminVideoCourses = () => {
                             Required: This access code will be assigned to this specific email address. Only this user can use it.
                           </small>
                         </div>
+                        
+                        {/* 🔥 NEW: Allowed emails textarea for multiple users */}
+                        {uploadForm.videoType === 'masterclass' && (
+                          <div className="mb-3">
+                            <label className="form-label fw-bold">Allowed Emails (Optional - for team access)</label>
+                            <textarea
+                              className="form-control"
+                              rows="3"
+                              placeholder="Enter additional emails (one per line or comma-separated):&#10;team.member1@company.com&#10;team.member2@company.com&#10;team.member3@company.com"
+                              value={uploadForm.allowedEmails || ''}
+                              onChange={(e) => setUploadForm({...uploadForm, allowedEmails: e.target.value})}
+                            />
+                            <small className="text-muted">
+                              Optional: Add multiple email addresses to allow team access with the same code.
+                              The primary email above is still required.
+                            </small>
+                          </div>
+                        )}
                         
                         <div className="mb-3">
                           <label className="form-label fw-bold">Video File</label>
@@ -784,6 +809,18 @@ const AdminVideoCourses = () => {
                             <p className="mb-0">
                               <strong>Total Videos:</strong> {videoCounts.totalVideos}
                             </p>
+                          </div>
+                        </div>
+                        {/* Team Access Information Card */}
+                        <div className="card bg-warning mt-3">
+                          <div className="card-body">
+                            <h6>Team Access Information:</h6>
+                            <ul className="small mb-0">
+                              <li>Use "Allowed Emails" to share access with team members</li>
+                              <li>All emails can use the same access code</li>
+                              <li>Primary email is still required for assignment</li>
+                              <li>Perfect for companies and study groups</li>
+                            </ul>
                           </div>
                         </div>
                       </div>
@@ -941,7 +978,7 @@ const AdminVideoCourses = () => {
         </div>
       </div>
 
-      {/* Upload Confirmation Modal */}
+      {/* UPDATED: Upload Confirmation Modal - SHOWS ALLOWED EMAILS INFO */}
       {showUploadModal && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog modal-dialog-centered">
@@ -967,7 +1004,10 @@ const AdminVideoCourses = () => {
                   {uploadForm.videoType === 'masterclass' && (
                     <>
                       <p><strong>Access Code:</strong> {uploadForm.accessCode}</p>
-                      <p><strong>Assigned to:</strong> {uploadForm.accessCodeEmail}</p>
+                      <p><strong>Primary Email:</strong> {uploadForm.accessCodeEmail}</p>
+                      {uploadForm.allowedEmails.trim() && (
+                        <p><strong>Additional Allowed Emails:</strong> {uploadForm.allowedEmails.split(/[\n,]/).filter(e => e.trim()).length} email(s) added for team access</p>
+                      )}
                     </>
                   )}
                 </div>
@@ -978,6 +1018,11 @@ const AdminVideoCourses = () => {
                     Please do not close this window until the upload is complete.
                   </p>
                 </div>
+                <p className="text-muted">
+                  {uploadForm.videoType === 'general' 
+                    ? 'This video will be immediately available to all users.' 
+                    : `This access code (${uploadForm.accessCode}) will be assigned to ${uploadForm.accessCodeEmail} ${uploadForm.allowedEmails.trim() ? 'and additional team members' : ''}.`}
+                </p>
               </div>
               <div className="modal-footer">
                 <button

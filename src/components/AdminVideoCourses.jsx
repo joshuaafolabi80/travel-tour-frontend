@@ -547,7 +547,10 @@ const AdminVideoCourses = () => {
                   <li className="nav-item" role="presentation">
                     <button
                       className={`nav-link ${activeTab === 'upload-general' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('upload-general')}
+                      onClick={() => {
+                        setActiveTab('upload-general');
+                        setUploadForm(prev => ({ ...prev, videoType: 'general' }));
+                      }}
                     >
                       <i className="fas fa-upload me-2"></i>Upload General Videos
                       <span className="badge bg-success ms-2">{videoCounts.generalVideos}</span>
@@ -556,7 +559,10 @@ const AdminVideoCourses = () => {
                   <li className="nav-item" role="presentation">
                     <button
                       className={`nav-link ${activeTab === 'upload-masterclass' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('upload-masterclass')}
+                      onClick={() => {
+                        setActiveTab('upload-masterclass');
+                        setUploadForm(prev => ({ ...prev, videoType: 'masterclass' }));
+                      }}
                     >
                       <i className="fas fa-crown me-2"></i>Upload Masterclass Videos
                       <span className="badge bg-warning ms-2">{videoCounts.masterclassVideos}</span>

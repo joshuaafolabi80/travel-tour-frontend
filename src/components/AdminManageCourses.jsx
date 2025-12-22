@@ -3,10 +3,18 @@ import axios from 'axios';
 
 const AdminManageCourses = () => {
   // --- State Management ---
-  const [courses, setCourses] = useState([]); // Initialized as array
+  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [alert, setAlert] = useState(null);
+  
+  // NEW: Added search/filter states from old version
+  const [searchTerm, setSearchTerm] = useState('');
+  const [courseTypeFilter, setCourseTypeFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [totalItems, setTotalItems] = useState(0);
+  const [error, setError] = useState('');
 
   // Modals visibility
   const [showAccessCodeModal, setShowAccessCodeModal] = useState(false);
@@ -42,7 +50,7 @@ const AdminManageCourses = () => {
   // --- Effects ---
   useEffect(() => {
     fetchCourses();
-  }, []);
+  }, [currentPage, itemsPerPage, courseTypeFilter]); // Added dependencies from old version
 
   useEffect(() => {
     if (alert) {
@@ -51,28 +59,140 @@ const AdminManageCourses = () => {
     }
   }, [alert]);
 
-  // --- API Calls ---
+  // --- FIXED API Calls ---
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/admin/courses');
+      setError('');
       
-      // SAFETY FIX: Check if data is nested or direct
-      if (res.data && Array.isArray(res.data.courses)) {
-        setCourses(res.data.courses);
-      } else if (Array.isArray(res.data)) {
-        setCourses(res.data);
+      // Use the OLD version's endpoint structure with query parameters
+      const res = await axios.get('/admin/courses', { // CHANGED: from /api/admin/courses to /admin/courses
+        params: {
+          page: currentPage,
+          limit: itemsPerPage,
+          courseType: courseTypeFilter || '',
+          search: searchTerm
+        }
+      });
+      
+      console.log('Courses API Response:', res.data); // Debug log
+      
+      // Use the OLD version's data structure handling
+      if (res.data.success) {
+        setCourses(res.data.courses || []);
+        // Set total items from stats or totalCount
+        setTotalItems(res.data.stats?.total || res.data.totalCount || 0);
       } else {
-        setCourses([]); // Fallback
+        setError('Failed to load courses data');
+        setCourses([]);
       }
       
       setLoading(false);
     } catch (err) {
       console.error("Fetch error:", err);
-      showAlert('danger', 'Failed to fetch courses');
-      setCourses([]); 
+      setError('Failed to load courses. Please try again later.');
+      setCourses([]);
       setLoading(false);
     }
+  };
+
+  // NEW: Filter courses function from old version
+  const filterCourses = () => {
+    let filtered = courses;
+    
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(course =>
+        course.title?.toLowerCase().includes(term) ||
+        course.description?.toLowerCase().includes(term) ||
+        course.fileName?.toLowerCase().includes(term)
+      );
+    }
+    
+    if (courseTypeFilter) {
+      filtered = filtered.filter(course => course.courseType === courseTypeFilter);
+    }
+    
+    return filtered;
+  };
+
+  // NEW: Pagination functions from old version
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
+  const renderPagination = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(
+        <li key={i} className={`page-item ${currentPage === i ? 'active' : ''}`}>
+          <button className="page-link" onClick={() => handlePageChange(i)}>
+            {i}
+          </button>
+        </li>
+      );
+    }
+
+    return (
+      <nav aria-label="Courses pagination">
+        <ul className="pagination justify-content-center">
+          <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+            <button
+              className="page-link"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </button>
+          </li>
+          
+          {startPage > 1 && (
+            <>
+              <li className="page-item">
+                <button className="page-link" onClick={() => handlePageChange(1)}>1</button>
+              </li>
+              {startPage > 2 && <li className="page-item disabled"><span className="page-link">...</span></li>}
+            </>
+          )}
+          
+          {pages}
+          
+          {endPage < totalPages && (
+            <>
+              {endPage < totalPages - 1 && <li className="page-item disabled"><span className="page-link">...</span></li>}
+              <li className="page-item">
+                <button className="page-link" onClick={() => handlePageChange(totalPages)}>{totalPages}</button>
+              </li>
+            </>
+          )}
+          
+          <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+            <button
+              className="page-link"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
+          </li>
+        </ul>
+      </nav>
+    );
   };
 
   const showAlert = (type, message) => {
@@ -91,9 +211,10 @@ const AdminManageCourses = () => {
     });
     setShowAccessCodeModal(true);
     try {
-      const res = await axios.get(`/api/admin/courses/${course._id}/access-codes`);
-      // SAFETY FIX: Ensure accessCodes is always an array
-      setAccessCodes(Array.isArray(res.data) ? res.data : []);
+      // Use OLD version's endpoint
+      const res = await axios.get(`/admin/courses/${course._id}/access-codes`);
+      // Ensure accessCodes is always an array
+      setAccessCodes(Array.isArray(res.data.accessCodes) ? res.data.accessCodes : []);
     } catch (err) {
       showAlert('danger', 'Could not load access codes');
       setAccessCodes([]);
@@ -111,11 +232,13 @@ const AdminManageCourses = () => {
         allowedEmails: emailList 
       };
 
-      const res = await axios.post(`/api/admin/courses/${selectedCourse._id}/generate-code`, payload);
-      setGeneratedAccessCode(res.data.code);
+      // Use OLD version's endpoint
+      const res = await axios.post(`/admin/courses/${selectedCourse._id}/generate-access-code-for-user`, payload);
+      setGeneratedAccessCode(res.data.accessCode);
       
-      const updatedCodes = await axios.get(`/api/admin/courses/${selectedCourse._id}/access-codes`);
-      setAccessCodes(Array.isArray(updatedCodes.data) ? updatedCodes.data : []);
+      // Refresh access codes
+      const updatedCodes = await axios.get(`/admin/courses/${selectedCourse._id}/access-codes`);
+      setAccessCodes(Array.isArray(updatedCodes.data.accessCodes) ? updatedCodes.data.accessCodes : []);
       showAlert('success', 'Access code generated and whitelist updated!');
     } catch (err) {
       showAlert('danger', err.response?.data?.message || 'Error generating code');
@@ -125,7 +248,8 @@ const AdminManageCourses = () => {
   const deleteAccessCode = async (codeId) => {
     if (!window.confirm('Delete this access code? This will revoke access for all associated emails.')) return;
     try {
-      await axios.delete(`/api/admin/access-codes/${codeId}`);
+      // Use OLD version's endpoint
+      await axios.delete(`/admin/access-codes/${codeId}`);
       setAccessCodes(accessCodes.filter(c => c._id !== codeId));
       showAlert('success', 'Code deleted');
     } catch (err) {
@@ -137,9 +261,14 @@ const AdminManageCourses = () => {
     setUploadingQuestions(true);
     try {
       const type = showMasterclassQuestionsModal ? 'masterclass' : 'general';
-      await axios.post(`/api/admin/courses/${selectedCourse._id}/questions`, {
+      // Use OLD version's endpoint structure
+      const endpoint = type === 'general' 
+        ? '/admin/upload-general-questions'
+        : '/admin/upload-masterclass-questions';
+      
+      await axios.post(endpoint, {
         ...questionForm,
-        type
+        courseType: type
       });
       showAlert('success', 'Questions uploaded successfully!');
       setShowGeneralQuestionsModal(false);
@@ -212,6 +341,9 @@ const AdminManageCourses = () => {
     );
   };
 
+  // Get filtered courses for display
+  const filteredCourses = filterCourses();
+
   return (
     <div className="container-fluid py-4">
       {alert && (
@@ -223,46 +355,222 @@ const AdminManageCourses = () => {
         </div>
       )}
 
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2><i className="fas fa-university me-2 text-primary"></i>Admin Course Manager</h2>
+      {/* Header Section from OLD version */}
+      <div className="row mb-4">
+        <div className="col-12">
+          <div className="card text-white shadow-lg" style={{backgroundColor: '#17a2b8'}}>
+            <div className="card-body py-4">
+              <div className="row align-items-center">
+                <div className="col-md-8">
+                  <h1 className="display-5 fw-bold mb-2">
+                    <i className="fas fa-book me-3"></i>
+                    Manage Courses - Admin Dashboard
+                  </h1>
+                  <p className="lead mb-0 opacity-75">Upload and manage general and masterclass courses</p>
+                </div>
+                <div className="col-md-4 text-md-end">
+                  <div className="bg-white rounded p-3 d-inline-block" style={{color: '#17a2b8'}}>
+                    <h4 className="mb-0 fw-bold">{totalItems}</h4>
+                    <small>Total Courses</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="card shadow-sm border-0">
-        <div className="table-responsive">
-          <table className="table table-hover align-middle mb-0">
-            <thead className="table-light">
-              <tr>
-                <th>Course Details</th>
-                <th>Access Control</th>
-                <th>Question Banks</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (<tr><td colSpan="3" className="text-center py-5">Loading courses...</td></tr>) : 
-                (Array.isArray(courses) && courses.length > 0) ? (
-                courses.map(course => (
-                <tr key={course._id}>
-                  <td>
-                    <div className="fw-bold">{course.title}</div>
-                    <code className="text-muted">{course.courseCode}</code>
-                  </td>
-                  <td>
-                    <button className="btn btn-sm btn-primary" onClick={() => handleOpenAccessModal(course)}>
-                      <i className="fas fa-users-cog me-1"></i> Manage Whitelist
-                    </button>
-                  </td>
-                  <td>
-                    <div className="btn-group btn-group-sm">
-                      <button className="btn btn-outline-info" onClick={() => { setSelectedCourse(course); setShowGeneralQuestionsModal(true); }}>+ General</button>
-                      <button className="btn btn-outline-warning" onClick={() => { setSelectedCourse(course); setShowMasterclassQuestionsModal(true); }}>+ Masterclass</button>
+      {/* Tab Navigation from OLD version */}
+      <div className="row mb-4">
+        <div className="col-12">
+          <div className="card shadow-sm border-0">
+            <div className="card-body p-0">
+              <ul className="nav nav-tabs nav-justified" id="coursesTab" role="tablist">
+                <li className="nav-item" role="presentation">
+                  <button
+                    className={`nav-link ${activeTab === 'view-courses' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('view-courses')}
+                  >
+                    <i className="fas fa-list me-2"></i>View/Edit/Delete Courses
+                  </button>
+                </li>
+                {/* Add other tabs as needed from old version */}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Error state from OLD version */}
+      {error && (
+        <div className="row justify-content-center mb-4">
+          <div className="col-12 col-md-8 col-lg-6">
+            <div className="alert alert-danger d-flex align-items-center" role="alert">
+              <i className="fas fa-exclamation-triangle fa-2x me-3"></i>
+              <div>
+                <h4 className="alert-heading">Oops! Something went wrong</h4>
+                <p className="mb-0">{error}</p>
+                <button className="btn btn-outline-danger mt-2" onClick={fetchCourses}>
+                  <i className="fas fa-redo me-2"></i>Try Again
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="card shadow-lg border-0">
+        <div className="card-body">
+          {/* View Courses Tab Content */}
+          {activeTab === 'view-courses' && (
+            <div className="view-courses-section">
+              {/* Search and Filter Controls from OLD version */}
+              <div className="row mb-4">
+                <div className="col-md-6">
+                  <div className="input-group">
+                    <span className="input-group-text">
+                      <i className="fas fa-search"></i>
+                    </span>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Search courses by title, description, or filename..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && fetchCourses()}
+                    />
+                  </div>
+                </div>
+                <div className="col-md-3">
+                  <select
+                    className="form-select"
+                    value={courseTypeFilter}
+                    onChange={(e) => {
+                      setCourseTypeFilter(e.target.value);
+                      setCurrentPage(1); // Reset to first page when filter changes
+                    }}
+                  >
+                    <option value="">All Course Types</option>
+                    <option value="general">General Courses</option>
+                    <option value="masterclass">Masterclass Courses</option>
+                  </select>
+                </div>
+                <div className="col-md-3">
+                  <select
+                    className="form-select"
+                    value={itemsPerPage}
+                    onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+                  >
+                    <option value="10">10 per page</option>
+                    <option value="20">20 per page</option>
+                    <option value="50">50 per page</option>
+                    <option value="100">100 per page</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Courses Table */}
+              {loading ? (
+                <div className="text-center py-5">
+                  <div className="spinner-border text-primary mb-3" style={{width: '3rem', height: '3rem', color: '#17a2b8'}}>
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                  <h4 className="text-primary" style={{color: '#17a2b8'}}>Loading Courses Data...</h4>
+                  <p className="text-muted">Fetching courses information</p>
+                </div>
+              ) : (
+                <>
+                  <div className="table-responsive">
+                    <table className="table table-hover">
+                      <thead className="table-light">
+                        <tr>
+                          <th>Title</th>
+                          <th>Type</th>
+                          <th>File Name</th>
+                          <th>Uploaded</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredCourses.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className="text-center py-4">
+                              <i className="fas fa-inbox fa-3x text-muted mb-3"></i>
+                              <h5 className="text-muted">No courses found</h5>
+                              <p className="text-muted">Try adjusting your search or filters</p>
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredCourses.map((course) => (
+                            <tr key={course._id}>
+                              <td>
+                                <strong>{course.title}</strong>
+                                <br />
+                                <small className="text-muted">{course.description?.substring(0, 50)}...</small>
+                              </td>
+                              <td>
+                                <span className={`badge ${
+                                  course.courseType === 'general' ? 'bg-info' : 'bg-warning'
+                                }`}>
+                                  {course.courseType}
+                                </span>
+                              </td>
+                              <td>
+                                <small>
+                                  <i className="fas fa-file me-1"></i>
+                                  {course.fileName}
+                                </small>
+                                <br />
+                                <small className="text-muted">({course.fileSize ? (course.fileSize / 1024).toFixed(1) : 0} KB)</small>
+                              </td>
+                              <td>
+                                <small>
+                                  {course.uploadedAt 
+                                    ? new Date(course.uploadedAt).toLocaleDateString()
+                                    : course.createdAt 
+                                      ? new Date(course.createdAt).toLocaleDateString()
+                                      : 'Date not available'
+                                  }
+                                </small>
+                              </td>
+                              <td>
+                                <span className={`badge ${course.isActive ? 'bg-success' : 'bg-secondary'}`}>
+                                  {course.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="btn-group btn-group-sm">
+                                  {course.courseType === 'masterclass' && (
+                                    <button
+                                      className="btn btn-outline-warning"
+                                      onClick={() => handleOpenAccessModal(course)}
+                                      title="Manage Access Codes"
+                                    >
+                                      <i className="fas fa-key"></i>
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="row mt-4">
+                      <div className="col-12">
+                        {renderPagination()}
+                      </div>
                     </div>
-                  </td>
-                </tr>
-              ))) : (
-                <tr><td colSpan="3" className="text-center py-4">No courses found.</td></tr>
+                  )}
+                </>
               )}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -344,7 +652,7 @@ const AdminManageCourses = () => {
                                   {code.allowedEmails?.length > 0 && `, ${code.allowedEmails.join(', ')}`}
                                 </div>
                               </td>
-                              <td>{code.currentUsageCount}/{code.maxUsageCount}</td>
+                              <td>{code.currentUsageCount || 0}/{code.maxUsageCount || 1}</td>
                               <td>
                                 <button className="btn btn-sm btn-outline-danger" onClick={() => deleteAccessCode(code._id)}><i className="fas fa-trash"></i></button>
                               </td>
@@ -415,9 +723,26 @@ const AdminManageCourses = () => {
         .custom-alert { position: fixed; top: 20px; right: 20px; z-index: 10000; min-width: 300px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .custom-alert-success { background: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
         .custom-alert-danger { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
-        .alert-content { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+        .alert-content { padding: 12px 16px; display: flex; align-items-center; justify-content: space-between; }
         .alert-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; }
         .questions-container { max-height: 70vh; overflow-y: auto; padding-right: 10px; }
+        
+        .nav-tabs .nav-link {
+          color: #6c757d;
+          font-weight: 500;
+          border: none;
+          padding: 1rem 1.5rem;
+        }
+        
+        .nav-tabs .nav-link.active {
+          color: #17a2b8;
+          border-bottom: 3px solid #17a2b8;
+          background: transparent;
+        }
+        
+        .table-hover tbody tr:hover {
+          background-color: rgba(23, 162, 184, 0.05);
+        }
       `}</style>
     </div>
   );

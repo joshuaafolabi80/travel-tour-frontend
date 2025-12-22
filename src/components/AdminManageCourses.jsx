@@ -3,23 +3,66 @@ import axios from 'axios';
 
 // Configure axios with the correct base URL
 const api = axios.create({
-  baseURL: 'https://travel-tour-academy-backend.onrender.com/api', // CHANGE THIS to your actual backend URL
+  baseURL: 'https://travel-tour-academy-backend.onrender.com', // CHANGE THIS to your actual backend URL
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   }
 });
 
-// Add request interceptor for auth tokens
+// Add request interceptor for auth tokens - FIXED VERSION
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Get token from localStorage
+    const token = localStorage.getItem('token') || 
+                  localStorage.getItem('authToken') || 
+                  localStorage.getItem('accessToken');
+    
+    // Also check sessionStorage as fallback
+    const sessionToken = sessionStorage.getItem('token') ||
+                        sessionStorage.getItem('authToken') ||
+                        sessionStorage.getItem('accessToken');
+    
+    const finalToken = token || sessionToken;
+    
+    if (finalToken) {
+      // Check if token already has "Bearer " prefix
+      const authToken = finalToken.startsWith('Bearer ') ? finalToken : `Bearer ${finalToken}`;
+      config.headers.Authorization = authToken;
+    } else {
+      console.warn('No authentication token found in localStorage or sessionStorage');
     }
+    
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle 401 errors
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Token expired or invalid
+      console.log('Token expired or invalid, redirecting to login');
+      
+      // Clear any invalid tokens
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('accessToken');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('authToken');
+      sessionStorage.removeItem('accessToken');
+      
+      // Redirect to login page
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
     return Promise.reject(error);
   }
 );
@@ -38,6 +81,10 @@ const AdminManageCourses = () => {
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [totalItems, setTotalItems] = useState(0);
   const [error, setError] = useState('');
+  
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
 
   // Modals visibility
   const [showAccessCodeModal, setShowAccessCodeModal] = useState(false);
@@ -88,10 +135,15 @@ const AdminManageCourses = () => {
 
   // --- Effects ---
   useEffect(() => {
-    if (activeTab === 'view-courses') {
+    // Check authentication on component mount
+    checkAuthentication();
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'view-courses') {
       fetchCourses();
     }
-  }, [currentPage, itemsPerPage, courseTypeFilter, activeTab]);
+  }, [currentPage, itemsPerPage, courseTypeFilter, activeTab, isAuthenticated]);
 
   useEffect(() => {
     if (alert) {
@@ -100,15 +152,77 @@ const AdminManageCourses = () => {
     }
   }, [alert]);
 
-  // --- FIXED API Calls with correct base URL ---
+  // Check authentication
+  const checkAuthentication = () => {
+    setAuthLoading(true);
+    
+    // Check for token
+    const token = localStorage.getItem('token') || 
+                  localStorage.getItem('authToken') || 
+                  localStorage.getItem('accessToken') ||
+                  sessionStorage.getItem('token') ||
+                  sessionStorage.getItem('authToken') ||
+                  sessionStorage.getItem('accessToken');
+    
+    if (token) {
+      console.log('Token found, checking validity...');
+      setIsAuthenticated(true);
+      
+      // Optional: Verify token with backend
+      verifyToken(token);
+    } else {
+      console.warn('No authentication token found');
+      setIsAuthenticated(false);
+      setError('Please login to access admin features');
+      setAuthLoading(false);
+      
+      // Redirect to login if not already there
+      if (window.location.pathname !== '/login') {
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      }
+    }
+  };
+
+  const verifyToken = async (token) => {
+    try {
+      // Simple token check - you might have a specific endpoint for this
+      const response = await api.get('/admin/verify-token');
+      if (response.data.valid) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+        setError('Session expired. Please login again.');
+      }
+    } catch (err) {
+      console.log('Token verification failed, trying with courses endpoint...');
+      // If no verify endpoint, try a simple protected endpoint
+      try {
+        await api.get('/admin/courses', { params: { page: 1, limit: 1 } });
+        setIsAuthenticated(true);
+      } catch (error) {
+        setIsAuthenticated(false);
+        setError('Authentication failed. Please login again.');
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // --- FIXED API Calls with proper auth ---
   const fetchCourses = async () => {
+    if (!isAuthenticated) {
+      setError('Please login to access courses');
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
       
-      console.log('Fetching courses...');
+      console.log('Fetching courses with auth token...');
       
-      // Try without base URL first (for Netlify proxy)
       const res = await api.get('/admin/courses', {
         params: {
           page: currentPage,
@@ -144,19 +258,16 @@ const AdminManageCourses = () => {
     } catch (err) {
       console.error("Fetch error details:", err);
       
-      // Try alternative endpoint
-      if (err.response?.status === 404) {
-        try {
-          console.log('Trying alternative endpoint...');
-          const altRes = await api.get('/api/admin/courses');
-          if (altRes.data) {
-            setCourses(Array.isArray(altRes.data) ? altRes.data : []);
-          }
-        } catch (altErr) {
-          setError('Backend connection failed. Please check your server.');
-        }
+      if (err.response?.status === 401) {
+        setError('Session expired. Please login again.');
+        setIsAuthenticated(false);
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      } else if (err.response?.status === 404) {
+        setError('Backend endpoint not found. Please check server configuration.');
       } else {
-        setError(err.response?.data?.message || 'Failed to load courses. Please check your connection.');
+        setError(err.response?.data?.message || 'Failed to load courses. Please try again.');
       }
       
       setCourses([]);
@@ -212,8 +323,13 @@ const AdminManageCourses = () => {
     }
   };
 
-  // Upload handler from old version - FIXED URL
+  // Upload handler from old version
   const handleUpload = async () => {
+    if (!isAuthenticated) {
+      showCustomAlert('Please login to upload courses', 'error');
+      return;
+    }
+
     if (!uploadForm.title.trim() || !uploadForm.description.trim() || !selectedFile) {
       showCustomAlert('Please fill all fields and select a file', 'error');
       return;
@@ -260,32 +376,13 @@ const AdminManageCourses = () => {
       
       formData.append('courseFile', selectedFile);
 
-      console.log('Uploading course...', {
-        title: uploadForm.title,
-        type: uploadForm.courseType,
-        accessCode: uploadForm.accessCode
-      });
+      console.log('Uploading course with auth...');
 
-      // Try different endpoints
-      let response;
-      try {
-        response = await api.post('/admin/upload-document-course', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-      } catch (err) {
-        if (err.response?.status === 404) {
-          // Try with /api prefix
-          response = await api.post('/api/admin/upload-document-course', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          });
-        } else {
-          throw err;
+      const response = await api.post('/admin/upload-document-course', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
         }
-      }
+      });
 
       if (response.data && response.data.success) {
         showCustomAlert(`Course uploaded successfully!`, 'success');
@@ -300,12 +397,18 @@ const AdminManageCourses = () => {
       }
     } catch (error) {
       console.error('Error uploading course:', error);
-      if (error.response?.status === 404) {
-        showCustomAlert('Backend server not found. Please check if your server is running.', 'error');
+      if (error.response?.status === 401) {
+        showCustomAlert('Session expired. Please login again.', 'error');
+        setIsAuthenticated(false);
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      } else if (error.response?.status === 404) {
+        showCustomAlert('Upload endpoint not found. Please check server configuration.', 'error');
       } else if (error.response?.data?.message) {
         showCustomAlert(error.response.data.message, 'error');
       } else {
-        showCustomAlert('Failed to upload course. Please check your connection.', 'error');
+        showCustomAlert('Failed to upload course. Please try again.', 'error');
       }
     }
     
@@ -408,6 +511,11 @@ const AdminManageCourses = () => {
   };
 
   const handleOpenAccessModal = async (course) => {
+    if (!isAuthenticated) {
+      showCustomAlert('Please login to manage access codes', 'error');
+      return;
+    }
+
     setSelectedCourse(course);
     setGeneratedAccessCode('');
     setAccessCodeForm({
@@ -461,6 +569,11 @@ const AdminManageCourses = () => {
   };
 
   const uploadQuestions = async () => {
+    if (!isAuthenticated) {
+      showCustomAlert('Please login to upload questions', 'error');
+      return;
+    }
+
     setUploadingQuestions(true);
     try {
       const type = showMasterclassQuestionsModal ? 'masterclass' : 'general';
@@ -546,6 +659,51 @@ const AdminManageCourses = () => {
   // Get filtered courses for display
   const filteredCourses = filterCourses();
 
+  // Render loading or login prompt
+  if (authLoading) {
+    return (
+      <div className="container-fluid py-4">
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-8 col-lg-6">
+            <div className="card shadow-lg border-0">
+              <div className="card-body text-center py-5">
+                <div className="spinner-border text-primary mb-3" style={{width: '3rem', height: '3rem'}}>
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <h4 className="text-primary">Checking Authentication...</h4>
+                <p className="text-muted">Please wait while we verify your session</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container-fluid py-4">
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-8 col-lg-6">
+            <div className="card shadow-lg border-0">
+              <div className="card-body text-center py-5">
+                <i className="fas fa-lock fa-4x text-danger mb-4"></i>
+                <h3 className="text-danger mb-3">Authentication Required</h3>
+                <p className="text-muted mb-4">{error || 'Please login to access the admin dashboard'}</p>
+                <button 
+                  className="btn btn-primary btn-lg"
+                  onClick={() => window.location.href = '/login'}
+                >
+                  <i className="fas fa-sign-in-alt me-2"></i>Go to Login
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="admin-manage-courses" style={{ background: '#f9fafb', minHeight: '100vh' }}>
       {alert && (
@@ -568,6 +726,31 @@ const AdminManageCourses = () => {
       )}
 
       <div className="container-fluid py-4">
+        {/* Authentication Status Bar */}
+        <div className="row mb-3">
+          <div className="col-12">
+            <div className="alert alert-success d-flex justify-content-between align-items-center">
+              <div>
+                <i className="fas fa-check-circle me-2"></i>
+                <strong>Authenticated as Admin</strong>
+                <span className="ms-3 text-muted">
+                  <small>Session active</small>
+                </span>
+              </div>
+              <button 
+                className="btn btn-sm btn-outline-danger"
+                onClick={() => {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  window.location.href = '/login';
+                }}
+              >
+                <i className="fas fa-sign-out-alt me-1"></i>Logout
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Header Section */}
         <div className="row mb-4">
           <div className="col-12">
@@ -645,31 +828,12 @@ const AdminManageCourses = () => {
           </div>
         </div>
 
-        {/* IMPORTANT: Add this backend connection info */}
-        {error && error.includes('Backend') && (
-          <div className="row mb-4">
-            <div className="col-12">
-              <div className="alert alert-warning">
-                <h5><i className="fas fa-server me-2"></i>Backend Connection Required</h5>
-                <p className="mb-2">Your frontend is deployed on Netlify but cannot connect to your backend server.</p>
-                <div className="mb-2">
-                  <strong>Quick Fix Options:</strong>
-                  <ol className="mb-0">
-                    <li>Make sure your backend server is running</li>
-                    <li>Update the <code>baseURL</code> in the code to point to your backend (line 7)</li>
-                    <li>Or create a <code>_redirects</code> file in your Netlify public folder</li>
-                  </ol>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab Content */}
+        {/* Tab Content - SAME AS BEFORE, but now authenticated */}
         <div className="row">
           <div className="col-12">
             <div className="card shadow-lg border-0">
               <div className="card-body">
+                {/* All tab contents remain the same as before */}
                 {/* Upload General Courses Tab */}
                 {activeTab === 'upload-general' && (
                   <div className="upload-section">
@@ -1012,7 +1176,7 @@ const AdminManageCourses = () => {
                     </div>
 
                     {/* Error state */}
-                    {error && !error.includes('Backend') && (
+                    {error && (
                       <div className="alert alert-danger d-flex align-items-center mb-4" role="alert">
                         <i className="fas fa-exclamation-triangle fa-2x me-3"></i>
                         <div>
@@ -1133,6 +1297,7 @@ const AdminManageCourses = () => {
         </div>
       </div>
 
+      {/* All modals remain the same as before */}
       {/* Upload Confirmation Modal */}
       {showUploadModal && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>

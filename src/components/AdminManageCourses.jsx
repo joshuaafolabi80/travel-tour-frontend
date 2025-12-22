@@ -1,16 +1,17 @@
+// travel-tour-frontend/src/components/AdminManageCourses.jsx - COMPLETE UPDATED VERSION
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 // Configure axios with the correct base URL
 const api = axios.create({
-  baseURL: 'https://travel-tour-academy-backend.onrender.com', // CHANGE THIS to your actual backend URL
+  baseURL: 'https://travel-tour-academy-backend.onrender.com', // Your backend URL
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   }
 });
 
-// Add request interceptor for auth tokens - FIXED VERSION
+// Add request interceptor for auth tokens
 api.interceptors.request.use(
   (config) => {
     // Get token from localStorage
@@ -18,7 +19,7 @@ api.interceptors.request.use(
                   localStorage.getItem('authToken') || 
                   localStorage.getItem('accessToken');
     
-    // Also check sessionStorage as fallback
+    // Also check sessionStorage
     const sessionToken = sessionStorage.getItem('token') ||
                         sessionStorage.getItem('authToken') ||
                         sessionStorage.getItem('accessToken');
@@ -29,8 +30,6 @@ api.interceptors.request.use(
       // Check if token already has "Bearer " prefix
       const authToken = finalToken.startsWith('Bearer ') ? finalToken : `Bearer ${finalToken}`;
       config.headers.Authorization = authToken;
-    } else {
-      console.warn('No authentication token found in localStorage or sessionStorage');
     }
     
     return config;
@@ -40,25 +39,16 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor to handle 401 errors
+// Add response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
-    if (error.response && error.response.status === 401) {
+    if (error.response?.status === 401) {
       // Token expired or invalid
-      console.log('Token expired or invalid, redirecting to login');
-      
-      // Clear any invalid tokens
-      localStorage.removeItem('token');
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('accessToken');
-      sessionStorage.removeItem('token');
-      sessionStorage.removeItem('authToken');
-      sessionStorage.removeItem('accessToken');
-      
-      // Redirect to login page
+      localStorage.clear();
+      sessionStorage.clear();
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
@@ -81,28 +71,22 @@ const AdminManageCourses = () => {
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [totalItems, setTotalItems] = useState(0);
   const [error, setError] = useState('');
-  
-  // Auth state
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
 
   // Modals visibility
-  const [showAccessCodeModal, setShowAccessCodeModal] = useState(false);
-  const [showGeneralQuestionsModal, setShowGeneralQuestionsModal] = useState(false);
-  const [showMasterclassQuestionsModal, setShowMasterclassQuestionsModal] = useState(false);
-
-  // Upload modal states from old version
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  
-  // Form States
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAccessCodeModal, setShowAccessCodeModal] = useState(false);
   const [accessCodes, setAccessCodes] = useState([]);
   const [generatedAccessCode, setGeneratedAccessCode] = useState('');
+  const [showGeneralQuestionsModal, setShowGeneralQuestionsModal] = useState(false);
+  const [showMasterclassQuestionsModal, setShowMasterclassQuestionsModal] = useState(false);
   const [uploadingQuestions, setUploadingQuestions] = useState(false);
 
-  // Upload form state from old version
+  // Upload form state
   const [uploadForm, setUploadForm] = useState({
     title: '',
     description: '',
@@ -113,174 +97,53 @@ const AdminManageCourses = () => {
     maxUsageCount: 1
   });
 
-  // Whitelist & Access Code Form State
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    isActive: true
+  });
+
+  // Access code form state
   const [accessCodeForm, setAccessCodeForm] = useState({
     userEmail: '',
     userName: '',
-    allowedEmails: '', 
     maxUsageCount: 1,
-    lifetimeAccess: false
+    lifetimeAccess: true
   });
 
+  // Question form state
   const [questionForm, setQuestionForm] = useState({
     title: '',
     description: '',
-    questions: Array(20).fill({
-      questionText: '',
+    courseType: 'general',
+    questions: Array(20).fill().map(() => ({
+      question: '',
       options: ['', '', '', ''],
-      correctOptionIndex: 0,
+      correctOption: 0,
       explanation: ''
-    })
+    }))
   });
 
   // --- Effects ---
   useEffect(() => {
-    // Check authentication on component mount
-    checkAuthentication();
+    fetchTotalCoursesCount();
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated && activeTab === 'view-courses') {
+    if (activeTab === 'view-courses') {
       fetchCourses();
     }
-  }, [currentPage, itemsPerPage, courseTypeFilter, activeTab, isAuthenticated]);
+  }, [currentPage, itemsPerPage, activeTab]);
 
-  useEffect(() => {
-    if (alert) {
-      const timer = setTimeout(() => setAlert(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [alert]);
-
-  // Check authentication
-  const checkAuthentication = () => {
-    setAuthLoading(true);
-    
-    // Check for token
-    const token = localStorage.getItem('token') || 
-                  localStorage.getItem('authToken') || 
-                  localStorage.getItem('accessToken') ||
-                  sessionStorage.getItem('token') ||
-                  sessionStorage.getItem('authToken') ||
-                  sessionStorage.getItem('accessToken');
-    
-    if (token) {
-      console.log('Token found, checking validity...');
-      setIsAuthenticated(true);
-      
-      // Optional: Verify token with backend
-      verifyToken(token);
-    } else {
-      console.warn('No authentication token found');
-      setIsAuthenticated(false);
-      setError('Please login to access admin features');
-      setAuthLoading(false);
-      
-      // Redirect to login if not already there
-      if (window.location.pathname !== '/login') {
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 2000);
-      }
-    }
-  };
-
-  const verifyToken = async (token) => {
-    try {
-      // Simple token check - you might have a specific endpoint for this
-      const response = await api.get('/admin/verify-token');
-      if (response.data.valid) {
-        setIsAuthenticated(true);
-      } else {
-        setIsAuthenticated(false);
-        setError('Session expired. Please login again.');
-      }
-    } catch (err) {
-      console.log('Token verification failed, trying with courses endpoint...');
-      // If no verify endpoint, try a simple protected endpoint
-      try {
-        await api.get('/admin/courses', { params: { page: 1, limit: 1 } });
-        setIsAuthenticated(true);
-      } catch (error) {
-        setIsAuthenticated(false);
-        setError('Authentication failed. Please login again.');
-      }
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  // --- FIXED API Calls with proper auth ---
-  const fetchCourses = async () => {
-    if (!isAuthenticated) {
-      setError('Please login to access courses');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError('');
-      
-      console.log('Fetching courses with auth token...');
-      
-      const res = await api.get('/admin/courses', {
-        params: {
-          page: currentPage,
-          limit: itemsPerPage,
-          courseType: courseTypeFilter || '',
-          search: searchTerm
-        }
-      });
-      
-      console.log('Courses API Response:', res.data);
-      
-      // Handle response
-      if (res.data) {
-        if (Array.isArray(res.data)) {
-          setCourses(res.data);
-          setTotalItems(res.data.length);
-        } else if (Array.isArray(res.data.courses)) {
-          setCourses(res.data.courses);
-          setTotalItems(res.data.total || res.data.courses.length);
-        } else if (res.data.success && Array.isArray(res.data.courses)) {
-          setCourses(res.data.courses);
-          setTotalItems(res.data.total || res.data.courses.length);
-        } else {
-          setCourses([]);
-          setTotalItems(0);
-        }
-      } else {
-        setCourses([]);
-        setTotalItems(0);
-      }
-      
-      setLoading(false);
-    } catch (err) {
-      console.error("Fetch error details:", err);
-      
-      if (err.response?.status === 401) {
-        setError('Session expired. Please login again.');
-        setIsAuthenticated(false);
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 2000);
-      } else if (err.response?.status === 404) {
-        setError('Backend endpoint not found. Please check server configuration.');
-      } else {
-        setError(err.response?.data?.message || 'Failed to load courses. Please try again.');
-      }
-      
-      setCourses([]);
-      setLoading(false);
-    }
-  };
-
-  // Helper function from old version
+  // --- Helper Functions ---
   const showCustomAlert = (message, type = 'success') => {
     setAlert({ message, type });
+    setTimeout(() => {
+      setAlert(null);
+    }, 3000);
   };
 
-  // Filter courses function from old version
   const filterCourses = () => {
     let filtered = courses;
     
@@ -300,7 +163,60 @@ const AdminManageCourses = () => {
     return filtered;
   };
 
-  // File select handler from old version
+  // --- API Functions ---
+  const fetchTotalCoursesCount = async () => {
+    try {
+      const response = await api.get('/admin/courses', {
+        params: {
+          page: 1,
+          limit: 1,
+          courseType: '',
+          search: ''
+        }
+      });
+      
+      if (response.data.success) {
+        if (response.data.stats) {
+          setTotalItems(response.data.stats.total || 0);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching courses count:', error);
+    }
+  };
+
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const response = await api.get('/admin/courses', {
+        params: {
+          page: currentPage,
+          limit: itemsPerPage,
+          courseType: courseTypeFilter || '',
+          search: searchTerm
+        }
+      });
+      
+      if (response.data.success) {
+        setCourses(response.data.courses || []);
+        setTotalItems(response.data.stats?.total || response.data.totalCount || 0);
+      } else {
+        setError('Failed to load courses data');
+      }
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      if (error.response?.status === 500) {
+        setError('Backend server error (500). Please check server logs.');
+      } else {
+        setError('Failed to load courses. Please try again later.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -323,13 +239,7 @@ const AdminManageCourses = () => {
     }
   };
 
-  // Upload handler from old version
   const handleUpload = async () => {
-    if (!isAuthenticated) {
-      showCustomAlert('Please login to upload courses', 'error');
-      return;
-    }
-
     if (!uploadForm.title.trim() || !uploadForm.description.trim() || !selectedFile) {
       showCustomAlert('Please fill all fields and select a file', 'error');
       return;
@@ -376,15 +286,13 @@ const AdminManageCourses = () => {
       
       formData.append('courseFile', selectedFile);
 
-      console.log('Uploading course with auth...');
-
       const response = await api.post('/admin/upload-document-course', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
 
-      if (response.data && response.data.success) {
+      if (response.data.success) {
         showCustomAlert(`Course uploaded successfully!`, 'success');
         setShowUploadModal(false);
         resetUploadForm();
@@ -393,20 +301,12 @@ const AdminManageCourses = () => {
           fetchCourses();
         }
       } else {
-        showCustomAlert(response.data?.message || 'Failed to upload course. Please try again.', 'error');
+        showCustomAlert('Failed to upload course. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error uploading course:', error);
-      if (error.response?.status === 401) {
-        showCustomAlert('Session expired. Please login again.', 'error');
-        setIsAuthenticated(false);
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 2000);
-      } else if (error.response?.status === 404) {
-        showCustomAlert('Upload endpoint not found. Please check server configuration.', 'error');
-      } else if (error.response?.data?.message) {
-        showCustomAlert(error.response.data.message, 'error');
+      if (error.response?.status === 500) {
+        showCustomAlert('Backend server error (500). Please check server logs.', 'error');
       } else {
         showCustomAlert('Failed to upload course. Please try again.', 'error');
       }
@@ -415,7 +315,118 @@ const AdminManageCourses = () => {
     setUploading(false);
   };
 
-  // Reset upload form from old version
+  const handleEdit = async () => {
+    if (!editForm.title.trim() || !editForm.description.trim()) {
+      showCustomAlert('Please fill all required fields', 'error');
+      return;
+    }
+
+    try {
+      const response = await api.put(`/admin/courses/${selectedCourse._id}`, editForm);
+      
+      if (response.data.success) {
+        showCustomAlert('Course updated successfully!', 'success');
+        setShowEditModal(false);
+        fetchCourses();
+      } else {
+        showCustomAlert('Failed to update course. Please try again.', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating course:', error);
+      showCustomAlert('Failed to update course. Please try again.', 'error');
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const response = await api.delete(`/admin/courses/${selectedCourse._id}`);
+      
+      if (response.data.success) {
+        showCustomAlert('Course deleted successfully!', 'success');
+        setShowDeleteModal(false);
+        fetchCourses();
+      } else {
+        showCustomAlert('Failed to delete course. Please try again.', 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting course:', error);
+      showCustomAlert('Failed to delete course. Please try again.', 'error');
+    }
+  };
+
+  const generateAccessCodeForUser = async () => {
+    if (!accessCodeForm.userEmail.trim()) {
+      showCustomAlert('Please enter user email address', 'error');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(accessCodeForm.userEmail.trim())) {
+      showCustomAlert('Please enter a valid email address', 'error');
+      return;
+    }
+
+    try {
+      const response = await api.post(`/admin/courses/${selectedCourse._id}/generate-access-code-for-user`, {
+        userEmail: accessCodeForm.userEmail.trim(),
+        userName: accessCodeForm.userName.trim() || undefined,
+        maxUsageCount: accessCodeForm.maxUsageCount,
+        lifetimeAccess: accessCodeForm.lifetimeAccess
+      });
+      
+      if (response.data.success) {
+        setGeneratedAccessCode(response.data.accessCode);
+        showCustomAlert(`Access code generated for ${accessCodeForm.userEmail}`, 'success');
+        fetchAccessCodes();
+        // Reset form
+        setAccessCodeForm({
+          userEmail: '',
+          userName: '',
+          maxUsageCount: 1,
+          lifetimeAccess: true
+        });
+      } else {
+        showCustomAlert('Failed to generate access code. Please try again.', 'error');
+      }
+    } catch (error) {
+      console.error('Error generating access code:', error);
+      showCustomAlert(error.response?.data?.message || 'Failed to generate access code', 'error');
+    }
+  };
+
+  const deleteAccessCode = async (accessCodeId) => {
+    if (!window.confirm('Are you sure you want to delete this access code?')) {
+      return;
+    }
+
+    try {
+      const response = await api.delete(`/admin/access-codes/${accessCodeId}`);
+      
+      if (response.data.success) {
+        showCustomAlert('Access code deleted successfully', 'success');
+        fetchAccessCodes();
+      }
+    } catch (error) {
+      console.error('Error deleting access code:', error);
+      showCustomAlert('Failed to delete access code', 'error');
+    }
+  };
+
+  const fetchAccessCodes = async () => {
+    if (!selectedCourse) return;
+    
+    try {
+      const response = await api.get(`/admin/courses/${selectedCourse._id}/access-codes`);
+      
+      if (response.data.success) {
+        setAccessCodes(response.data.accessCodes);
+      }
+    } catch (error) {
+      console.error('Error fetching access codes:', error);
+    }
+  };
+
   const resetUploadForm = () => {
     setUploadForm({
       title: '',
@@ -429,7 +440,166 @@ const AdminManageCourses = () => {
     setSelectedFile(null);
   };
 
-  // Pagination functions from old version
+  const openEditModal = (course) => {
+    setSelectedCourse(course);
+    setEditForm({
+      title: course.title,
+      description: course.description,
+      isActive: course.isActive
+    });
+    setShowEditModal(true);
+  };
+
+  const openDeleteModal = (course) => {
+    setSelectedCourse(course);
+    setShowDeleteModal(true);
+  };
+
+  const openAccessCodeModal = async (course) => {
+    setSelectedCourse(course);
+    setGeneratedAccessCode('');
+    setShowAccessCodeModal(true);
+    setAccessCodeForm({
+      userEmail: '',
+      userName: '',
+      maxUsageCount: 1,
+      lifetimeAccess: true
+    });
+    await fetchAccessCodes();
+  };
+
+  const openGeneralQuestionsModal = () => {
+    setQuestionForm({
+      title: '',
+      description: '',
+      courseType: 'general',
+      questions: Array(20).fill().map(() => ({
+        question: '',
+        options: ['', '', '', ''],
+        correctOption: 0,
+        explanation: ''
+      }))
+    });
+    setShowGeneralQuestionsModal(true);
+  };
+
+  const openMasterclassQuestionsModal = () => {
+    setQuestionForm({
+      title: '',
+      description: '',
+      courseType: 'masterclass',
+      questions: Array(20).fill().map(() => ({
+        question: '',
+        options: ['', '', '', ''],
+        correctOption: 0,
+        explanation: ''
+      }))
+    });
+    setShowMasterclassQuestionsModal(true);
+  };
+
+  const handleQuestionChange = (questionIndex, field, value) => {
+    const updatedQuestions = [...questionForm.questions];
+    updatedQuestions[questionIndex] = {
+      ...updatedQuestions[questionIndex],
+      [field]: value
+    };
+    setQuestionForm({
+      ...questionForm,
+      questions: updatedQuestions
+    });
+  };
+
+  const handleOptionChange = (questionIndex, optionIndex, value) => {
+    const updatedQuestions = [...questionForm.questions];
+    updatedQuestions[questionIndex].options[optionIndex] = value;
+    setQuestionForm({
+      ...questionForm,
+      questions: updatedQuestions
+    });
+  };
+
+  const handleCorrectOptionChange = (questionIndex, optionIndex) => {
+    const updatedQuestions = [...questionForm.questions];
+    updatedQuestions[questionIndex].correctOption = optionIndex;
+    setQuestionForm({
+      ...questionForm,
+      questions: updatedQuestions
+    });
+  };
+
+  const uploadQuestions = async () => {
+    if (!questionForm.title.trim() || !questionForm.description.trim()) {
+      showCustomAlert('Please fill all required fields', 'error');
+      return;
+    }
+
+    // Validate all questions
+    for (let i = 0; i < questionForm.questions.length; i++) {
+      const q = questionForm.questions[i];
+      if (!q.question.trim()) {
+        showCustomAlert(`Please fill question ${i + 1}`, 'error');
+        return;
+      }
+      for (let j = 0; j < q.options.length; j++) {
+        if (!q.options[j].trim()) {
+          showCustomAlert(`Please fill all options for question ${i + 1}`, 'error');
+          return;
+        }
+      }
+      if (!q.explanation.trim()) {
+        showCustomAlert(`Please provide explanation for question ${i + 1}`, 'error');
+        return;
+      }
+    }
+
+    setUploadingQuestions(true);
+
+    try {
+      const questionsData = questionForm.questions.map((q, index) => ({
+        questionNumber: index + 1,
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.options[q.correctOption],
+        correctOption: q.correctOption,
+        explanation: q.explanation
+      }));
+
+      const payload = {
+        title: questionForm.title,
+        description: questionForm.description,
+        courseType: questionForm.courseType,
+        questions: questionsData,
+        totalQuestions: 20,
+        marksPerQuestion: 5,
+        timeLimit: 15
+      };
+
+      const endpoint = questionForm.courseType === 'general' 
+        ? '/admin/upload-general-questions'
+        : '/admin/upload-masterclass-questions';
+
+      const response = await api.post(endpoint, payload);
+
+      if (response.data.success) {
+        showCustomAlert(`${questionForm.courseType === 'general' ? 'General' : 'Masterclass'} questions uploaded successfully!`, 'success');
+        if (questionForm.courseType === 'general') {
+          setShowGeneralQuestionsModal(false);
+        } else {
+          setShowMasterclassQuestionsModal(false);
+        }
+      } else {
+        showCustomAlert('Failed to upload questions. Please try again.', 'error');
+      }
+    } catch (error) {
+      console.error('Error uploading questions:', error);
+      showCustomAlert('Failed to upload questions. Please try again.', 'error');
+    } finally {
+      setUploadingQuestions(false);
+    }
+  };
+
+  // Pagination functions
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const handlePageChange = (pageNumber) => {
@@ -442,8 +612,6 @@ const AdminManageCourses = () => {
   };
 
   const renderPagination = () => {
-    if (totalPages <= 1) return null;
-    
     const pages = [];
     const maxVisiblePages = 5;
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
@@ -510,147 +678,87 @@ const AdminManageCourses = () => {
     );
   };
 
-  const handleOpenAccessModal = async (course) => {
-    if (!isAuthenticated) {
-      showCustomAlert('Please login to manage access codes', 'error');
-      return;
-    }
-
-    setSelectedCourse(course);
-    setGeneratedAccessCode('');
-    setAccessCodeForm({
-      userEmail: '',
-      userName: '',
-      allowedEmails: '',
-      maxUsageCount: 1,
-      lifetimeAccess: false
-    });
-    setShowAccessCodeModal(true);
-    try {
-      const res = await api.get(`/admin/courses/${course._id}/access-codes`);
-      setAccessCodes(Array.isArray(res.data.accessCodes) ? res.data.accessCodes : []);
-    } catch (err) {
-      showCustomAlert('Could not load access codes', 'error');
-      setAccessCodes([]);
-    }
-  };
-
-  const generateAccessCodeForUser = async () => {
-    try {
-      const emailList = accessCodeForm.allowedEmails 
-        ? accessCodeForm.allowedEmails.split(',').map(e => e.trim()).filter(e => e !== "")
-        : [];
-
-      const payload = {
-        ...accessCodeForm,
-        allowedEmails: emailList 
-      };
-
-      const res = await api.post(`/admin/courses/${selectedCourse._id}/generate-access-code-for-user`, payload);
-      setGeneratedAccessCode(res.data.accessCode);
-      
-      const updatedCodes = await api.get(`/admin/courses/${selectedCourse._id}/access-codes`);
-      setAccessCodes(Array.isArray(updatedCodes.data.accessCodes) ? updatedCodes.data.accessCodes : []);
-      showCustomAlert('Access code generated and whitelist updated!', 'success');
-    } catch (err) {
-      showCustomAlert(err.response?.data?.message || 'Error generating code', 'error');
-    }
-  };
-
-  const deleteAccessCode = async (codeId) => {
-    if (!window.confirm('Delete this access code? This will revoke access for all associated emails.')) return;
-    try {
-      await api.delete(`/admin/access-codes/${codeId}`);
-      setAccessCodes(accessCodes.filter(c => c._id !== codeId));
-      showCustomAlert('Code deleted', 'success');
-    } catch (err) {
-      showCustomAlert('Failed to delete code', 'error');
-    }
-  };
-
-  const uploadQuestions = async () => {
-    if (!isAuthenticated) {
-      showCustomAlert('Please login to upload questions', 'error');
-      return;
-    }
-
-    setUploadingQuestions(true);
-    try {
-      const type = showMasterclassQuestionsModal ? 'masterclass' : 'general';
-      const endpoint = type === 'general' 
-        ? '/admin/upload-general-questions'
-        : '/admin/upload-masterclass-questions';
-      
-      await api.post(endpoint, {
-        ...questionForm,
-        courseType: type
-      });
-      showCustomAlert('Questions uploaded successfully!', 'success');
-      setShowGeneralQuestionsModal(false);
-      setShowMasterclassQuestionsModal(false);
-      resetQuestionForm();
-    } catch (err) {
-      showCustomAlert('Error uploading questions', 'error');
-    } finally {
-      setUploadingQuestions(false);
-    }
-  };
-
-  const resetQuestionForm = () => {
-    setQuestionForm({
-      title: '',
-      description: '',
-      questions: Array(20).fill({
-        questionText: '',
-        options: ['', '', '', ''],
-        correctOptionIndex: 0,
-        explanation: ''
-      })
-    });
-  };
-
-  const renderQuestionInput = (index) => {
-    const q = questionForm.questions[index];
-    const updateQuestion = (field, value) => {
-      const newQuestions = [...questionForm.questions];
-      newQuestions[index] = { ...newQuestions[index], [field]: value };
-      setQuestionForm({ ...questionForm, questions: newQuestions });
-    };
-
-    const updateOption = (optIndex, value) => {
-      const newQuestions = [...questionForm.questions];
-      const newOptions = [...newQuestions[index].options];
-      newOptions[optIndex] = value;
-      newQuestions[index].options = newOptions;
-      setQuestionForm({ ...questionForm, questions: newQuestions });
-    };
-
+  // Loading state
+  if (loading && activeTab === 'view-courses') {
     return (
-      <div key={index} className="card mb-4 question-card shadow-sm border-start border-4 border-info">
+      <div className="container-fluid py-4">
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-10 col-lg-8">
+            <div className="card shadow-lg border-0">
+              <div className="card-body text-center py-5">
+                <div className="spinner-border text-primary mb-3" style={{width: '3rem', height: '3rem', color: '#17a2b8'}}>
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <h4 className="text-primary" style={{color: '#17a2b8'}}>Loading Courses Data...</h4>
+                <p className="text-muted">Fetching courses information</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render question input for a specific question index
+  const renderQuestionInput = (questionIndex) => {
+    const question = questionForm.questions[questionIndex];
+    const optionLetters = ['A', 'B', 'C', 'D'];
+    
+    return (
+      <div key={questionIndex} className="question-card card mb-4">
         <div className="card-header bg-light">
-          <span className="fw-bold">Question {index + 1}</span>
+          <h6 className="mb-0">Question {questionIndex + 1}</h6>
         </div>
         <div className="card-body">
-          <textarea 
-            className="form-control mb-3" 
-            placeholder="Enter question text..." 
-            value={q.questionText}
-            onChange={(e) => updateQuestion('questionText', e.target.value)}
-          />
-          <div className="row">
-            {q.options.map((opt, i) => (
-              <div className="col-md-6 mb-2" key={i}>
-                <div className="input-group">
-                  <span className="input-group-text">{String.fromCharCode(65 + i)}</span>
-                  <input type="text" className="form-control" value={opt} onChange={(e) => updateOption(i, e.target.value)} placeholder={`Option ${String.fromCharCode(65 + i)}`} />
-                  <div className="input-group-text">
-                    <input type="radio" name={`correct-${index}`} checked={q.correctOptionIndex === i} onChange={() => updateQuestion('correctOptionIndex', i)} />
-                  </div>
+          <div className="mb-3">
+            <label className="form-label fw-bold">Question Text</label>
+            <textarea
+              className="form-control"
+              rows="3"
+              placeholder={`Enter question ${questionIndex + 1}...`}
+              value={question.question}
+              onChange={(e) => handleQuestionChange(questionIndex, 'question', e.target.value)}
+            />
+          </div>
+          
+          <div className="mb-3">
+            <label className="form-label fw-bold">Options</label>
+            {question.options.map((option, optionIndex) => (
+              <div key={optionIndex} className="input-group mb-2">
+                <span className="input-group-text" style={{width: '40px'}}>
+                  {optionLetters[optionIndex]}
+                </span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder={`Option ${optionLetters[optionIndex]}...`}
+                  value={option}
+                  onChange={(e) => handleOptionChange(questionIndex, optionIndex, e.target.value)}
+                />
+                <div className="input-group-text">
+                  <input
+                    type="radio"
+                    className="form-check-input"
+                    name={`correct-option-${questionIndex}`}
+                    checked={question.correctOption === optionIndex}
+                    onChange={() => handleCorrectOptionChange(questionIndex, optionIndex)}
+                  />
+                  <label className="form-check-label ms-2">Correct</label>
                 </div>
               </div>
             ))}
           </div>
-          <input type="text" className="form-control form-control-sm mt-2" placeholder="Explanation (Optional)" value={q.explanation} onChange={(e) => updateQuestion('explanation', e.target.value)} />
+          
+          <div className="mb-3">
+            <label className="form-label fw-bold">Correct Option Explanation</label>
+            <textarea
+              className="form-control"
+              rows="2"
+              placeholder="Explain why the correct option is right..."
+              value={question.explanation}
+              onChange={(e) => handleQuestionChange(questionIndex, 'explanation', e.target.value)}
+            />
+          </div>
         </div>
       </div>
     );
@@ -659,53 +767,9 @@ const AdminManageCourses = () => {
   // Get filtered courses for display
   const filteredCourses = filterCourses();
 
-  // Render loading or login prompt
-  if (authLoading) {
-    return (
-      <div className="container-fluid py-4">
-        <div className="row justify-content-center">
-          <div className="col-12 col-md-8 col-lg-6">
-            <div className="card shadow-lg border-0">
-              <div className="card-body text-center py-5">
-                <div className="spinner-border text-primary mb-3" style={{width: '3rem', height: '3rem'}}>
-                  <span className="visually-hidden">Loading...</span>
-                </div>
-                <h4 className="text-primary">Checking Authentication...</h4>
-                <p className="text-muted">Please wait while we verify your session</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="container-fluid py-4">
-        <div className="row justify-content-center">
-          <div className="col-12 col-md-8 col-lg-6">
-            <div className="card shadow-lg border-0">
-              <div className="card-body text-center py-5">
-                <i className="fas fa-lock fa-4x text-danger mb-4"></i>
-                <h3 className="text-danger mb-3">Authentication Required</h3>
-                <p className="text-muted mb-4">{error || 'Please login to access the admin dashboard'}</p>
-                <button 
-                  className="btn btn-primary btn-lg"
-                  onClick={() => window.location.href = '/login'}
-                >
-                  <i className="fas fa-sign-in-alt me-2"></i>Go to Login
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="admin-manage-courses" style={{ background: '#f9fafb', minHeight: '100vh' }}>
+      {/* Custom Alert Component */}
       {alert && (
         <div className={`custom-alert custom-alert-${alert.type}`}>
           <div className="alert-content">
@@ -726,31 +790,6 @@ const AdminManageCourses = () => {
       )}
 
       <div className="container-fluid py-4">
-        {/* Authentication Status Bar */}
-        <div className="row mb-3">
-          <div className="col-12">
-            <div className="alert alert-success d-flex justify-content-between align-items-center">
-              <div>
-                <i className="fas fa-check-circle me-2"></i>
-                <strong>Authenticated as Admin</strong>
-                <span className="ms-3 text-muted">
-                  <small>Session active</small>
-                </span>
-              </div>
-              <button 
-                className="btn btn-sm btn-outline-danger"
-                onClick={() => {
-                  localStorage.clear();
-                  sessionStorage.clear();
-                  window.location.href = '/login';
-                }}
-              >
-                <i className="fas fa-sign-out-alt me-1"></i>Logout
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Header Section */}
         <div className="row mb-4">
           <div className="col-12">
@@ -828,12 +867,11 @@ const AdminManageCourses = () => {
           </div>
         </div>
 
-        {/* Tab Content - SAME AS BEFORE, but now authenticated */}
+        {/* Tab Content */}
         <div className="row">
           <div className="col-12">
             <div className="card shadow-lg border-0">
               <div className="card-body">
-                {/* All tab contents remain the same as before */}
                 {/* Upload General Courses Tab */}
                 {activeTab === 'upload-general' && (
                   <div className="upload-section">
@@ -953,7 +991,7 @@ const AdminManageCourses = () => {
                             required
                           />
                           <small className="text-muted">
-                            Required: This access code will be assigned to this specific email address.
+                            Required: This access code will be assigned to this specific email address. Only this user can use it.
                           </small>
                         </div>
                         
@@ -969,6 +1007,7 @@ const AdminManageCourses = () => {
                           />
                           <small className="text-muted">
                             Optional: Add multiple email addresses to allow team access with the same code.
+                            The primary email above is still required.
                           </small>
                         </div>
                         
@@ -1060,7 +1099,7 @@ const AdminManageCourses = () => {
                         </div>
                         <button
                           className="btn btn-info btn-lg"
-                          onClick={() => setShowGeneralQuestionsModal(true)}
+                          onClick={openGeneralQuestionsModal}
                         >
                           <i className="fas fa-plus-circle me-2"></i>Create General Course Questions
                         </button>
@@ -1104,7 +1143,7 @@ const AdminManageCourses = () => {
                         </div>
                         <button
                           className="btn btn-warning btn-lg"
-                          onClick={() => setShowMasterclassQuestionsModal(true)}
+                          onClick={openMasterclassQuestionsModal}
                         >
                           <i className="fas fa-plus-circle me-2"></i>Create Masterclass Course Questions
                         </button>
@@ -1143,7 +1182,6 @@ const AdminManageCourses = () => {
                             placeholder="Search courses by title, description, or filename..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && fetchCourses()}
                           />
                         </div>
                       </div>
@@ -1151,10 +1189,7 @@ const AdminManageCourses = () => {
                         <select
                           className="form-select"
                           value={courseTypeFilter}
-                          onChange={(e) => {
-                            setCourseTypeFilter(e.target.value);
-                            setCurrentPage(1);
-                          }}
+                          onChange={(e) => setCourseTypeFilter(e.target.value)}
                         >
                           <option value="">All Course Types</option>
                           <option value="general">General Courses</option>
@@ -1177,117 +1212,123 @@ const AdminManageCourses = () => {
 
                     {/* Error state */}
                     {error && (
-                      <div className="alert alert-danger d-flex align-items-center mb-4" role="alert">
-                        <i className="fas fa-exclamation-triangle fa-2x me-3"></i>
-                        <div>
-                          <h4 className="alert-heading">Oops! Something went wrong</h4>
-                          <p className="mb-0">{error}</p>
-                          <button className="btn btn-outline-danger mt-2" onClick={fetchCourses}>
-                            <i className="fas fa-redo me-2"></i>Try Again
-                          </button>
+                      <div className="row justify-content-center mb-4">
+                        <div className="col-12 col-md-8 col-lg-6">
+                          <div className="alert alert-danger d-flex align-items-center" role="alert">
+                            <i className="fas fa-exclamation-triangle fa-2x me-3"></i>
+                            <div>
+                              <h4 className="alert-heading">Oops! Something went wrong</h4>
+                              <p className="mb-0">{error}</p>
+                              <button className="btn btn-outline-danger mt-2" onClick={fetchCourses}>
+                                <i className="fas fa-redo me-2"></i>Try Again
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
 
                     {/* Courses Table */}
-                    {loading ? (
-                      <div className="text-center py-5">
-                        <div className="spinner-border text-primary mb-3" style={{width: '3rem', height: '3rem', color: '#17a2b8'}}>
-                          <span className="visually-hidden">Loading...</span>
-                        </div>
-                        <h4 className="text-primary" style={{color: '#17a2b8'}}>Loading Courses Data...</h4>
-                        <p className="text-muted">Fetching courses information</p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="table-responsive">
-                          <table className="table table-hover">
-                            <thead className="table-light">
-                              <tr>
-                                <th>Title</th>
-                                <th>Type</th>
-                                <th>File Name</th>
-                                <th>Uploaded</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                    <div className="table-responsive">
+                      <table className="table table-hover">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>File Name</th>
+                            <th>Uploaded</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredCourses.length === 0 ? (
+                            <tr>
+                              <td colSpan="6" className="text-center py-4">
+                                <i className="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <h5 className="text-muted">No courses found</h5>
+                                <p className="text-muted">Try adjusting your search or filters</p>
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredCourses.map((course) => (
+                              <tr key={course._id}>
+                                <td>
+                                  <strong>{course.title}</strong>
+                                  <br />
+                                  <small className="text-muted">{course.description?.substring(0, 50)}...</small>
+                                </td>
+                                <td>
+                                  <span className={`badge ${
+                                    course.courseType === 'general' ? 'bg-info' : 'bg-warning'
+                                  }`}>
+                                    {course.courseType}
+                                  </span>
+                                </td>
+                                <td>
+                                  <small>
+                                    <i className="fas fa-file me-1"></i>
+                                    {course.fileName}
+                                  </small>
+                                  <br />
+                                  <small className="text-muted">({course.fileSize ? (course.fileSize / 1024).toFixed(1) : 0} KB)</small>
+                                </td>
+                                <td>
+                                  <small>
+                                    {course.uploadedAt 
+                                      ? new Date(course.uploadedAt).toLocaleDateString()
+                                      : course.createdAt 
+                                        ? new Date(course.createdAt).toLocaleDateString()
+                                        : 'Date not available'
+                                    }
+                                  </small>
+                                </td>
+                                <td>
+                                  <span className={`badge ${course.isActive ? 'bg-success' : 'bg-secondary'}`}>
+                                    {course.isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </td>
+                                <td>
+                                  <div className="btn-group btn-group-sm">
+                                    <button
+                                      className="btn btn-outline-primary"
+                                      onClick={() => openEditModal(course)}
+                                      title="Edit Course"
+                                    >
+                                      <i className="fas fa-edit"></i>
+                                    </button>
+                                    {course.courseType === 'masterclass' && (
+                                      <button
+                                        className="btn btn-outline-warning"
+                                        onClick={() => openAccessCodeModal(course)}
+                                        title="Manage Access Codes"
+                                      >
+                                        <i className="fas fa-key"></i>
+                                      </button>
+                                    )}
+                                    <button
+                                      className="btn btn-outline-danger"
+                                      onClick={() => openDeleteModal(course)}
+                                      title="Delete Course"
+                                      >
+                                      <i className="fas fa-trash"></i>
+                                    </button>
+                                  </div>
+                                </td>
                               </tr>
-                            </thead>
-                            <tbody>
-                              {filteredCourses.length === 0 ? (
-                                <tr>
-                                  <td colSpan="6" className="text-center py-4">
-                                    <i className="fas fa-inbox fa-3x text-muted mb-3"></i>
-                                    <h5 className="text-muted">No courses found</h5>
-                                    <p className="text-muted">Try adjusting your search or filters</p>
-                                  </td>
-                                </tr>
-                              ) : (
-                                filteredCourses.map((course) => (
-                                  <tr key={course._id}>
-                                    <td>
-                                      <strong>{course.title}</strong>
-                                      <br />
-                                      <small className="text-muted">{course.description?.substring(0, 50)}...</small>
-                                    </td>
-                                    <td>
-                                      <span className={`badge ${
-                                        course.courseType === 'general' ? 'bg-info' : 'bg-warning'
-                                      }`}>
-                                        {course.courseType}
-                                      </span>
-                                    </td>
-                                    <td>
-                                      <small>
-                                        <i className="fas fa-file me-1"></i>
-                                        {course.fileName}
-                                      </small>
-                                      <br />
-                                      <small className="text-muted">({course.fileSize ? (course.fileSize / 1024).toFixed(1) : 0} KB)</small>
-                                    </td>
-                                    <td>
-                                      <small>
-                                        {course.uploadedAt 
-                                          ? new Date(course.uploadedAt).toLocaleDateString()
-                                          : course.createdAt 
-                                            ? new Date(course.createdAt).toLocaleDateString()
-                                            : 'Date not available'
-                                        }
-                                      </small>
-                                    </td>
-                                    <td>
-                                      <span className={`badge ${course.isActive ? 'bg-success' : 'bg-secondary'}`}>
-                                        {course.isActive ? 'Active' : 'Inactive'}
-                                      </span>
-                                    </td>
-                                    <td>
-                                      <div className="btn-group btn-group-sm">
-                                        {course.courseType === 'masterclass' && (
-                                          <button
-                                            className="btn btn-outline-warning"
-                                            onClick={() => handleOpenAccessModal(course)}
-                                            title="Manage Access Codes"
-                                          >
-                                            <i className="fas fa-key"></i>
-                                          </button>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
 
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                          <div className="row mt-4">
-                            <div className="col-12">
-                              {renderPagination()}
-                            </div>
-                          </div>
-                        )}
-                      </>
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="row mt-4">
+                        <div className="col-12">
+                          {renderPagination()}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1297,7 +1338,6 @@ const AdminManageCourses = () => {
         </div>
       </div>
 
-      {/* All modals remain the same as before */}
       {/* Upload Confirmation Modal */}
       {showUploadModal && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
@@ -1374,119 +1414,386 @@ const AdminManageCourses = () => {
         </div>
       )}
 
-      {/* Access Code & Whitelist Modal */}
-      {showAccessCodeModal && (
-        <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.6)'}}>
-          <div className="modal-dialog modal-xl modal-dialog-scrollable">
+      {/* Edit Course Modal */}
+      {showEditModal && selectedCourse && (
+        <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
+          <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
-              <div className="modal-header bg-dark text-white">
-                <h5 className="modal-title">Whitelist & Access Codes: {selectedCourse?.title}</h5>
-                <button className="btn-close btn-close-white" onClick={() => setShowAccessCodeModal(false)}></button>
+              <div className="modal-header bg-primary text-white">
+                <h5 className="modal-title">
+                  <i className="fas fa-edit me-2"></i>
+                  Edit Course
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowEditModal(false)}
+                ></button>
               </div>
               <div className="modal-body">
-                <div className="row">
-                  <div className="col-md-5 border-end">
-                    <h6>Generate Access for Whitelist</h6>
-                    <div className="mb-3">
-                      <label className="form-label small fw-bold">Primary User Email</label>
-                      <input type="email" className="form-control" value={accessCodeForm.userEmail} onChange={(e) => setAccessCodeForm({...accessCodeForm, userEmail: e.target.value})} placeholder="e.g. admin@school.com" />
-                    </div>
-                    <div className="mb-3">
-                      <label className="form-label small fw-bold">Additional Whitelisted Emails (Comma separated)</label>
-                      <textarea 
-                        className="form-control" 
-                        rows="4" 
-                        value={accessCodeForm.allowedEmails} 
-                        onChange={(e) => setAccessCodeForm({...accessCodeForm, allowedEmails: e.target.value})} 
-                        placeholder="student1@gmail.com, student2@gmail.com..."
-                      />
-                      <small className="text-muted">Only these emails will be allowed to use the generated code.</small>
-                    </div>
-                    <div className="row">
-                        <div className="col-6">
-                            <label className="form-label small fw-bold">Usage Limit</label>
-                            <select className="form-select" value={accessCodeForm.maxUsageCount} onChange={(e) => setAccessCodeForm({...accessCodeForm, maxUsageCount: parseInt(e.target.value)})}>
-                                <option value="1">1 Use</option>
-                                <option value="10">10 Uses</option>
-                                <option value="100">100 Uses</option>
-                                <option value="9999">Unlimited</option>
-                            </select>
-                        </div>
-                        <div className="col-6 pt-4">
-                            <div className="form-check">
-                                <input className="form-check-input" type="checkbox" checked={accessCodeForm.lifetimeAccess} onChange={(e) => setAccessCodeForm({...accessCodeForm, lifetimeAccess: e.target.checked})} id="lifetime" />
-                                <label className="form-check-label" htmlFor="lifetime">Lifetime</label>
-                            </div>
-                        </div>
-                    </div>
-                    <button className="btn btn-success w-100 mt-3" onClick={generateAccessCodeForUser} disabled={!accessCodeForm.userEmail}>
-                      Generate & Whitelist
-                    </button>
-                    {generatedAccessCode && (
-                        <div className="alert alert-success mt-3 text-center">
-                            <small className="d-block">Copy this code:</small>
-                            <strong className="fs-4">{generatedAccessCode}</strong>
-                        </div>
-                    )}
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Course Title</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Description</label>
+                  <textarea
+                    className="form-control"
+                    rows="4"
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                  />
+                </div>
+                <div className="mb-3">
+                  <div className="form-check form-switch">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={editForm.isActive}
+                      onChange={(e) => setEditForm({...editForm, isActive: e.target.checked})}
+                    />
+                    <label className="form-check-label fw-bold">Active Course</label>
                   </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleEdit}
+                >
+                  <i className="fas fa-save me-2"></i>
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-                  <div className="col-md-7">
-                    <h6>Active Whitelists</h6>
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedCourse && (
+        <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-danger text-white">
+                <h5 className="modal-title">
+                  <i className="fas fa-exclamation-triangle me-2"></i>
+                  Confirm Deletion
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowDeleteModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="alert alert-danger">
+                  <h6>Warning: This action cannot be undone!</h6>
+                  <p className="mb-0">
+                    You are about to delete the course: <strong>"{selectedCourse.title}"</strong>
+                  </p>
+                </div>
+                <p className="text-muted">
+                  This will remove the course from the system and users will no longer have access to it.
+                  The notification count for users will be updated accordingly.
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={handleDelete}
+                >
+                  <i className="fas fa-trash me-2"></i>
+                  Delete Course
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Access Code Management Modal */}
+      {showAccessCodeModal && selectedCourse && (
+        <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-warning text-dark">
+                <h5 className="modal-title">
+                  <i className="fas fa-key me-2"></i>
+                  Access Code Management - {selectedCourse.title}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowAccessCodeModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                {/* Generate New Access Code for Specific User */}
+                <div className="mb-4 p-3 border rounded">
+                  <h6>Generate Access Code for Specific User</h6>
+                  <div className="row mb-3">
+                    <div className="col-md-6">
+                      <label className="form-label fw-bold">User Email *</label>
+                      <input
+                        type="email"
+                        className="form-control"
+                        placeholder="user@example.com"
+                        value={accessCodeForm.userEmail}
+                        onChange={(e) => setAccessCodeForm({...accessCodeForm, userEmail: e.target.value})}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label">User Name (Optional)</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="John Doe"
+                        value={accessCodeForm.userName}
+                        onChange={(e) => setAccessCodeForm({...accessCodeForm, userName: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="row mb-3">
+                    <div className="col-md-6">
+                      <label className="form-label">Usage Limit</label>
+                      <select
+                        className="form-select"
+                        value={accessCodeForm.maxUsageCount}
+                        onChange={(e) => setAccessCodeForm({...accessCodeForm, maxUsageCount: parseInt(e.target.value)})}
+                      >
+                        <option value="1">Single use only</option>
+                        <option value="5">5 uses</option>
+                        <option value="10">10 uses</option>
+                        <option value="9999">Unlimited uses</option>
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="form-check mt-4">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          checked={accessCodeForm.lifetimeAccess}
+                          onChange={(e) => setAccessCodeForm({...accessCodeForm, lifetimeAccess: e.target.checked})}
+                          id="lifetimeAccess"
+                        />
+                        <label className="form-check-label" htmlFor="lifetimeAccess">
+                          Lifetime Access
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-end">
+                    <button
+                      className="btn btn-warning"
+                      onClick={generateAccessCodeForUser}
+                      disabled={!accessCodeForm.userEmail.trim()}
+                    >
+                      <i className="fas fa-plus me-2"></i>Generate Code for User
+                    </button>
+                  </div>
+                  
+                  {generatedAccessCode && (
+                    <div className="alert alert-success mt-3">
+                      <h6>Access Code Generated Successfully!</h6>
+                      <div className="mb-2">
+                        <strong>Code:</strong> 
+                        <code className="fs-5 ms-2">{generatedAccessCode}</code>
+                      </div>
+                      <div className="mb-2">
+                        <strong>For:</strong> {accessCodeForm.userEmail}
+                        {accessCodeForm.userName && ` (${accessCodeForm.userName})`}
+                      </div>
+                      <div>
+                        <strong>Usage:</strong> {accessCodeForm.maxUsageCount === 1 ? 'Single use' : 
+                          accessCodeForm.maxUsageCount === 9999 ? 'Unlimited uses' : 
+                          `${accessCodeForm.maxUsageCount} uses`}
+                      </div>
+                      <p className="mb-0 mt-2 text-muted">
+                        Share this code with the user. They must use the same email address to validate.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Existing Access Codes */}
+                <div>
+                  <h6>Existing Access Codes</h6>
+                  {accessCodes.length === 0 ? (
+                    <div className="text-center py-3 text-muted">
+                      <i className="fas fa-key fa-2x mb-2"></i>
+                      <p>No access codes generated yet</p>
+                    </div>
+                  ) : (
                     <div className="table-responsive">
-                      <table className="table table-sm align-middle">
+                      <table className="table table-sm">
                         <thead>
-                          <tr className="small text-muted">
-                            <th>Code</th>
-                            <th>Whitelisted Emails</th>
+                          <tr>
+                            <th>Access Code</th>
+                            <th>Assigned To</th>
+                            <th>Type</th>
+                            <th>Status</th>
                             <th>Usage</th>
-                            <th>Action</th>
+                            <th>Generated</th>
+                            <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {Array.isArray(accessCodes) && accessCodes.map(code => (
+                          {accessCodes.map((code) => (
                             <tr key={code._id}>
                               <td><code>{code.code}</code></td>
                               <td>
-                                <div className="small text-truncate" style={{maxWidth: '200px'}}>
-                                  {code.assignedEmail}
-                                  {code.allowedEmails?.length > 0 && `, ${code.allowedEmails.join(', ')}`}
+                                <div>
+                                  <strong>{code.assignedEmail || 'Not assigned (Generic)'}</strong>
+                                  {code.assignedUserName && <div><small>{code.assignedUserName}</small></div>}
+                                  {code.allowedEmails && code.allowedEmails.length > 0 && (
+                                    <div><small className="text-muted">+{code.allowedEmails.length} additional email(s)</small></div>
+                                  )}
                                 </div>
                               </td>
-                              <td>{code.currentUsageCount || 0}/{code.maxUsageCount || 1}</td>
                               <td>
-                                <button className="btn btn-sm btn-outline-danger" onClick={() => deleteAccessCode(code._id)}><i className="fas fa-trash"></i></button>
+                                <span className={`badge ${code.codeType === 'assigned' ? 'bg-primary' : 'bg-secondary'}`}>
+                                  {code.codeType === 'assigned' ? 'Assigned' : 'Generic'}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`badge ${code.isUsed ? 'bg-success' : 'bg-secondary'}`}>
+                                  {code.isUsed ? 'Used' : 'Available'}
+                                </span>
+                              </td>
+                              <td>
+                                {code.currentUsageCount || 0}/{code.maxUsageCount || 1}
+                              </td>
+                              <td>{new Date(code.createdAt).toLocaleDateString()}</td>
+                              <td>
+                                <button 
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => deleteAccessCode(code._id)}
+                                >
+                                  <i className="fas fa-trash"></i>
+                                </button>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                  </div>
+                  )}
                 </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowAccessCodeModal(false)}
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* General Questions Modal */}
+      {/* General Questions Upload Modal */}
       {showGeneralQuestionsModal && (
-        <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.6)'}}>
-          <div className="modal-dialog modal-xl modal-dialog-scrollable">
+        <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
+          <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div className="modal-content">
               <div className="modal-header bg-info text-white">
-                <h5 className="modal-title">Bulk Upload General Questions</h5>
-                <button className="btn-close btn-close-white" onClick={() => setShowGeneralQuestionsModal(false)}></button>
+                <h5 className="modal-title">
+                  <i className="fas fa-question-circle me-2"></i>
+                  Upload General Course Questions
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowGeneralQuestionsModal(false)}
+                ></button>
               </div>
-              <div className="modal-body bg-light">
-                <input type="text" className="form-control mb-3" placeholder="Question Set Title" value={questionForm.title} onChange={e => setQuestionForm({...questionForm, title: e.target.value})} />
+              <div className="modal-body">
+                <div className="row mb-4">
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label fw-bold">Question Set Title</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="e.g., TCA 001 Questions"
+                        value={questionForm.title}
+                        onChange={(e) => setQuestionForm({...questionForm, title: e.target.value})}
+                      />
+                      <small className="text-muted">Ensure the title relates to the specific course</small>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label fw-bold">Description</label>
+                      <textarea
+                        className="form-control"
+                        rows="2"
+                        placeholder="Describe this question set..."
+                        value={questionForm.description}
+                        onChange={(e) => setQuestionForm({...questionForm, description: e.target.value})}
+                      />
+                      <small className="text-muted">Provide context about these questions</small>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="questions-container">
                   {questionForm.questions.map((_, index) => renderQuestionInput(index))}
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-info text-white" onClick={uploadQuestions} disabled={uploadingQuestions}>
-                  {uploadingQuestions ? 'Uploading...' : 'Upload 20 Questions'}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowGeneralQuestionsModal(false)}
+                  disabled={uploadingQuestions}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-info"
+                  onClick={uploadQuestions}
+                  disabled={uploadingQuestions}
+                >
+                  {uploadingQuestions ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                      Uploading Questions...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-upload me-2"></i>
+                      Upload 20 Questions
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -1494,24 +1801,82 @@ const AdminManageCourses = () => {
         </div>
       )}
 
-      {/* Masterclass Questions Modal */}
+      {/* Masterclass Questions Upload Modal */}
       {showMasterclassQuestionsModal && (
-        <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.6)'}}>
-          <div className="modal-dialog modal-xl modal-dialog-scrollable">
+        <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
+          <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div className="modal-content">
               <div className="modal-header bg-warning text-dark">
-                <h5 className="modal-title">Bulk Upload Masterclass Questions</h5>
-                <button className="btn-close" onClick={() => setShowMasterclassQuestionsModal(false)}></button>
+                <h5 className="modal-title">
+                  <i className="fas fa-graduation-cap me-2"></i>
+                  Upload Masterclass Course Questions
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowMasterclassQuestionsModal(false)}
+                ></button>
               </div>
-              <div className="modal-body bg-light">
-                <input type="text" className="form-control mb-3" placeholder="Masterclass Set Title" value={questionForm.title} onChange={e => setQuestionForm({...questionForm, title: e.target.value})} />
+              <div className="modal-body">
+                <div className="row mb-4">
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label fw-bold">Question Set Title</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="e.g., TCA Masterclass 001 Questions"
+                        value={questionForm.title}
+                        onChange={(e) => setQuestionForm({...questionForm, title: e.target.value})}
+                      />
+                      <small className="text-muted">Ensure the title relates to the specific masterclass course</small>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label fw-bold">Description</label>
+                      <textarea
+                        className="form-control"
+                        rows="2"
+                        placeholder="Describe this masterclass question set..."
+                        value={questionForm.description}
+                        onChange={(e) => setQuestionForm({...questionForm, description: e.target.value})}
+                      />
+                      <small className="text-muted">Provide context about these advanced questions</small>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="questions-container">
                   {questionForm.questions.map((_, index) => renderQuestionInput(index))}
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-warning" onClick={uploadQuestions} disabled={uploadingQuestions}>
-                  {uploadingQuestions ? 'Uploading...' : 'Upload 20 Questions'}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowMasterclassQuestionsModal(false)}
+                  disabled={uploadingQuestions}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-warning"
+                  onClick={uploadQuestions}
+                  disabled={uploadingQuestions}
+                >
+                  {uploadingQuestions ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                      Uploading Questions...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-upload me-2"></i>
+                      Upload 20 Questions
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -1519,6 +1884,7 @@ const AdminManageCourses = () => {
         </div>
       )}
 
+      {/* Custom CSS */}
       <style jsx>{`
         .custom-alert {
           position: fixed;

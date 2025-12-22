@@ -1,6 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+// Configure axios with the correct base URL
+const api = axios.create({
+  baseURL: 'https://travel-tour-academy-backend.onrender.com/api', // CHANGE THIS to your actual backend URL
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
+
+// Add request interceptor for auth tokens
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 const AdminManageCourses = () => {
   // --- State Management ---
   const [courses, setCourses] = useState([]);
@@ -77,20 +100,16 @@ const AdminManageCourses = () => {
     }
   }, [alert]);
 
-  // --- FIXED API Calls ---
+  // --- FIXED API Calls with correct base URL ---
   const fetchCourses = async () => {
     try {
       setLoading(true);
       setError('');
       
-      console.log('Fetching courses with params:', {
-        page: currentPage,
-        limit: itemsPerPage,
-        courseType: courseTypeFilter || '',
-        search: searchTerm
-      });
+      console.log('Fetching courses...');
       
-      const res = await axios.get('/admin/courses', {
+      // Try without base URL first (for Netlify proxy)
+      const res = await api.get('/admin/courses', {
         params: {
           page: currentPage,
           limit: itemsPerPage,
@@ -101,26 +120,22 @@ const AdminManageCourses = () => {
       
       console.log('Courses API Response:', res.data);
       
-      // FIX: Handle different response structures
-      if (res.data && res.data.success === false) {
-        // If API returns error
-        setError(res.data.message || 'Failed to load courses');
-        setCourses([]);
-      } else if (res.data && Array.isArray(res.data)) {
-        // If response is direct array
-        setCourses(res.data);
-        setTotalItems(res.data.length);
-      } else if (res.data && Array.isArray(res.data.courses)) {
-        // If response has courses array
-        setCourses(res.data.courses);
-        setTotalItems(res.data.total || res.data.courses.length);
-      } else if (res.data && res.data.success && Array.isArray(res.data.courses)) {
-        // If response has success flag and courses
-        setCourses(res.data.courses);
-        setTotalItems(res.data.total || res.data.courses.length);
+      // Handle response
+      if (res.data) {
+        if (Array.isArray(res.data)) {
+          setCourses(res.data);
+          setTotalItems(res.data.length);
+        } else if (Array.isArray(res.data.courses)) {
+          setCourses(res.data.courses);
+          setTotalItems(res.data.total || res.data.courses.length);
+        } else if (res.data.success && Array.isArray(res.data.courses)) {
+          setCourses(res.data.courses);
+          setTotalItems(res.data.total || res.data.courses.length);
+        } else {
+          setCourses([]);
+          setTotalItems(0);
+        }
       } else {
-        // Fallback
-        console.warn('Unexpected API response structure:', res.data);
         setCourses([]);
         setTotalItems(0);
       }
@@ -128,8 +143,22 @@ const AdminManageCourses = () => {
       setLoading(false);
     } catch (err) {
       console.error("Fetch error details:", err);
-      console.error("Error response:", err.response?.data);
-      setError(err.response?.data?.message || 'Failed to load courses. Please try again later.');
+      
+      // Try alternative endpoint
+      if (err.response?.status === 404) {
+        try {
+          console.log('Trying alternative endpoint...');
+          const altRes = await api.get('/api/admin/courses');
+          if (altRes.data) {
+            setCourses(Array.isArray(altRes.data) ? altRes.data : []);
+          }
+        } catch (altErr) {
+          setError('Backend connection failed. Please check your server.');
+        }
+      } else {
+        setError(err.response?.data?.message || 'Failed to load courses. Please check your connection.');
+      }
+      
       setCourses([]);
       setLoading(false);
     }
@@ -183,7 +212,7 @@ const AdminManageCourses = () => {
     }
   };
 
-  // Upload handler from old version
+  // Upload handler from old version - FIXED URL
   const handleUpload = async () => {
     if (!uploadForm.title.trim() || !uploadForm.description.trim() || !selectedFile) {
       showCustomAlert('Please fill all fields and select a file', 'error');
@@ -231,13 +260,34 @@ const AdminManageCourses = () => {
       
       formData.append('courseFile', selectedFile);
 
-      const response = await axios.post('/admin/upload-document-course', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      console.log('Uploading course...', {
+        title: uploadForm.title,
+        type: uploadForm.courseType,
+        accessCode: uploadForm.accessCode
       });
 
-      if (response.data.success) {
+      // Try different endpoints
+      let response;
+      try {
+        response = await api.post('/admin/upload-document-course', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      } catch (err) {
+        if (err.response?.status === 404) {
+          // Try with /api prefix
+          response = await api.post('/api/admin/upload-document-course', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          });
+        } else {
+          throw err;
+        }
+      }
+
+      if (response.data && response.data.success) {
         showCustomAlert(`Course uploaded successfully!`, 'success');
         setShowUploadModal(false);
         resetUploadForm();
@@ -246,11 +296,17 @@ const AdminManageCourses = () => {
           fetchCourses();
         }
       } else {
-        showCustomAlert('Failed to upload course. Please try again.', 'error');
+        showCustomAlert(response.data?.message || 'Failed to upload course. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error uploading course:', error);
-      showCustomAlert('Failed to upload course. Please try again.', 'error');
+      if (error.response?.status === 404) {
+        showCustomAlert('Backend server not found. Please check if your server is running.', 'error');
+      } else if (error.response?.data?.message) {
+        showCustomAlert(error.response.data.message, 'error');
+      } else {
+        showCustomAlert('Failed to upload course. Please check your connection.', 'error');
+      }
     }
     
     setUploading(false);
@@ -363,7 +419,7 @@ const AdminManageCourses = () => {
     });
     setShowAccessCodeModal(true);
     try {
-      const res = await axios.get(`/admin/courses/${course._id}/access-codes`);
+      const res = await api.get(`/admin/courses/${course._id}/access-codes`);
       setAccessCodes(Array.isArray(res.data.accessCodes) ? res.data.accessCodes : []);
     } catch (err) {
       showCustomAlert('Could not load access codes', 'error');
@@ -382,10 +438,10 @@ const AdminManageCourses = () => {
         allowedEmails: emailList 
       };
 
-      const res = await axios.post(`/admin/courses/${selectedCourse._id}/generate-access-code-for-user`, payload);
+      const res = await api.post(`/admin/courses/${selectedCourse._id}/generate-access-code-for-user`, payload);
       setGeneratedAccessCode(res.data.accessCode);
       
-      const updatedCodes = await axios.get(`/admin/courses/${selectedCourse._id}/access-codes`);
+      const updatedCodes = await api.get(`/admin/courses/${selectedCourse._id}/access-codes`);
       setAccessCodes(Array.isArray(updatedCodes.data.accessCodes) ? updatedCodes.data.accessCodes : []);
       showCustomAlert('Access code generated and whitelist updated!', 'success');
     } catch (err) {
@@ -396,7 +452,7 @@ const AdminManageCourses = () => {
   const deleteAccessCode = async (codeId) => {
     if (!window.confirm('Delete this access code? This will revoke access for all associated emails.')) return;
     try {
-      await axios.delete(`/admin/access-codes/${codeId}`);
+      await api.delete(`/admin/access-codes/${codeId}`);
       setAccessCodes(accessCodes.filter(c => c._id !== codeId));
       showCustomAlert('Code deleted', 'success');
     } catch (err) {
@@ -412,7 +468,7 @@ const AdminManageCourses = () => {
         ? '/admin/upload-general-questions'
         : '/admin/upload-masterclass-questions';
       
-      await axios.post(endpoint, {
+      await api.post(endpoint, {
         ...questionForm,
         courseType: type
       });
@@ -537,7 +593,7 @@ const AdminManageCourses = () => {
           </div>
         </div>
 
-        {/* Tab Navigation - ALL TABS RESTORED */}
+        {/* Tab Navigation */}
         <div className="row mb-4">
           <div className="col-12">
             <div className="card shadow-sm border-0">
@@ -588,6 +644,26 @@ const AdminManageCourses = () => {
             </div>
           </div>
         </div>
+
+        {/* IMPORTANT: Add this backend connection info */}
+        {error && error.includes('Backend') && (
+          <div className="row mb-4">
+            <div className="col-12">
+              <div className="alert alert-warning">
+                <h5><i className="fas fa-server me-2"></i>Backend Connection Required</h5>
+                <p className="mb-2">Your frontend is deployed on Netlify but cannot connect to your backend server.</p>
+                <div className="mb-2">
+                  <strong>Quick Fix Options:</strong>
+                  <ol className="mb-0">
+                    <li>Make sure your backend server is running</li>
+                    <li>Update the <code>baseURL</code> in the code to point to your backend (line 7)</li>
+                    <li>Or create a <code>_redirects</code> file in your Netlify public folder</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tab Content */}
         <div className="row">
@@ -694,7 +770,7 @@ const AdminManageCourses = () => {
                           <input
                             type="text"
                             className="form-control"
-                            placeholder="Enter access code (any letters/numbers, e.g., 12345 or ABC123)..."
+                            placeholder="Enter access code (any letters/numbers, e.g., 123456 or ABC123)..."
                             value={uploadForm.accessCode}
                             onChange={(e) => setUploadForm({...uploadForm, accessCode: e.target.value})}
                           />
@@ -713,7 +789,7 @@ const AdminManageCourses = () => {
                             required
                           />
                           <small className="text-muted">
-                            Required: This access code will be assigned to this specific email address. Only this user can use it.
+                            Required: This access code will be assigned to this specific email address.
                           </small>
                         </div>
                         
@@ -729,7 +805,6 @@ const AdminManageCourses = () => {
                           />
                           <small className="text-muted">
                             Optional: Add multiple email addresses to allow team access with the same code.
-                            The primary email above is still required.
                           </small>
                         </div>
                         
@@ -937,7 +1012,7 @@ const AdminManageCourses = () => {
                     </div>
 
                     {/* Error state */}
-                    {error && (
+                    {error && !error.includes('Backend') && (
                       <div className="alert alert-danger d-flex align-items-center mb-4" role="alert">
                         <i className="fas fa-exclamation-triangle fa-2x me-3"></i>
                         <div>

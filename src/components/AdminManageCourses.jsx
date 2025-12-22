@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const AdminManageCourses = () => {
   // --- State Management ---
-  const [courses, setCourses] = useState([]);
+  const [courses, setCourses] = useState([]); // Initialized as array
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [alert, setAlert] = useState(null);
@@ -23,7 +23,7 @@ const AdminManageCourses = () => {
   const [accessCodeForm, setAccessCodeForm] = useState({
     userEmail: '',
     userName: '',
-    allowedEmails: '', // For pasting list of emails
+    allowedEmails: '', 
     maxUsageCount: 1,
     lifetimeAccess: false
   });
@@ -54,11 +54,23 @@ const AdminManageCourses = () => {
   // --- API Calls ---
   const fetchCourses = async () => {
     try {
+      setLoading(true);
       const res = await axios.get('/api/admin/courses');
-      setCourses(res.data);
+      
+      // SAFETY FIX: Check if data is nested or direct
+      if (res.data && Array.isArray(res.data.courses)) {
+        setCourses(res.data.courses);
+      } else if (Array.isArray(res.data)) {
+        setCourses(res.data);
+      } else {
+        setCourses([]); // Fallback
+      }
+      
       setLoading(false);
     } catch (err) {
+      console.error("Fetch error:", err);
       showAlert('danger', 'Failed to fetch courses');
+      setCourses([]); 
       setLoading(false);
     }
   };
@@ -70,7 +82,6 @@ const AdminManageCourses = () => {
   const handleOpenAccessModal = async (course) => {
     setSelectedCourse(course);
     setGeneratedAccessCode('');
-    // Reset form when opening
     setAccessCodeForm({
       userEmail: '',
       userName: '',
@@ -81,29 +92,30 @@ const AdminManageCourses = () => {
     setShowAccessCodeModal(true);
     try {
       const res = await axios.get(`/api/admin/courses/${course._id}/access-codes`);
-      setAccessCodes(res.data);
+      // SAFETY FIX: Ensure accessCodes is always an array
+      setAccessCodes(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       showAlert('danger', 'Could not load access codes');
+      setAccessCodes([]);
     }
   };
 
   const generateAccessCodeForUser = async () => {
     try {
-      // Split the allowedEmails string into an array if it exists
       const emailList = accessCodeForm.allowedEmails 
         ? accessCodeForm.allowedEmails.split(',').map(e => e.trim()).filter(e => e !== "")
         : [];
 
       const payload = {
         ...accessCodeForm,
-        allowedEmails: emailList // Sending array to backend
+        allowedEmails: emailList 
       };
 
       const res = await axios.post(`/api/admin/courses/${selectedCourse._id}/generate-code`, payload);
       setGeneratedAccessCode(res.data.code);
-      // Refresh list
+      
       const updatedCodes = await axios.get(`/api/admin/courses/${selectedCourse._id}/access-codes`);
-      setAccessCodes(updatedCodes.data);
+      setAccessCodes(Array.isArray(updatedCodes.data) ? updatedCodes.data : []);
       showAlert('success', 'Access code generated and whitelist updated!');
     } catch (err) {
       showAlert('danger', err.response?.data?.message || 'Error generating code');
@@ -202,7 +214,6 @@ const AdminManageCourses = () => {
 
   return (
     <div className="container-fluid py-4">
-      {/* Custom Alerts */}
       {alert && (
         <div className={`custom-alert custom-alert-${alert.type}`}>
           <div className="alert-content">
@@ -228,6 +239,7 @@ const AdminManageCourses = () => {
             </thead>
             <tbody>
               {loading ? (<tr><td colSpan="3" className="text-center py-5">Loading courses...</td></tr>) : 
+                (Array.isArray(courses) && courses.length > 0) ? (
                 courses.map(course => (
                 <tr key={course._id}>
                   <td>
@@ -246,7 +258,9 @@ const AdminManageCourses = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))) : (
+                <tr><td colSpan="3" className="text-center py-4">No courses found.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -263,7 +277,6 @@ const AdminManageCourses = () => {
               </div>
               <div className="modal-body">
                 <div className="row">
-                  {/* Left Column: Generation Form */}
                   <div className="col-md-5 border-end">
                     <h6>Generate Access for Whitelist</h6>
                     <div className="mb-3">
@@ -309,7 +322,6 @@ const AdminManageCourses = () => {
                     )}
                   </div>
 
-                  {/* Right Column: Existing Access */}
                   <div className="col-md-7">
                     <h6>Active Whitelists</h6>
                     <div className="table-responsive">
@@ -323,7 +335,7 @@ const AdminManageCourses = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {accessCodes.map(code => (
+                          {Array.isArray(accessCodes) && accessCodes.map(code => (
                             <tr key={code._id}>
                               <td><code>{code.code}</code></td>
                               <td>

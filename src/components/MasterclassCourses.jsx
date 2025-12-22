@@ -25,6 +25,7 @@ const MasterclassCourses = ({ navigateTo }) => {
   const [itemsPerPage] = useState(6); // CHANGED: From 10 to 6
   const [totalItems, setTotalItems] = useState(0);
 
+  // FIXED: Added currentPage dependency to refetch courses when page changes
   useEffect(() => {
     // 1. Check for existing Masterclass session
     const savedAccess = localStorage.getItem('masterclassAccess');
@@ -43,11 +44,14 @@ const MasterclassCourses = ({ navigateTo }) => {
     } else {
       setShowAccessModal(true);
     }
-  }, []);
+  }, [currentPage]); // FIXED: Added currentPage dependency
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
+      setError(''); // Clear previous errors
+      
+      console.log(`📄 Fetching courses for page ${currentPage} with limit ${itemsPerPage}`);
       
       // First, try to fetch masterclass courses to see if user has access
       const response = await api.get('/courses', {
@@ -58,11 +62,15 @@ const MasterclassCourses = ({ navigateTo }) => {
         }
       });
       
+      console.log('📊 API Response:', response.data);
+      
       if (response.data.success) {
-        setCourses(response.data.courses);
-        setTotalItems(response.data.totalCount);
+        setCourses(response.data.courses || []);
+        setTotalItems(response.data.totalCount || 0);
+        console.log(`✅ Loaded ${response.data.courses?.length || 0} courses for page ${currentPage}`);
       } else {
         setError('Failed to load courses');
+        console.error('❌ API returned success: false', response.data);
       }
     } catch (error) {
       console.error('Error fetching courses:', error);
@@ -259,7 +267,7 @@ const MasterclassCourses = ({ navigateTo }) => {
     setCourses([]);
     setQuestionSets([]);
     setTotalItems(0);
-    setCurrentPage(1);
+    setCurrentPage(1); // FIXED: Reset to page 1
     localStorage.removeItem('masterclassAccess');
     localStorage.removeItem('masterclassUserEmail');
     localStorage.removeItem('masterclassUserName');
@@ -315,7 +323,11 @@ const MasterclassCourses = ({ navigateTo }) => {
           <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
             <button
               className="page-link"
-              onClick={() => setCurrentPage(currentPage - 1)}
+              onClick={() => {
+                if (currentPage > 1) {
+                  setCurrentPage(currentPage - 1);
+                }
+              }}
               disabled={currentPage === 1}
             >
               Previous
@@ -324,7 +336,13 @@ const MasterclassCourses = ({ navigateTo }) => {
           
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
             <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
-              <button className="page-link" onClick={() => setCurrentPage(page)}>
+              <button 
+                className="page-link" 
+                onClick={() => {
+                  console.log(`📄 Changing to page ${page}`);
+                  setCurrentPage(page);
+                }}
+              >
                 {page}
               </button>
             </li>
@@ -333,7 +351,11 @@ const MasterclassCourses = ({ navigateTo }) => {
           <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
             <button
               className="page-link"
-              onClick={() => setCurrentPage(currentPage + 1)}
+              onClick={() => {
+                if (currentPage < totalPages) {
+                  setCurrentPage(currentPage + 1);
+                }
+              }}
               disabled={currentPage === totalPages}
             >
               Next
@@ -465,6 +487,7 @@ const MasterclassCourses = ({ navigateTo }) => {
                   <span className="visually-hidden">Loading...</span>
                 </div>
                 <h4 className="text-warning">Loading Masterclass Courses...</h4>
+                <p className="text-muted">Page {currentPage} of {totalPages || '...'}</p>
               </div>
             </div>
           </div>

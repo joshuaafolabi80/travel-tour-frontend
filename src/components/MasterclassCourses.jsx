@@ -1,3 +1,4 @@
+// travel-tour-frontend/src/components/MasterclassCourses.jsx - UPDATED FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
@@ -8,9 +9,9 @@ const MasterclassCourses = ({ navigateTo }) => {
   const [error, setError] = useState('');
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [showCourseModal, setShowCourseModal] = useState(false);
-  const [showAccessModal, setShowAccessModal] = useState(true);
+  const [showAccessModal, setShowAccessModal] = useState(true); // CHANGED: Show by default
   const [accessCode, setAccessCode] = useState('');
-  const [userEmail, setUserEmail] = useState(''); 
+  const [userEmail, setUserEmail] = useState(''); // NEW: Email field
   const [validating, setValidating] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [documentLoading, setDocumentLoading] = useState(false);
@@ -29,7 +30,7 @@ const MasterclassCourses = ({ navigateTo }) => {
     const savedAccess = localStorage.getItem('masterclassAccess');
     const savedEmail = localStorage.getItem('masterclassUserEmail');
     
-    // 2. 🔥 NEW: Pre-fill email if user is logged into the main app
+    // 2. 🔥 FIXED: Pre-fill email if user is logged into the main app (from Gemini version)
     const loggedInUser = JSON.parse(localStorage.getItem('user') || '{}');
     const emailToUse = savedEmail || loggedInUser.email || '';
     setUserEmail(emailToUse);
@@ -47,6 +48,8 @@ const MasterclassCourses = ({ navigateTo }) => {
   const fetchCourses = async () => {
     try {
       setLoading(true);
+      
+      // First, try to fetch masterclass courses to see if user has access
       const response = await api.get('/courses', {
         params: {
           type: 'masterclass',
@@ -58,6 +61,8 @@ const MasterclassCourses = ({ navigateTo }) => {
       if (response.data.success) {
         setCourses(response.data.courses);
         setTotalItems(response.data.totalCount);
+      } else {
+        setError('Failed to load courses');
       }
     } catch (error) {
       console.error('Error fetching courses:', error);
@@ -70,20 +75,36 @@ const MasterclassCourses = ({ navigateTo }) => {
   const fetchQuestionSets = async () => {
     try {
       const response = await api.get('/masterclass-course-questions');
+      
       if (response.data.success) {
         setQuestionSets(response.data.questionSets);
+      } else {
+        console.error('Failed to load question sets');
       }
     } catch (error) {
       console.error('Error fetching question sets:', error);
     }
   };
 
+  const handleMasterclassQuestionsTab = () => {
+    if (!hasAccess) {
+      setShowAccessModal(true);
+      return;
+    }
+    console.log('🎯 Navigating to Masterclass Course Questions');
+    if (navigateTo) {
+      navigateTo('masterclass-course-questions');
+    }
+  };
+
+  // 🔥 FIXED: validateAccessCode function (from Gemini version with proper validation)
   const validateAccessCode = async () => {
     if (!accessCode.trim() || !userEmail.trim()) {
       setValidationError('Please enter both access code and email address');
       return;
     }
 
+    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(userEmail.trim())) {
       setValidationError('Please enter a valid email address');
@@ -94,25 +115,31 @@ const MasterclassCourses = ({ navigateTo }) => {
     setValidationError('');
 
     try {
-      // This route will now check both assignedEmail AND allowedEmails array
+      // 🔥 FIXED: This route now works with the updated backend
       const response = await api.post('/courses/validate-masterclass-access', {
-        accessCode: accessCode.trim().toUpperCase(),
-        userEmail: userEmail.trim().toLowerCase()
+        accessCode: accessCode.trim().toUpperCase(), // Convert to uppercase
+        userEmail: userEmail.trim().toLowerCase()     // Convert to lowercase
       });
 
       if (response.data.success) {
+        // Grant access
         setHasAccess(true);
         localStorage.setItem('masterclassAccess', 'granted');
         localStorage.setItem('masterclassUserEmail', userEmail.trim().toLowerCase());
         localStorage.setItem('masterclassUserName', response.data.userName || '');
         setShowAccessModal(false);
-        showCustomAlert('Access granted! Welcome to Masterclass.', 'success');
+        showCustomAlert('Access granted! Welcome to Masterclass Courses.', 'success');
         
+        // Fetch courses and question sets
         await fetchCourses();
         await fetchQuestionSets();
       }
     } catch (error) {
-      setValidationError(error.response?.data?.message || 'Unauthorized email or invalid code.');
+      console.error('Error validating access code:', error);
+      setValidationError(
+        error.response?.data?.message || 
+        'Invalid access code or email. Please check your details.'
+      );
     } finally {
       setValidating(false);
     }
@@ -133,22 +160,75 @@ const MasterclassCourses = ({ navigateTo }) => {
         setContentType('text');
       }
     } catch (error) {
+      console.error('Error fetching course details:', error);
       if (error.response?.status === 403) {
-        showCustomAlert('Access denied. Valid code required.', 'error');
+        showCustomAlert('Access denied. You need a valid access code to view this course.', 'error');
+      } else {
+        showCustomAlert('Failed to load course content. Please try again.', 'error');
       }
+    }
+  };
+
+  const attemptQuestions = (questionSet) => {
+    if (!hasAccess) {
+      setShowAccessModal(true);
+      return;
+    }
+    
+    if (!questionSet || !questionSet.questions || questionSet.questions.length === 0) {
+      alert('No questions available in this question set.');
+      return;
+    }
+    
+    console.log('🎯 Attempting masterclass questions:', questionSet.title);
+    
+    // Store question set data for the quiz attempt
+    const questionSetData = {
+      id: questionSet._id,
+      type: 'masterclass',
+      title: questionSet.title,
+      description: questionSet.description,
+      questions: questionSet.questions,
+      courseType: 'masterclass'
+    };
+    
+    localStorage.setItem('currentQuestionSet', JSON.stringify(questionSetData));
+    console.log('💾 Question set stored in localStorage');
+    
+    if (navigateTo) {
+      console.log('📍 Navigating to: masterclass-quiz-attempt');
+      navigateTo('masterclass-quiz-attempt');
     }
   };
 
   const readDocumentInApp = async () => {
     if (!selectedCourse) return;
+    
     try {
       setDocumentLoading(true);
+      setDocumentContent(null);
+      console.log('📖 Reading document content for course:', selectedCourse._id);
+      
       const response = await api.get(`/direct-courses/${selectedCourse._id}/view`);
+      console.log('📄 API Response:', response.data);
+      
       if (response.data.success) {
         setContentType(response.data.contentType || 'text');
-        setDocumentContent(response.data.content);
+        
+        if (response.data.contentType === 'html' || response.data.contentType === 'text') {
+          setDocumentContent(response.data.content);
+          console.log('📷 Returning HTML content with embedded images');
+        } else if (response.data.contentType === 'error') {
+          setDocumentContent('Error: ' + response.data.content);
+        } else {
+          setDocumentContent(response.data.content || 'Document loaded but cannot be displayed.');
+        }
+      } else {
+        setDocumentContent('Error: ' + (response.data.message || 'Failed to load document'));
       }
+      
     } catch (error) {
+      console.error('❌ Error reading document:', error);
       setDocumentContent('Error loading document: ' + error.message);
     } finally {
       setDocumentLoading(false);
@@ -159,65 +239,211 @@ const MasterclassCourses = ({ navigateTo }) => {
     setShowCourseModal(false);
     setSelectedCourse(null);
     setDocumentContent(null);
+    setDocumentLoading(false);
+    setContentType('text');
   };
 
+  const closeAccessModal = () => {
+    setShowAccessModal(false);
+    setAccessCode('');
+    setUserEmail('');
+    setValidationError('');
+  };
+
+  // 🔥 FIXED: logout function (from Gemini version with proper cleanup)
   const logout = () => {
     setHasAccess(false);
     setShowAccessModal(true);
+    setAccessCode('');
+    setUserEmail('');
+    setCourses([]);
+    setQuestionSets([]);
+    setTotalItems(0);
+    setCurrentPage(1);
     localStorage.removeItem('masterclassAccess');
     localStorage.removeItem('masterclassUserEmail');
     localStorage.removeItem('masterclassUserName');
+    showCustomAlert('Logged out. Please enter your access code to continue.', 'info');
+  };
+
+  const formatCourseDate = (course) => {
+    if (course.uploadedAt) return new Date(course.uploadedAt).toLocaleDateString();
+    if (course.createdAt) return new Date(course.createdAt).toLocaleDateString();
+    if (course.date) return new Date(course.date).toLocaleDateString();
+    if (course.updatedAt) return new Date(course.updatedAt).toLocaleDateString();
+    return 'Date not available';
+  };
+
+  const formatQuestionSetDate = (questionSet) => {
+    if (questionSet.createdAt) return new Date(questionSet.createdAt).toLocaleDateString();
+    if (questionSet.updatedAt) return new Date(questionSet.updatedAt).toLocaleDateString();
+    return 'Date not available';
   };
 
   const showCustomAlert = (message, type = 'success') => {
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} position-fixed`;
-    alertDiv.style.cssText = `top: 100px; right: 20px; z-index: 9999; animation: slideInRight 0.3s ease-out;`;
-    alertDiv.innerHTML = message;
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = `
+      top: 100px;
+      right: 20px;
+      z-index: 9999;
+      min-width: 300px;
+      animation: slideInRight 0.3s ease-out;
+    `;
+    alertDiv.innerHTML = `
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
     document.body.appendChild(alertDiv);
-    setTimeout(() => alertDiv.remove(), 3000);
+    
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        alertDiv.parentNode.removeChild(alertDiv);
+      }
+    }, 3000);
   };
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  // If no access, show access modal
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    return (
+      <nav aria-label="Courses pagination">
+        <ul className="pagination justify-content-center">
+          <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+            <button
+              className="page-link"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </button>
+          </li>
+          
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
+              <button className="page-link" onClick={() => setCurrentPage(page)}>
+                {page}
+              </button>
+            </li>
+          ))}
+          
+          <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+            <button
+              className="page-link"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
+          </li>
+        </ul>
+      </nav>
+    );
+  };
+
+  // If no access, show access modal immediately
   if (!hasAccess) {
     return (
-      <div className="masterclass-access bg-light min-vh-100 py-5">
-        <div className="container">
+      <div className="masterclass-access" style={{ background: '#f8f9fa', minHeight: '100vh' }}>
+        <div className="container-fluid py-5">
           <div className="row justify-content-center">
-            <div className="col-md-6 col-lg-5">
+            <div className="col-12 col-md-6 col-lg-5">
               <div className="card shadow-lg border-warning">
-                <div className="card-header bg-warning text-center py-4">
+                <div className="card-header bg-warning text-dark text-center py-4">
                   <i className="fas fa-crown fa-3x mb-3"></i>
-                  <h1 className="h3 fw-bold">Masterclass Courses</h1>
+                  <h1 className="display-5 fw-bold">Masterclass Courses</h1>
+                  <p className="lead mb-0">Premium content requiring access code</p>
                 </div>
+                
                 <div className="card-body p-4">
+                  <div className="alert alert-info">
+                    <h6><i className="fas fa-info-circle me-2"></i>Access Required</h6>
+                    <p className="mb-0">
+                      Please enter the access code provided by the administrator along with your email address.
+                    </p>
+                  </div>
+
                   <div className="mb-3">
-                    <label className="form-label fw-bold">Email Address *</label>
+                    <label className="form-label fw-bold">Your Email Address *</label>
                     <input
                       type="email"
                       className="form-control"
+                      placeholder="Enter your email address"
                       value={userEmail}
                       onChange={(e) => setUserEmail(e.target.value)}
-                      placeholder="Email assigned to code"
+                      disabled={validating}
                     />
+                    <small className="text-muted">Must match the email provided to the administrator</small>
                   </div>
+
                   <div className="mb-3">
                     <label className="form-label fw-bold">Access Code *</label>
                     <input
                       type="text"
                       className="form-control"
+                      placeholder="Enter your 1 to 20-digit access code"
                       value={accessCode}
                       onChange={(e) => setAccessCode(e.target.value)}
+                      disabled={validating}
+                      maxLength={20}
                       style={{ letterSpacing: '2px', fontFamily: 'monospace' }}
-                      placeholder="Enter code"
                     />
+                    <small className="text-muted">Enter the code provided by the administrator</small>
                   </div>
-                  {validationError && <div className="alert alert-danger small">{validationError}</div>}
-                  <button className="btn btn-warning w-100 btn-lg" onClick={validateAccessCode} disabled={validating}>
-                    {validating ? 'Validating...' : 'Unlock Content'}
+
+                  {validationError && (
+                    <div className="alert alert-danger">
+                      <i className="fas fa-exclamation-triangle me-2"></i>
+                      {validationError}
+                    </div>
+                  )}
+
+                  <button
+                    className="btn btn-warning btn-lg w-100"
+                    onClick={validateAccessCode}
+                    disabled={validating || !accessCode.trim() || !userEmail.trim()}
+                  >
+                    {validating ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Validating...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-check me-2"></i>
+                        Validate Access
+                      </>
+                    )}
                   </button>
+
+                  <div className="mt-3 text-center">
+                    <p className="text-muted">
+                      Don't have an access code? 
+                      <button 
+                        className="btn btn-link p-0 ms-1"
+                        onClick={() => navigateTo('contact-us')}
+                      >
+                        Contact Administrator
+                      </button>
+                    </p>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="card bg-light">
+                      <div className="card-body">
+                        <h6>Important Notes:</h6>
+                        <ul className="small mb-0">
+                          <li>Each access code is tied to a specific email address</li>
+                          <li>You must use the same email address provided to the administrator</li>
+                          <li>Access codes are typically single-use or limited-use</li>
+                          <li>Contact the administrator if you need a new code</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -227,87 +453,489 @@ const MasterclassCourses = ({ navigateTo }) => {
     );
   }
 
-  return (
-    <div className="masterclass-courses bg-light min-vh-100 py-4">
-      <div className="container-fluid">
-        {/* Header Section */}
-        <div className="card bg-warning shadow-sm mb-4">
-          <div className="card-body d-flex justify-content-between align-items-center">
-            <div>
-              <h1 className="h2 fw-bold text-dark mb-0"><i className="fas fa-crown me-2"></i>Masterclass Hub</h1>
-              <p className="text-dark mb-0">Welcome, {localStorage.getItem('masterclassUserEmail')}</p>
+  // Loading state (when user has access but data is loading)
+  if (loading) {
+    return (
+      <div className="container-fluid py-4">
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-8 col-lg-6">
+            <div className="card shadow-lg border-0">
+              <div className="card-body text-center py-5">
+                <div className="spinner-border text-warning mb-3" style={{width: '3rem', height: '3rem'}}>
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <h4 className="text-warning">Loading Masterclass Courses...</h4>
+              </div>
             </div>
-            <button className="btn btn-dark" onClick={logout}>Logout</button>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Tabs */}
-        <ul className="nav nav-pills mb-4 justify-content-center">
-          <li className="nav-item">
-            <button className={`nav-link ${activeTab === 'courses' ? 'active bg-warning text-dark' : 'text-dark'}`} onClick={() => setActiveTab('courses')}>
-              Documents ({courses.length})
-            </button>
-          </li>
-          <li className="nav-item">
-            <button className={`nav-link ${activeTab === 'questions' ? 'active bg-info text-white' : 'text-dark'}`} onClick={() => setActiveTab('questions')}>
-              Questions ({questionSets.length})
-            </button>
-          </li>
-        </ul>
+  if (error) {
+    return (
+      <div className="container-fluid py-4">
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-8 col-lg-6">
+            <div className="alert alert-danger text-center">
+              <i className="fas fa-exclamation-triangle fa-2x mb-3"></i>
+              <h4>Error Loading Courses</h4>
+              <p>{error}</p>
+              <button className="btn btn-warning" onClick={fetchCourses}>
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-        {/* Content Area */}
-        {activeTab === 'courses' && (
-          <div className="row">
-            {courses.map(course => (
-              <div key={course._id} className="col-md-4 mb-4">
-                <div className="card h-100 shadow-sm border-warning">
-                  <div className="card-body">
-                    <h5>{course.title}</h5>
-                    <p className="text-muted small">{course.description?.substring(0, 100)}...</p>
-                    <button className="btn btn-warning btn-sm w-100" onClick={() => viewCourse(course._id)}>View Course</button>
+  // This is the "Access Granted" view that should only show when user has access
+  return (
+    <div className="masterclass-courses" style={{ background: '#f8f9fa', minHeight: '100vh' }}>
+      <div className="container-fluid py-4">
+        {/* Header - FIXED: Added user email display and logout button from Gemini version */}
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="card text-white bg-warning shadow-lg">
+              <div className="card-body py-4">
+                <div className="row align-items-center">
+                  <div className="col-md-8">
+                    <h1 className="display-5 fw-bold mb-2 text-dark">
+                      <i className="fas fa-crown me-3"></i>
+                      Masterclass Courses
+                    </h1>
+                    <p className="lead mb-0 opacity-75 text-dark">
+                      Welcome, {localStorage.getItem('masterclassUserEmail') || userEmail}
+                    </p>
+                  </div>
+                  <div className="col-md-4 text-md-end">
+                    <div className="d-flex align-items-center justify-content-end">
+                      <div className="bg-dark rounded p-3 d-inline-block text-warning me-3">
+                        <h4 className="mb-0 fw-bold">{totalItems + questionSets.length}</h4>
+                        <small>Masterclass Learning Items</small>
+                      </div>
+                      <button 
+                        className="btn btn-dark"
+                        onClick={logout}
+                      >
+                        <i className="fas fa-sign-out-alt me-2"></i>Logout
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Access Granted Banner */}
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="alert alert-success border-0 shadow-sm">
+              <div className="row align-items-center">
+                <div className="col-md-8">
+                  <h5 className="mb-1">
+                    <i className="fas fa-check-circle me-2"></i>
+                    Access Granted
+                  </h5>
+                  <p className="mb-0">
+                    You have access to premium masterclass courses and question sets. All content can be viewed directly in the app.
+                  </p>
+                </div>
+                <div className="col-md-4 text-md-end">
+                  <small className="text-muted">
+                    Valid until: Unlimited
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="row mb-4">
+          <div className="col-12">
+            <div className="card shadow-sm border-0">
+              <div className="card-body p-0">
+                <ul className="nav nav-tabs nav-justified">
+                  <li className="nav-item">
+                    <button
+                      className={`nav-link ${activeTab === 'courses' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('courses')}
+                    >
+                      <i className="fas fa-crown me-2"></i>Masterclass Courses
+                      <span className="badge bg-warning ms-2">{courses.length}</span>
+                    </button>
+                  </li>
+                  <li className="nav-item">
+                    <button
+                      className={`nav-link ${activeTab === 'questions' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('questions')}
+                    >
+                      <i className="fas fa-graduation-cap me-2"></i>Masterclass Questions
+                      <span className="badge bg-info ms-2">{questionSets.length}</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Courses Tab Content */}
+        {activeTab === 'courses' && (
+          <div className="row">
+            <div className="col-12">
+              {courses.length === 0 ? (
+                <div className="card shadow-lg border-0">
+                  <div className="card-body text-center py-5">
+                    <i className="fas fa-book-open fa-4x text-muted mb-3"></i>
+                    <h3 className="text-muted">No Masterclass Courses Available</h3>
+                    <p className="text-muted">
+                      There are no masterclass courses available at the moment. 
+                      Check back later for new course additions.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="row">
+                  {courses.map((course) => (
+                    <div key={course._id} className="col-lg-6 col-xl-4 mb-4">
+                      <div className="card course-card h-100 shadow-sm border-warning">
+                        <div className="card-header bg-warning text-dark border-0">
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span className="badge bg-dark fs-6">
+                              <i className="fas fa-crown me-1"></i>
+                              Masterclass
+                            </span>
+                            <i className="fas fa-unlock text-success"></i>
+                          </div>
+                        </div>
+                        <div className="card-body">
+                          <h5 className="card-title text-dark mb-3">{course.title}</h5>
+                          <p className="card-text text-muted mb-3">
+                            {course.description ? (course.description.length > 120 
+                              ? `${course.description.substring(0, 120)}...` 
+                              : course.description) : 'No description available'
+                            }
+                          </p>
+                          
+                          <div className="course-meta mb-3">
+                            {course.fileName && (
+                              <small className="text-muted d-block">
+                                <i className="fas fa-file me-1"></i>
+                                {course.fileName}
+                              </small>
+                            )}
+                            {course.htmlContent && (
+                              <small className="text-success d-block">
+                                <i className="fas fa-image me-1"></i>
+                                Includes images and formatting
+                              </small>
+                            )}
+                          </div>
+                        </div>
+                        <div className="card-footer bg-transparent border-0 pt-0">
+                          <div className="d-grid gap-2">
+                            <button
+                              className="btn btn-warning btn-sm"
+                              onClick={() => viewCourse(course._id)}
+                            >
+                              <i className="fas fa-eye me-2"></i>View Course
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Modal for viewing document content */}
-        {showCourseModal && selectedCourse && (
-          <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.7)'}}>
-            <div className="modal-dialog modal-xl modal-dialog-centered">
-              <div className="modal-content">
-                <div className="modal-header bg-warning">
-                  <h5 className="modal-title">{selectedCourse.title}</h5>
-                  <button className="btn-close" onClick={closeModal}></button>
+        {/* Questions Tab Content */}
+        {activeTab === 'questions' && (
+          <div className="row">
+            <div className="col-12">
+              {questionSets.length === 0 ? (
+                <div className="card shadow-lg border-0">
+                  <div className="card-body text-center py-5">
+                    <i className="fas fa-question-circle fa-4x text-muted mb-3"></i>
+                    <h3 className="text-muted">No Question Sets Available</h3>
+                    <p className="text-muted">
+                      There are no masterclass question sets available at the moment. 
+                      Check back later for new question additions.
+                    </p>
+                  </div>
                 </div>
-                <div className="modal-body" style={{maxHeight: '70vh', overflowY: 'auto'}}>
-                  {!documentContent ? (
-                    <div className="text-center py-5">
-                      <p>{selectedCourse.description}</p>
-                      <button className="btn btn-warning" onClick={readDocumentInApp} disabled={documentLoading}>
-                        {documentLoading ? 'Loading...' : 'Read Full Document'}
-                      </button>
+              ) : (
+                <div className="row">
+                  {questionSets.map((questionSet) => (
+                    <div key={questionSet._id} className="col-lg-6 col-xl-4 mb-4">
+                      <div className="card question-card h-100 shadow-sm border-warning">
+                        <div className="card-header bg-warning text-dark">
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span className="badge bg-dark text-white fs-6">
+                              <i className="fas fa-crown me-1"></i>
+                              Masterclass
+                            </span>
+                            <small className="text-dark">
+                              {formatQuestionSetDate(questionSet)}
+                            </small>
+                          </div>
+                        </div>
+                        <div className="card-body">
+                          <h5 className="card-title text-dark mb-3">{questionSet.title}</h5>
+                          <p className="card-text text-muted mb-3">
+                            {questionSet.description ? (questionSet.description.length > 120 
+                              ? `${questionSet.description.substring(0, 120)}...` 
+                              : questionSet.description) : 'No description available'
+                            }
+                          </p>
+                          
+                          <div className="question-meta mb-3">
+                            <small className="text-muted d-block">
+                              <i className="fas fa-list-ol me-1"></i>
+                              {questionSet.questions?.length || 0} Questions
+                            </small>
+                            <small className="text-muted d-block">
+                              <i className="fas fa-clock me-1"></i>
+                              20 Minutes Time Limit
+                            </small>
+                            <small className="text-muted d-block">
+                              <i className="fas fa-star me-1"></i>
+                              10 Marks per Question
+                            </small>
+                            <small className="text-warning d-block">
+                              <i className="fas fa-crown me-1"></i>
+                              Premium Masterclass Content
+                            </small>
+                          </div>
+                        </div>
+                        <div className="card-footer bg-transparent border-0 pt-0">
+                          <div className="d-grid gap-2">
+                            <button
+                              className="btn btn-success btn-lg"
+                              onClick={() => attemptQuestions(questionSet)}
+                            >
+                              <i className="fas fa-play me-2"></i>Attempt Questions
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="p-3 bg-white rounded shadow-inner">
-                      {contentType === 'html' ? (
-                        <div dangerouslySetInnerHTML={{ __html: documentContent }} />
-                      ) : (
-                        <pre style={{whiteSpace: 'pre-wrap'}}>{documentContent}</pre>
-                      )}
-                    </div>
-                  )}
+                  ))}
                 </div>
-                <div className="modal-footer">
-                  {documentContent && <button className="btn btn-link" onClick={() => setDocumentContent(null)}>Back to Info</button>}
-                  <button className="btn btn-secondary" onClick={closeModal}>Close</button>
-                </div>
-              </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && activeTab === 'courses' && (
+          <div className="row mt-4">
+            <div className="col-12">
+              {renderPagination()}
             </div>
           </div>
         )}
       </div>
+
+      {/* Course Modal (EXISTING CODE - NO CHANGES) */}
+      {showCourseModal && selectedCourse && (
+        <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
+          <div className="modal-dialog modal-xl modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-warning text-dark">
+                <h5 className="modal-title">
+                  <i className="fas fa-crown me-2"></i>
+                  {selectedCourse.title}
+                  {contentType === 'html' && (
+                    <span className="badge bg-success ms-2">
+                      <i className="fas fa-image me-1"></i>
+                      With Images
+                    </span>
+                  )}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={closeModal}
+                ></button>
+              </div>
+              
+              <div className="modal-body" style={{maxHeight: '80vh', overflowY: 'auto'}}>
+                
+                {!documentContent ? (
+                  // Preview View
+                  <div>
+                    <div className="row mb-4">
+                      <div className="col-md-6">
+                        <h6>Course Information</h6>
+                        <p className="text-muted mb-2">
+                          <strong>Type:</strong> Masterclass Course
+                        </p>
+                        <p className="text-muted mb-2">
+                          <strong>Uploaded:</strong> {formatCourseDate(selectedCourse)}
+                        </p>
+                        {selectedCourse.fileName && (
+                          <p className="text-muted mb-2">
+                            <strong>File:</strong> {selectedCourse.fileName}
+                          </p>
+                        )}
+                        {selectedCourse.htmlContent && (
+                          <p className="text-success mb-2">
+                            <strong>Format:</strong> Includes images and rich formatting
+                          </p>
+                        )}
+                      </div>
+                      <div className="col-md-6">
+                        <h6>Description</h6>
+                        <p className="text-muted">{selectedCourse.description || 'No description available'}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center py-4">
+                      <button 
+                        className="btn btn-warning btn-lg" 
+                        onClick={readDocumentInApp}
+                        disabled={documentLoading}
+                      >
+                        {documentLoading ? (
+                          <>
+                            <i className="fas fa-spinner fa-spin me-2"></i>Loading Document...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-book-open me-2"></i>Read Document in App
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // Document Content View
+                  <div>
+                    {documentLoading ? (
+                      <div className="text-center py-5">
+                        <div className="spinner-border text-warning mb-3" style={{width: '3rem', height: '3rem'}}>
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <h4>Loading Document</h4>
+                        <p className="text-muted">Please wait while we load the document content...</p>
+                      </div>
+                    ) : (
+                      <div className="document-content">
+                        <div className="bg-light rounded p-3 mb-3 d-flex justify-content-between align-items-center">
+                          <small className="text-muted">
+                            <i className="fas fa-info-circle me-1"></i>
+                            {contentType === 'html' ? 'Document with images and formatting' : 'Text document'}
+                          </small>
+                          <small className="text-muted">
+                            <i className="fas fa-file-text me-1"></i>
+                            {documentContent.length} characters
+                          </small>
+                        </div>
+                        <div 
+                          className="document-content-display"
+                          style={{
+                            background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+                            padding: '2.5rem',
+                            border: '1px solid #dee2e6',
+                            borderRadius: '0.75rem',
+                            maxHeight: '60vh',
+                            overflowY: 'auto',
+                            wordWrap: 'break-word',
+                            lineHeight: '1.7',
+                            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                            fontSize: '16px',
+                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                            color: '#2c3e50'
+                          }}
+                        >
+                          {contentType === 'html' ? (
+                            <div 
+                              dangerouslySetInnerHTML={{ __html: documentContent }}
+                              style={{
+                                textAlign: 'left'
+                              }}
+                            />
+                          ) : (
+                            <div style={{ textAlign: 'justify', whiteSpace: 'pre-wrap' }}>
+                              {documentContent.split('\n').map((paragraph, index) => (
+                                paragraph.trim() ? (
+                                  <div 
+                                    key={index} 
+                                    className="paragraph"
+                                    style={{
+                                      marginBottom: '1.2rem',
+                                      paddingBottom: '0.5rem',
+                                      borderBottom: paragraph.trim().endsWith(':') ? '2px solid #ffc107' : 'none'
+                                    }}
+                                  >
+                                    {paragraph}
+                                  </div>
+                                ) : (
+                                  <br key={index} />
+                                )
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <div className="modal-footer">
+                {documentContent && (
+                  <button
+                    className="btn btn-outline-secondary"
+                    onClick={() => setDocumentContent(null)}
+                  >
+                    <i className="fas fa-arrow-left me-2"></i>Back to Preview
+                  </button>
+                )}
+                <button
+                  className="btn btn-secondary"
+                  onClick={closeModal}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        .course-card {
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .course-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2) !important;
+        }
+
+        .question-card {
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .question-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 15px rgba(23, 162, 184, 0.2) !important;
+        }
+        
+        .modal-content {
+          max-height: 90vh;
+        }
+      `}</style>
     </div>
   );
 };

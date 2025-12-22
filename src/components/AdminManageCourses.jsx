@@ -1,117 +1,68 @@
-// travel-tour-frontend/src/components/AdminManageCourses.jsx - COMPLETE UPDATED VERSION
+// travel-tour-frontend/src/components/AdminManageCourses.jsx - COMPLETELY FIXED VERSION
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-// Configure axios with the correct base URL
-const api = axios.create({
-  baseURL: 'https://travel-tour-academy-backend.onrender.com', // Your backend URL
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  }
-});
-
-// Add request interceptor for auth tokens
-api.interceptors.request.use(
-  (config) => {
-    // Get token from localStorage
-    const token = localStorage.getItem('token') || 
-                  localStorage.getItem('authToken') || 
-                  localStorage.getItem('accessToken');
-    
-    // Also check sessionStorage
-    const sessionToken = sessionStorage.getItem('token') ||
-                        sessionStorage.getItem('authToken') ||
-                        sessionStorage.getItem('accessToken');
-    
-    const finalToken = token || sessionToken;
-    
-    if (finalToken) {
-      // Check if token already has "Bearer " prefix
-      const authToken = finalToken.startsWith('Bearer ') ? finalToken : `Bearer ${finalToken}`;
-      config.headers.Authorization = authToken;
-    }
-    
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor to handle errors
-api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.clear();
-      sessionStorage.clear();
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-    }
-    return Promise.reject(error);
-  }
-);
+import api from '../services/api';
 
 const AdminManageCourses = () => {
-  // --- State Management ---
+  // State declarations
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('view-courses');
-  const [alert, setAlert] = useState(null);
-  
-  // Search/filter states
-  const [searchTerm, setSearchTerm] = useState('');
-  const [courseTypeFilter, setCourseTypeFilter] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
-  const [totalItems, setTotalItems] = useState(0);
   const [error, setError] = useState('');
-
-  // Modals visibility
+  const [activeTab, setActiveTab] = useState('upload-general');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAccessCodeModal, setShowAccessCodeModal] = useState(false);
-  const [accessCodes, setAccessCodes] = useState([]);
-  const [generatedAccessCode, setGeneratedAccessCode] = useState('');
-  const [showGeneralQuestionsModal, setShowGeneralQuestionsModal] = useState(false);
-  const [showMasterclassQuestionsModal, setShowMasterclassQuestionsModal] = useState(false);
-  const [uploadingQuestions, setUploadingQuestions] = useState(false);
-
-  // Upload form state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredCourses, setFilteredCourses] = useState([]);
+  const [courseTypeFilter, setCourseTypeFilter] = useState('');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [totalItems, setTotalItems] = useState(0);
+  
+  // FIXED: Upload form state with corrected access code handling
   const [uploadForm, setUploadForm] = useState({
     title: '',
     description: '',
     courseType: 'general',
     accessCode: '',
-    accessCodeEmail: '',
-    allowedEmails: '',
-    maxUsageCount: 1
+    accessCodeEmail: '', // Email field for access code assignment
+    allowedEmails: '', // Textarea for multiple emails (will be converted to array)
+    maxUsageCount: 1 // Usage limit field
   });
-
+  const [selectedFile, setSelectedFile] = useState(null);
+  
   // Edit form state
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
     isActive: true
   });
-
-  // Access code form state
+  
+  // Custom alert states
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState('success');
+  
+  // FIXED: Access code state with corrected structure
+  const [generatedAccessCode, setGeneratedAccessCode] = useState('');
+  const [accessCodes, setAccessCodes] = useState([]);
   const [accessCodeForm, setAccessCodeForm] = useState({
     userEmail: '',
     userName: '',
+    allowedEmails: '', // String input, will be converted to array
     maxUsageCount: 1,
     lifetimeAccess: true
   });
 
+  // Question upload states
+  const [showGeneralQuestionsModal, setShowGeneralQuestionsModal] = useState(false);
+  const [showMasterclassQuestionsModal, setShowMasterclassQuestionsModal] = useState(false);
+  const [uploadingQuestions, setUploadingQuestions] = useState(false);
+  
   // Question form state
   const [questionForm, setQuestionForm] = useState({
     title: '',
@@ -120,27 +71,59 @@ const AdminManageCourses = () => {
     questions: Array(20).fill().map(() => ({
       question: '',
       options: ['', '', '', ''],
-      correctOption: 0,
+      correctOption: 2,
       explanation: ''
     }))
   });
 
-  // --- Effects ---
+  // NEW: Fetch total courses count on component mount
   useEffect(() => {
     fetchTotalCoursesCount();
   }, []);
 
+  // Add this function after the other useEffect functions:
+  const fetchTotalCoursesCount = async () => {
+    try {
+      console.log('📊 Fetching total courses count on component mount...');
+      const response = await api.get('/admin/courses', {
+        params: {
+          page: 1,
+          limit: 1, // Just to get the stats
+          courseType: '',
+          search: ''
+        }
+      });
+      
+      if (response.data.success) {
+        console.log('✅ Total courses count loaded:', response.data.stats?.total || 0);
+        // Set total items from the stats
+        if (response.data.stats) {
+          setTotalItems(response.data.stats.total || 0);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching courses count:', error);
+    }
+  };
+
+  // Effects
   useEffect(() => {
     if (activeTab === 'view-courses') {
       fetchCourses();
     }
   }, [currentPage, itemsPerPage, activeTab]);
 
-  // --- Helper Functions ---
+  useEffect(() => {
+    filterCourses();
+  }, [courses, searchTerm, courseTypeFilter]);
+
+  // Helper functions
   const showCustomAlert = (message, type = 'success') => {
-    setAlert({ message, type });
+    setAlertMessage(message);
+    setAlertType(type);
+    setShowAlert(true);
     setTimeout(() => {
-      setAlert(null);
+      setShowAlert(false);
     }, 3000);
   };
 
@@ -160,36 +143,29 @@ const AdminManageCourses = () => {
       filtered = filtered.filter(course => course.courseType === courseTypeFilter);
     }
     
-    return filtered;
+    setFilteredCourses(filtered);
   };
 
-  // --- API Functions ---
-  const fetchTotalCoursesCount = async () => {
-    try {
-      const response = await api.get('/admin/courses', {
-        params: {
-          page: 1,
-          limit: 1,
-          courseType: '',
-          search: ''
-        }
+  // FIXED: Email string to array converter (from new file)
+  const parseEmailString = (emailString) => {
+    if (!emailString || !emailString.trim()) return [];
+    
+    // Split by commas or newlines, trim, filter out empty strings and validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailString
+      .split(/[\n,]/)
+      .map(email => email.trim())
+      .filter(email => {
+        if (email === '') return false;
+        return emailRegex.test(email);
       });
-      
-      if (response.data.success) {
-        if (response.data.stats) {
-          setTotalItems(response.data.stats.total || 0);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching courses count:', error);
-    }
   };
 
+  // API functions
   const fetchCourses = async () => {
     try {
       setLoading(true);
       setError('');
-      
       const response = await api.get('/admin/courses', {
         params: {
           page: currentPage,
@@ -200,18 +176,15 @@ const AdminManageCourses = () => {
       });
       
       if (response.data.success) {
-        setCourses(response.data.courses || []);
+        setCourses(response.data.courses);
+        // CHANGE 2: Updated the setTotalItems line
         setTotalItems(response.data.stats?.total || response.data.totalCount || 0);
       } else {
         setError('Failed to load courses data');
       }
     } catch (error) {
       console.error('Error fetching courses:', error);
-      if (error.response?.status === 500) {
-        setError('Backend server error (500). Please check server logs.');
-      } else {
-        setError('Failed to load courses. Please try again later.');
-      }
+      setError('Failed to load courses. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -239,6 +212,7 @@ const AdminManageCourses = () => {
     }
   };
 
+  // FIXED COMPLETELY: handleUpload function with corrected access code format
   const handleUpload = async () => {
     if (!uploadForm.title.trim() || !uploadForm.description.trim() || !selectedFile) {
       showCustomAlert('Please fill all fields and select a file', 'error');
@@ -249,6 +223,13 @@ const AdminManageCourses = () => {
     if (uploadForm.courseType === 'masterclass') {
       if (!uploadForm.accessCode.trim()) {
         showCustomAlert('Please provide an access code for masterclass courses', 'error');
+        return;
+      }
+      
+      // Validate access code format (3-20 characters, alphanumeric)
+      const accessCodeRegex = /^[A-Za-z0-9]{3,20}$/;
+      if (!accessCodeRegex.test(uploadForm.accessCode.trim())) {
+        showCustomAlert('Access code must be 3-20 alphanumeric characters (letters and numbers only)', 'error');
         return;
       }
       
@@ -269,22 +250,38 @@ const AdminManageCourses = () => {
       formData.append('title', uploadForm.title);
       formData.append('description', uploadForm.description);
       formData.append('courseType', uploadForm.courseType);
-      formData.append('accessCode', uploadForm.accessCode);
       
-      // Append email if provided
-      if (uploadForm.accessCodeEmail.trim()) {
-        formData.append('accessCodeEmail', uploadForm.accessCodeEmail.trim());
+      // FIXED: Only append access code for masterclass courses
+      if (uploadForm.courseType === 'masterclass') {
+        formData.append('accessCode', uploadForm.accessCode.trim());
+        
+        // Append email if provided
+        if (uploadForm.accessCodeEmail.trim()) {
+          formData.append('accessCodeEmail', uploadForm.accessCodeEmail.trim());
+        }
+        
+        // FIXED: Convert allowedEmails string to array before sending
+        if (uploadForm.allowedEmails.trim()) {
+          const emailArray = parseEmailString(uploadForm.allowedEmails);
+          if (emailArray.length > 0) {
+            // Send as JSON string (backend should parse this)
+            formData.append('allowedEmails', JSON.stringify(emailArray));
+            console.log('Sending allowed emails array:', emailArray);
+          }
+        }
+        
+        // Append max usage count
+        formData.append('maxUsageCount', uploadForm.maxUsageCount || 1);
       }
-      
-      // Append allowed emails if provided
-      if (uploadForm.allowedEmails.trim()) {
-        formData.append('allowedEmails', uploadForm.allowedEmails.trim());
-      }
-      
-      // Append max usage count
-      formData.append('maxUsageCount', uploadForm.maxUsageCount || 1);
       
       formData.append('courseFile', selectedFile);
+
+      console.log('Uploading course with form data:', {
+        title: uploadForm.title,
+        courseType: uploadForm.courseType,
+        accessCode: uploadForm.courseType === 'masterclass' ? uploadForm.accessCode : 'N/A',
+        hasAllowedEmails: uploadForm.allowedEmails.trim() ? 'Yes' : 'No'
+      });
 
       const response = await api.post('/admin/upload-document-course', formData, {
         headers: {
@@ -301,15 +298,16 @@ const AdminManageCourses = () => {
           fetchCourses();
         }
       } else {
-        showCustomAlert('Failed to upload course. Please try again.', 'error');
+        showCustomAlert(response.data.message || 'Failed to upload course. Please try again.', 'error');
       }
     } catch (error) {
-      console.error('Error uploading course:', error);
-      if (error.response?.status === 500) {
-        showCustomAlert('Backend server error (500). Please check server logs.', 'error');
-      } else {
-        showCustomAlert('Failed to upload course. Please try again.', 'error');
-      }
+      console.error('Error uploading course:', error.response?.data || error);
+      showCustomAlert(
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        'Failed to upload course. Please try again.', 
+        'error'
+      );
     }
     
     setUploading(false);
@@ -354,6 +352,7 @@ const AdminManageCourses = () => {
     }
   };
 
+  // FIXED COMPLETELY: generateAccessCodeForUser function with corrected format
   const generateAccessCodeForUser = async () => {
     if (!accessCodeForm.userEmail.trim()) {
       showCustomAlert('Please enter user email address', 'error');
@@ -368,33 +367,55 @@ const AdminManageCourses = () => {
     }
 
     try {
-      const response = await api.post(`/admin/courses/${selectedCourse._id}/generate-access-code-for-user`, {
+      // FIXED: Convert allowedEmails string to array (from new file)
+      const emailList = accessCodeForm.allowedEmails 
+        ? parseEmailString(accessCodeForm.allowedEmails)
+        : [];
+
+      console.log('Generating access code with:', {
         userEmail: accessCodeForm.userEmail.trim(),
-        userName: accessCodeForm.userName.trim() || undefined,
+        allowedEmailsCount: emailList.length,
+        maxUsageCount: accessCodeForm.maxUsageCount
+      });
+
+      const payload = {
+        userEmail: accessCodeForm.userEmail.trim(),
+        userName: accessCodeForm.userName.trim() || '',
+        allowedEmails: emailList, // Send as ARRAY, not string
         maxUsageCount: accessCodeForm.maxUsageCount,
         lifetimeAccess: accessCodeForm.lifetimeAccess
-      });
+      };
+      
+      const response = await api.post(`/admin/courses/${selectedCourse._id}/generate-access-code-for-user`, payload);
       
       if (response.data.success) {
-        setGeneratedAccessCode(response.data.accessCode);
+        setGeneratedAccessCode(response.data.accessCode || response.data.code);
         showCustomAlert(`Access code generated for ${accessCodeForm.userEmail}`, 'success');
-        fetchAccessCodes();
+        await fetchAccessCodes(); // Refresh the list
+        
         // Reset form
         setAccessCodeForm({
           userEmail: '',
           userName: '',
+          allowedEmails: '',
           maxUsageCount: 1,
           lifetimeAccess: true
         });
       } else {
-        showCustomAlert('Failed to generate access code. Please try again.', 'error');
+        showCustomAlert(response.data.message || 'Failed to generate access code. Please try again.', 'error');
       }
     } catch (error) {
-      console.error('Error generating access code:', error);
-      showCustomAlert(error.response?.data?.message || 'Failed to generate access code', 'error');
+      console.error('Error generating access code:', error.response?.data || error);
+      showCustomAlert(
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        'Failed to generate access code', 
+        'error'
+      );
     }
   };
 
+  // deleteAccessCode function
   const deleteAccessCode = async (accessCodeId) => {
     if (!window.confirm('Are you sure you want to delete this access code?')) {
       return;
@@ -405,7 +426,9 @@ const AdminManageCourses = () => {
       
       if (response.data.success) {
         showCustomAlert('Access code deleted successfully', 'success');
-        fetchAccessCodes();
+        await fetchAccessCodes();
+      } else {
+        showCustomAlert('Failed to delete access code', 'error');
       }
     } catch (error) {
       console.error('Error deleting access code:', error);
@@ -420,13 +443,15 @@ const AdminManageCourses = () => {
       const response = await api.get(`/admin/courses/${selectedCourse._id}/access-codes`);
       
       if (response.data.success) {
-        setAccessCodes(response.data.accessCodes);
+        setAccessCodes(response.data.accessCodes || []);
       }
     } catch (error) {
       console.error('Error fetching access codes:', error);
+      setAccessCodes([]);
     }
   };
 
+  // UPDATED: resetUploadForm function with allowedEmails
   const resetUploadForm = () => {
     setUploadForm({
       title: '',
@@ -434,7 +459,7 @@ const AdminManageCourses = () => {
       courseType: 'general',
       accessCode: '',
       accessCodeEmail: '',
-      allowedEmails: '',
+      allowedEmails: '', // Reset this too
       maxUsageCount: 1
     });
     setSelectedFile(null);
@@ -459,15 +484,18 @@ const AdminManageCourses = () => {
     setSelectedCourse(course);
     setGeneratedAccessCode('');
     setShowAccessCodeModal(true);
+    // FIXED: Initialize with correct form structure
     setAccessCodeForm({
       userEmail: '',
       userName: '',
+      allowedEmails: '',
       maxUsageCount: 1,
       lifetimeAccess: true
     });
     await fetchAccessCodes();
   };
 
+  // Question upload functions
   const openGeneralQuestionsModal = () => {
     setQuestionForm({
       title: '',
@@ -476,7 +504,7 @@ const AdminManageCourses = () => {
       questions: Array(20).fill().map(() => ({
         question: '',
         options: ['', '', '', ''],
-        correctOption: 0,
+        correctOption: Math.floor(Math.random() * 4),
         explanation: ''
       }))
     });
@@ -491,7 +519,7 @@ const AdminManageCourses = () => {
       questions: Array(20).fill().map(() => ({
         question: '',
         options: ['', '', '', ''],
-        correctOption: 0,
+        correctOption: Math.floor(Math.random() * 4),
         explanation: ''
       }))
     });
@@ -699,6 +727,28 @@ const AdminManageCourses = () => {
     );
   }
 
+  // Error state
+  if (error && activeTab === 'view-courses') {
+    return (
+      <div className="container-fluid py-4">
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-8 col-lg-6">
+            <div className="alert alert-danger d-flex align-items-center" role="alert">
+              <i className="fas fa-exclamation-triangle fa-2x me-3"></i>
+              <div>
+                <h4 className="alert-heading">Oops! Something went wrong</h4>
+                <p className="mb-0">{error}</p>
+                <button className="btn btn-outline-danger mt-2" onClick={fetchCourses}>
+                  <i className="fas fa-redo me-2"></i>Try Again
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Render question input for a specific question index
   const renderQuestionInput = (questionIndex) => {
     const question = questionForm.questions[questionIndex];
@@ -764,24 +814,21 @@ const AdminManageCourses = () => {
     );
   };
 
-  // Get filtered courses for display
-  const filteredCourses = filterCourses();
-
   return (
     <div className="admin-manage-courses" style={{ background: '#f9fafb', minHeight: '100vh' }}>
       {/* Custom Alert Component */}
-      {alert && (
-        <div className={`custom-alert custom-alert-${alert.type}`}>
+      {showAlert && (
+        <div className={`custom-alert custom-alert-${alertType}`}>
           <div className="alert-content">
             <i className={`fas ${
-              alert.type === 'success' ? 'fa-check-circle' :
-              alert.type === 'error' ? 'fa-exclamation-circle' :
+              alertType === 'success' ? 'fa-check-circle' :
+              alertType === 'error' ? 'fa-exclamation-circle' :
               'fa-info-circle'
             } me-2`}></i>
-            {alert.message}
+            {alertMessage}
             <button
               className="alert-close"
-              onClick={() => setAlert(null)}
+              onClick={() => setShowAlert(false)}
             >
               <i className="fas fa-times"></i>
             </button>
@@ -937,7 +984,7 @@ const AdminManageCourses = () => {
                   </div>
                 )}
 
-                {/* Upload Masterclass Courses Tab */}
+                {/* FIXED: Upload Masterclass Courses Tab - WITH CORRECTED ACCESS CODE HANDLING */}
                 {activeTab === 'upload-masterclass' && (
                   <div className="upload-section">
                     <h4 className="mb-4" style={{color: '#0c5460'}}>
@@ -966,17 +1013,17 @@ const AdminManageCourses = () => {
                             onChange={(e) => setUploadForm({...uploadForm, description: e.target.value})}
                           />
                         </div>
-                        {/* Access Code input */}
+                        {/* Access Code input - FIXED validation */}
                         <div className="mb-3">
                           <label className="form-label fw-bold">Access Code *</label>
                           <input
                             type="text"
                             className="form-control"
-                            placeholder="Enter access code (any letters/numbers, e.g., 123456 or ABC123)..."
+                            placeholder="Enter access code (3-20 alphanumeric characters, e.g., ABC123 or 456DEF)..."
                             value={uploadForm.accessCode}
                             onChange={(e) => setUploadForm({...uploadForm, accessCode: e.target.value})}
                           />
-                          <small className="text-muted">Enter any combination of letters and numbers (3-20 characters)</small>
+                          <small className="text-muted">Must be 3-20 letters/numbers only (no spaces or special characters)</small>
                         </div>
                         
                         {/* Email field - REQUIRED */}
@@ -991,23 +1038,22 @@ const AdminManageCourses = () => {
                             required
                           />
                           <small className="text-muted">
-                            Required: This access code will be assigned to this specific email address. Only this user can use it.
+                            Required: This access code will be assigned to this specific email address.
                           </small>
                         </div>
                         
-                        {/* Allowed emails textarea for multiple users */}
+                        {/* FIXED: Allowed emails textarea with better instructions */}
                         <div className="mb-3">
-                          <label className="form-label fw-bold">Allowed Emails (Optional - for team access)</label>
+                          <label className="form-label fw-bold">Additional Allowed Emails (Optional)</label>
                           <textarea
                             className="form-control"
                             rows="3"
-                            placeholder="Enter additional emails (one per line or comma-separated):&#10;team.member1@company.com&#10;team.member2@company.com&#10;team.member3@company.com"
+                            placeholder="Enter additional emails (one per line or comma-separated):&#10;team.member1@company.com&#10;team.member2@company.com"
                             value={uploadForm.allowedEmails}
                             onChange={(e) => setUploadForm({...uploadForm, allowedEmails: e.target.value})}
                           />
                           <small className="text-muted">
-                            Optional: Add multiple email addresses to allow team access with the same code.
-                            The primary email above is still required.
+                            Optional: Add multiple email addresses (comma or newline separated) to allow team access.
                           </small>
                         </div>
                         
@@ -1054,10 +1100,9 @@ const AdminManageCourses = () => {
                           <h6><i className="fas fa-exclamation-triangle me-2"></i>Masterclass Courses Information</h6>
                           <ul className="mb-0">
                             <li>Require access codes for user access</li>
-                            <li>Each code can be assigned to specific emails or be generic</li>
-                            <li>Generic codes can be claimed by any user with their email</li>
-                            <li>Assigned codes require specific email addresses</li>
-                            <li>Premium content for authorized users</li>
+                            <li>Each code is assigned to specific emails</li>
+                            <li>Additional emails can be added for team access</li>
+                            <li>Premium content for authorized users only</li>
                           </ul>
                         </div>
                         {/* Access Code Information card */}
@@ -1065,11 +1110,11 @@ const AdminManageCourses = () => {
                           <div className="card-body">
                             <h6>Access Code Information:</h6>
                             <ul className="small mb-0">
-                              <li><strong>Assigned Code Only:</strong> Each code is tied to a specific email address</li>
-                              <li><strong>Team Access:</strong> Add multiple emails in the "Allowed Emails" field</li>
-                              <li><strong>Email Required:</strong> Must provide a valid email for assignment</li>
-                              <li><strong>Code Format:</strong> Any combination of letters/numbers (3-20 characters)</li>
-                              <li><strong>Team Sharing:</strong> Use allowed emails to share access with team members</li>
+                              <li><strong>Code Format:</strong> 3-20 alphanumeric characters only</li>
+                              <li><strong>Primary Email:</strong> Required for code assignment</li>
+                              <li><strong>Team Access:</strong> Add multiple emails in "Additional Emails"</li>
+                              <li><strong>Email Validation:</strong> All emails must be valid format</li>
+                              <li><strong>Usage Tracking:</strong> Monitor how many times code is used</li>
                             </ul>
                           </div>
                         </div>
@@ -1210,24 +1255,6 @@ const AdminManageCourses = () => {
                       </div>
                     </div>
 
-                    {/* Error state */}
-                    {error && (
-                      <div className="row justify-content-center mb-4">
-                        <div className="col-12 col-md-8 col-lg-6">
-                          <div className="alert alert-danger d-flex align-items-center" role="alert">
-                            <i className="fas fa-exclamation-triangle fa-2x me-3"></i>
-                            <div>
-                              <h4 className="alert-heading">Oops! Something went wrong</h4>
-                              <p className="mb-0">{error}</p>
-                              <button className="btn btn-outline-danger mt-2" onClick={fetchCourses}>
-                                <i className="fas fa-redo me-2"></i>Try Again
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
                     {/* Courses Table */}
                     <div className="table-responsive">
                       <table className="table table-hover">
@@ -1256,7 +1283,7 @@ const AdminManageCourses = () => {
                                 <td>
                                   <strong>{course.title}</strong>
                                   <br />
-                                  <small className="text-muted">{course.description?.substring(0, 50)}...</small>
+                                  <small className="text-muted">{course.description.substring(0, 50)}...</small>
                                 </td>
                                 <td>
                                   <span className={`badge ${
@@ -1271,7 +1298,7 @@ const AdminManageCourses = () => {
                                     {course.fileName}
                                   </small>
                                   <br />
-                                  <small className="text-muted">({course.fileSize ? (course.fileSize / 1024).toFixed(1) : 0} KB)</small>
+                                  <small className="text-muted">({(course.fileSize / 1024).toFixed(1)} KB)</small>
                                 </td>
                                 <td>
                                   <small>
@@ -1338,7 +1365,7 @@ const AdminManageCourses = () => {
         </div>
       </div>
 
-      {/* Upload Confirmation Modal */}
+      {/* FIXED: Upload Confirmation Modal */}
       {showUploadModal && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog modal-dialog-centered">
@@ -1365,12 +1392,20 @@ const AdminManageCourses = () => {
                       <p><strong>Access Code:</strong> {uploadForm.accessCode}</p>
                       <p><strong>Max Usage:</strong> {uploadForm.maxUsageCount === 9999 ? 'Unlimited' : uploadForm.maxUsageCount} time(s)</p>
                       {uploadForm.accessCodeEmail ? (
-                        <p><strong>Primary Email:</strong> {uploadForm.accessCodeEmail} (Assigned Code)</p>
+                        <p><strong>Primary Email:</strong> {uploadForm.accessCodeEmail}</p>
                       ) : (
                         <p><strong>Assignment:</strong> Generic Code (can be claimed by any user)</p>
                       )}
                       {uploadForm.allowedEmails.trim() && (
-                        <p><strong>Additional Allowed Emails:</strong> {uploadForm.allowedEmails.split(/[\n,]/).filter(e => e.trim()).length} email(s) added for team access</p>
+                        <div>
+                          <p><strong>Additional Allowed Emails:</strong></p>
+                          <ul className="small">
+                            {parseEmailString(uploadForm.allowedEmails).map((email, idx) => (
+                              <li key={idx}>{email}</li>
+                            ))}
+                          </ul>
+                          <p className="mb-0"><small>{parseEmailString(uploadForm.allowedEmails).length} email(s) added for team access</small></p>
+                        </div>
                       )}
                     </>
                   )}
@@ -1533,7 +1568,7 @@ const AdminManageCourses = () => {
         </div>
       )}
 
-      {/* Access Code Management Modal */}
+      {/* FIXED COMPLETELY: Access Code Management Modal */}
       {showAccessCodeModal && selectedCourse && (
         <div className="modal fade show" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
           <div className="modal-dialog modal-lg modal-dialog-centered">
@@ -1574,6 +1609,21 @@ const AdminManageCourses = () => {
                         onChange={(e) => setAccessCodeForm({...accessCodeForm, userName: e.target.value})}
                       />
                     </div>
+                  </div>
+                  
+                  {/* FIXED: Allowed emails textarea (from new file) */}
+                  <div className="mb-3">
+                    <label className="form-label fw-bold">Additional Allowed Emails (Optional)</label>
+                    <textarea
+                      className="form-control"
+                      rows="3"
+                      placeholder="team.member1@company.com, team.member2@company.com"
+                      value={accessCodeForm.allowedEmails}
+                      onChange={(e) => setAccessCodeForm({...accessCodeForm, allowedEmails: e.target.value})}
+                    />
+                    <small className="text-muted">
+                      Add multiple email addresses (comma or newline separated) for team access.
+                    </small>
                   </div>
                   
                   <div className="row mb-3">
@@ -1627,6 +1677,11 @@ const AdminManageCourses = () => {
                         <strong>For:</strong> {accessCodeForm.userEmail}
                         {accessCodeForm.userName && ` (${accessCodeForm.userName})`}
                       </div>
+                      {accessCodeForm.allowedEmails.trim() && (
+                        <div className="mb-2">
+                          <strong>Team Access:</strong> {parseEmailString(accessCodeForm.allowedEmails).length} additional email(s)
+                        </div>
+                      )}
                       <div>
                         <strong>Usage:</strong> {accessCodeForm.maxUsageCount === 1 ? 'Single use' : 
                           accessCodeForm.maxUsageCount === 9999 ? 'Unlimited uses' : 
@@ -1670,7 +1725,11 @@ const AdminManageCourses = () => {
                                   <strong>{code.assignedEmail || 'Not assigned (Generic)'}</strong>
                                   {code.assignedUserName && <div><small>{code.assignedUserName}</small></div>}
                                   {code.allowedEmails && code.allowedEmails.length > 0 && (
-                                    <div><small className="text-muted">+{code.allowedEmails.length} additional email(s)</small></div>
+                                    <div>
+                                      <small className="text-muted">
+                                        +{code.allowedEmails.length} additional email(s)
+                                      </small>
+                                    </div>
                                   )}
                                 </div>
                               </td>

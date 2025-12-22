@@ -20,9 +20,9 @@ const MasterclassCourses = ({ navigateTo }) => {
   const [hasAccess, setHasAccess] = useState(false);
   const [activeTab, setActiveTab] = useState('courses');
   
-  // Pagination state
+  // Pagination state - CHANGED: Now 6 courses per page
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(6); // CHANGED: From 10 to 6
   const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
@@ -54,7 +54,7 @@ const MasterclassCourses = ({ navigateTo }) => {
         params: {
           type: 'masterclass',
           page: currentPage,
-          limit: itemsPerPage
+          limit: itemsPerPage // This will now be 6
         }
       });
       
@@ -555,6 +555,26 @@ const MasterclassCourses = ({ navigateTo }) => {
           </div>
         </div>
 
+        {/* Page info display - NEW: Shows current page range */}
+        <div className="row mb-3">
+          <div className="col-12">
+            <div className="alert alert-light border-0 shadow-sm">
+              <div className="row align-items-center">
+                <div className="col-md-6">
+                  <p className="mb-0">
+                    Showing {courses.length} courses (Page {currentPage} of {totalPages})
+                  </p>
+                </div>
+                <div className="col-md-6 text-md-end">
+                  <p className="mb-0 text-muted">
+                    Total: {totalItems} masterclass courses
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Tab Navigation */}
         <div className="row mb-4">
           <div className="col-12">
@@ -585,7 +605,7 @@ const MasterclassCourses = ({ navigateTo }) => {
           </div>
         </div>
 
-        {/* Courses Tab Content */}
+        {/* Courses Tab Content - UPDATED: Changed grid to show 6 courses (3x2 on large, 2x3 on medium) */}
         {activeTab === 'courses' && (
           <div className="row">
             <div className="col-12">
@@ -603,7 +623,7 @@ const MasterclassCourses = ({ navigateTo }) => {
               ) : (
                 <div className="row">
                   {courses.map((course) => (
-                    <div key={course._id} className="col-lg-6 col-xl-4 mb-4">
+                    <div key={course._id} className="col-md-6 col-lg-4 mb-4">
                       <div className="card course-card h-100 shadow-sm border-warning">
                         <div className="card-header bg-warning text-dark border-0">
                           <div className="d-flex justify-content-between align-items-center">

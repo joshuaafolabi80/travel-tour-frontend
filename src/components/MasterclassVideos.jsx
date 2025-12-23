@@ -26,13 +26,6 @@ const MasterclassVideos = ({ navigateTo }) => {
     name: ''
   });
 
-  // Debug state
-  const [debugInfo, setDebugInfo] = useState({
-    apiCallCount: 0,
-    lastValidationAttempt: null,
-    lastValidationResult: null
-  });
-
   useEffect(() => {
     // 1. Check for existing Masterclass Video session
     const savedAccess = localStorage.getItem('masterclassVideoAccess');
@@ -92,12 +85,6 @@ const MasterclassVideos = ({ navigateTo }) => {
         setVideos(response.data.videos || []);
         setTotalItems(response.data.totalCount || 0);
         console.log(`✅ Loaded ${response.data.videos?.length || 0} masterclass videos`);
-        
-        // Update debug info
-        setDebugInfo(prev => ({
-          ...prev,
-          apiCallCount: prev.apiCallCount + 1
-        }));
       } else {
         // If API returns success: false, check if it's an access issue
         if (response.data.message?.includes('No access') || response.data.message?.includes('Access denied')) {
@@ -148,20 +135,6 @@ const MasterclassVideos = ({ navigateTo }) => {
     };
 
     console.log('🔑 Validating access code with data:', requestData);
-    
-    // Update debug info
-    setDebugInfo(prev => ({
-      ...prev,
-      lastValidationAttempt: {
-        timestamp: new Date().toISOString(),
-        accessCode: requestData.accessCode,
-        userEmail: requestData.userEmail,
-        sanitized: {
-          accessCode: requestData.accessCode.replace(/./g, '*'),
-          userEmail: requestData.userEmail.replace(/./g, '*')
-        }
-      }
-    }));
 
     try {
       // Try the primary validation endpoint
@@ -187,32 +160,12 @@ const MasterclassVideos = ({ navigateTo }) => {
         setShowAccessModal(false);
         showCustomAlert('Access granted! Welcome to Masterclass Videos.', 'success');
         
-        // Update debug info
-        setDebugInfo(prev => ({
-          ...prev,
-          lastValidationResult: {
-            success: true,
-            message: 'Access granted',
-            timestamp: new Date().toISOString()
-          }
-        }));
-        
         // Fetch videos
         await fetchVideos();
       } else {
         // Validation failed but API returned success: false
         console.log('❌ Validation failed:', response.data.message);
         setValidationError(response.data.message || 'Access denied. Please check your credentials.');
-        
-        // Update debug info
-        setDebugInfo(prev => ({
-          ...prev,
-          lastValidationResult: {
-            success: false,
-            message: response.data.message,
-            timestamp: new Date().toISOString()
-          }
-        }));
       }
     } catch (error) {
       console.error('❌ Validation Error:', error);
@@ -241,17 +194,6 @@ const MasterclassVideos = ({ navigateTo }) => {
         } else if (error.response.status === 500) {
           errorMessage = 'Server error. Please try again later or contact the administrator.';
         }
-        
-        // Update debug info with server error
-        setDebugInfo(prev => ({
-          ...prev,
-          lastValidationResult: {
-            success: false,
-            message: error.response.data?.message || error.message,
-            status: error.response.status,
-            timestamp: new Date().toISOString()
-          }
-        }));
       } else if (error.request) {
         console.error('No response received:', error.request);
         errorMessage = 'No response from server. Please check your internet connection.';
@@ -308,12 +250,6 @@ const MasterclassVideos = ({ navigateTo }) => {
     localStorage.removeItem('masterclassVideoUserName');
     
     showCustomAlert('Logged out. Please enter your access code to continue.', 'info');
-    
-    // Update debug info
-    setDebugInfo(prev => ({
-      ...prev,
-      lastValidationResult: null
-    }));
   };
 
   const formatVideoDate = (video) => {
@@ -402,8 +338,6 @@ const MasterclassVideos = ({ navigateTo }) => {
       </nav>
     );
   };
-
-  
 
   // If no access, show access modal immediately
   if (!hasAccess) {
@@ -496,9 +430,6 @@ const MasterclassVideos = ({ navigateTo }) => {
                       </button>
                     </p>
                   </div>
-
-                  {/* Debug Information */}
-                  <DebugPanel />
 
                   <div className="mt-4">
                     <div className="card bg-light">

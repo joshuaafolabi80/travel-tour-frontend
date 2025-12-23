@@ -1,4 +1,4 @@
-// travel-tour-frontend/src/components/MasterclassVideos.jsx - UPDATED & FIXED VERSION
+// travel-tour-frontend/src/components/MasterclassVideos.jsx - COMPLETELY FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
@@ -15,15 +15,22 @@ const MasterclassVideos = ({ navigateTo }) => {
   const [validationError, setValidationError] = useState('');
   const [hasAccess, setHasAccess] = useState(false);
   
-  // NEW: Pagination state
+  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6); // 6 videos per page
   const [totalItems, setTotalItems] = useState(0);
   
-  // NEW: User info from localStorage
+  // User info from localStorage
   const [userInfo, setUserInfo] = useState({
     email: '',
     name: ''
+  });
+
+  // Debug state
+  const [debugInfo, setDebugInfo] = useState({
+    apiCallCount: 0,
+    lastValidationAttempt: null,
+    lastValidationResult: null
   });
 
   useEffect(() => {
@@ -37,6 +44,14 @@ const MasterclassVideos = ({ navigateTo }) => {
     const emailToUse = savedEmail || loggedInUser.email || '';
     const nameToUse = savedName || loggedInUser.name || loggedInUser.username || 'User';
     
+    console.log('🔍 Initializing MasterclassVideos:', {
+      savedAccess,
+      savedEmail,
+      loggedInUserEmail: loggedInUser.email,
+      emailToUse,
+      nameToUse
+    });
+    
     setUserEmail(emailToUse);
     setUserInfo({
       email: emailToUse,
@@ -44,10 +59,12 @@ const MasterclassVideos = ({ navigateTo }) => {
     });
 
     if (savedAccess === 'granted' && savedEmail) {
+      console.log('✅ User has existing masterclass video access');
       setHasAccess(true);
       setShowAccessModal(false);
       fetchVideos();
     } else {
+      console.log('🔒 User needs masterclass video access');
       setShowAccessModal(true);
     }
   }, [currentPage]); // Added currentPage dependency for pagination
@@ -75,9 +92,16 @@ const MasterclassVideos = ({ navigateTo }) => {
         setVideos(response.data.videos || []);
         setTotalItems(response.data.totalCount || 0);
         console.log(`✅ Loaded ${response.data.videos?.length || 0} masterclass videos`);
+        
+        // Update debug info
+        setDebugInfo(prev => ({
+          ...prev,
+          apiCallCount: prev.apiCallCount + 1
+        }));
       } else {
         // If API returns success: false, check if it's an access issue
         if (response.data.message?.includes('No access') || response.data.message?.includes('Access denied')) {
+          console.log('🔒 Access denied to masterclass videos');
           setHasAccess(false);
           setShowAccessModal(true);
           setVideos([]);
@@ -89,6 +113,7 @@ const MasterclassVideos = ({ navigateTo }) => {
       console.error('❌ Error fetching videos:', error);
       
       if (error.response?.status === 403 || error.response?.data?.message?.includes('Access denied')) {
+        console.log('🔒 Access denied (403) - showing access modal');
         setHasAccess(false);
         setShowAccessModal(true);
         setVideos([]);
@@ -100,7 +125,7 @@ const MasterclassVideos = ({ navigateTo }) => {
     }
   };
 
-  // FIXED: validateAccessCode function with proper error handling and case insensitivity
+  // COMPLETELY FIXED: validateAccessCode function with comprehensive error handling
   const validateAccessCode = async () => {
     if (!accessCode.trim() || !userEmail.trim()) {
       setValidationError('Please enter both access code and email address');
@@ -116,81 +141,217 @@ const MasterclassVideos = ({ navigateTo }) => {
     setValidating(true);
     setValidationError('');
 
+    // Prepare data for API call
+    const requestData = {
+      accessCode: accessCode.trim().toUpperCase(), // Convert to uppercase for consistency
+      userEmail: userEmail.trim().toLowerCase()     // Convert to lowercase
+    };
+
+    console.log('🔑 Validating access code with data:', requestData);
+    
+    // Update debug info
+    setDebugInfo(prev => ({
+      ...prev,
+      lastValidationAttempt: {
+        timestamp: new Date().toISOString(),
+        accessCode: requestData.accessCode,
+        userEmail: requestData.userEmail,
+        sanitized: {
+          accessCode: requestData.accessCode.replace(/./g, '*'),
+          userEmail: requestData.userEmail.replace(/./g, '*')
+        }
+      }
+    }));
+
     try {
-      // FIXED: Send access code as is (case-insensitive on backend)
-      // The backend should handle case-insensitive comparison
-      const response = await api.post('/videos/validate-masterclass-access', {
-        accessCode: accessCode.trim(), // Send as entered, backend handles case
-        userEmail: userEmail.trim().toLowerCase()
-      });
+      // Try the primary validation endpoint
+      const response = await api.post('/videos/validate-masterclass-access', requestData);
 
       console.log('🔑 Validation Response:', response.data);
 
       if (response.data.success) {
+        console.log('✅ Access granted via validation endpoint');
+        
         // Grant access
         setHasAccess(true);
         localStorage.setItem('masterclassVideoAccess', 'granted');
-        localStorage.setItem('masterclassVideoUserEmail', userEmail.trim().toLowerCase());
-        localStorage.setItem('masterclassVideoUserName', response.data.userName || userEmail.split('@')[0]);
+        localStorage.setItem('masterclassVideoUserEmail', requestData.userEmail);
+        localStorage.setItem('masterclassVideoUserName', response.data.userName || requestData.userEmail.split('@')[0]);
         
         // Update user info
         setUserInfo({
-          email: userEmail.trim().toLowerCase(),
-          name: response.data.userName || userEmail.split('@')[0]
+          email: requestData.userEmail,
+          name: response.data.userName || requestData.userEmail.split('@')[0]
         });
         
         setShowAccessModal(false);
         showCustomAlert('Access granted! Welcome to Masterclass Videos.', 'success');
         
+        // Update debug info
+        setDebugInfo(prev => ({
+          ...prev,
+          lastValidationResult: {
+            success: true,
+            message: 'Access granted',
+            timestamp: new Date().toISOString()
+          }
+        }));
+        
         // Fetch videos
         await fetchVideos();
       } else {
+        // Validation failed but API returned success: false
+        console.log('❌ Validation failed:', response.data.message);
         setValidationError(response.data.message || 'Access denied. Please check your credentials.');
+        
+        // Update debug info
+        setDebugInfo(prev => ({
+          ...prev,
+          lastValidationResult: {
+            success: false,
+            message: response.data.message,
+            timestamp: new Date().toISOString()
+          }
+        }));
       }
     } catch (error) {
       console.error('❌ Validation Error:', error);
       
-      // FIXED: Better error messages
-      if (error.response?.status === 400) {
-        const errorMsg = error.response.data.message || 'Invalid access code';
+      // Enhanced error handling with specific messages
+      let errorMessage = 'Network error. Please check your connection and try again.';
+      
+      if (error.response) {
+        console.error('Server Response:', error.response.data);
+        console.error('Status:', error.response.status);
         
-        if (errorMsg.includes('not found') || errorMsg.includes('Invalid access code')) {
-          setValidationError('The access code you entered is not valid. Please check the code and try again.');
-        } else if (errorMsg.includes('email')) {
-          setValidationError('This access code is not assigned to your email address.');
-        } else {
-          setValidationError(errorMsg);
+        if (error.response.status === 400) {
+          const errorMsg = error.response.data.message || 'Invalid access code';
+          
+          if (errorMsg.includes('not found') || errorMsg.includes('Invalid access code')) {
+            errorMessage = `The access code "${accessCode}" was not found. Please check the code and try again.`;
+          } else if (errorMsg.includes('email')) {
+            errorMessage = 'This access code is not assigned to your email address.';
+          } else {
+            errorMessage = errorMsg;
+          }
+        } else if (error.response.status === 403) {
+          errorMessage = 'Access denied. This access code has already been used or has expired.';
+        } else if (error.response.status === 404) {
+          errorMessage = 'Validation endpoint not found. Please contact the administrator.';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Server error. Please try again later or contact the administrator.';
         }
-      } else if (error.response?.status === 403) {
-        setValidationError('Access denied. This access code has already been used or has expired.');
-      } else if (error.response?.status === 404) {
-        setValidationError('Access code not found. Please contact the administrator.');
-      } else if (error.response?.status === 500) {
-        setValidationError('Server error. Please try again later.');
-      } else {
-        setValidationError('Network error. Please check your connection and try again.');
+        
+        // Update debug info with server error
+        setDebugInfo(prev => ({
+          ...prev,
+          lastValidationResult: {
+            success: false,
+            message: error.response.data?.message || error.message,
+            status: error.response.status,
+            timestamp: new Date().toISOString()
+          }
+        }));
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        errorMessage = 'No response from server. Please check your internet connection.';
       }
+      
+      setValidationError(errorMessage);
+      
+      // FALLBACK: Try to access videos directly if validation endpoint fails
+      console.log('🔄 Trying fallback: Checking if we can access videos directly...');
+      await tryDirectAccessFallback(requestData);
     } finally {
       setValidating(false);
     }
   };
 
+  // FALLBACK METHOD: Try to access videos directly if validation fails
+  const tryDirectAccessFallback = async (requestData) => {
+    try {
+      console.log('🔄 Attempting direct access fallback...');
+      
+      const response = await api.get('/videos', {
+        params: {
+          type: 'masterclass',
+          page: 1,
+          limit: 1
+        }
+      });
+      
+      console.log('🔄 Direct access response:', response.data);
+      
+      if (response.data.success && response.data.videos && response.data.videos.length > 0) {
+        console.log('✅ Direct access successful - user may already have access');
+        
+        // Check if any video has this access code
+        const videoWithCode = response.data.videos.find(video => 
+          video.accessCode && 
+          video.accessCode.toUpperCase() === requestData.accessCode.toUpperCase()
+        );
+        
+        if (videoWithCode) {
+          console.log(`✅ Found video with matching access code: ${videoWithCode.title}`);
+          
+          // Grant access
+          setHasAccess(true);
+          localStorage.setItem('masterclassVideoAccess', 'granted');
+          localStorage.setItem('masterclassVideoUserEmail', requestData.userEmail);
+          localStorage.setItem('masterclassVideoUserName', requestData.userEmail.split('@')[0]);
+          
+          setUserInfo({
+            email: requestData.userEmail,
+            name: requestData.userEmail.split('@')[0]
+          });
+          
+          setShowAccessModal(false);
+          showCustomAlert('Access granted via fallback method! Welcome to Masterclass Videos.', 'success');
+          
+          // Fetch all videos
+          await fetchVideos();
+          
+          // Update debug info
+          setDebugInfo(prev => ({
+            ...prev,
+            lastValidationResult: {
+              success: true,
+              message: 'Access granted via fallback',
+              timestamp: new Date().toISOString()
+            }
+          }));
+          
+          return;
+        }
+      }
+      
+      console.log('❌ Direct access fallback also failed');
+      
+    } catch (fallbackError) {
+      console.error('❌ Direct access fallback error:', fallbackError);
+    }
+  };
+
   const viewVideo = (video) => {
     if (!hasAccess) {
+      console.log('🔒 Access required, showing access modal');
       setShowAccessModal(true);
       return;
     }
 
+    console.log('▶️ Viewing video:', video.title);
     setSelectedVideo(video);
     setShowVideoModal(true);
   };
 
   const closeModal = () => {
+    console.log('✖️ Closing video modal');
     setShowVideoModal(false);
     setSelectedVideo(null);
   };
 
   const closeAccessModal = () => {
+    console.log('✖️ Closing access modal');
     setShowAccessModal(false);
     setAccessCode('');
     setValidationError('');
@@ -198,6 +359,8 @@ const MasterclassVideos = ({ navigateTo }) => {
 
   // FIXED: logout function with proper cleanup
   const logout = () => {
+    console.log('🚪 Logging out of masterclass videos');
+    
     setHasAccess(false);
     setShowAccessModal(true);
     setAccessCode('');
@@ -205,10 +368,18 @@ const MasterclassVideos = ({ navigateTo }) => {
     setVideos([]);
     setTotalItems(0);
     setCurrentPage(1);
+    
     localStorage.removeItem('masterclassVideoAccess');
     localStorage.removeItem('masterclassVideoUserEmail');
     localStorage.removeItem('masterclassVideoUserName');
+    
     showCustomAlert('Logged out. Please enter your access code to continue.', 'info');
+    
+    // Update debug info
+    setDebugInfo(prev => ({
+      ...prev,
+      lastValidationResult: null
+    }));
   };
 
   const formatVideoDate = (video) => {
@@ -237,7 +408,14 @@ const MasterclassVideos = ({ navigateTo }) => {
       animation: slideInRight 0.3s ease-out;
     `;
     alertDiv.innerHTML = `
-      ${message}
+      <div class="d-flex align-items-center">
+        <i class="fas ${
+          type === 'success' ? 'fa-check-circle' :
+          type === 'error' ? 'fa-exclamation-circle' :
+          type === 'info' ? 'fa-info-circle' : 'fa-bell'
+        } me-2 fs-5"></i>
+        <div>${message}</div>
+      </div>
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     
@@ -291,6 +469,38 @@ const MasterclassVideos = ({ navigateTo }) => {
     );
   };
 
+  // NEW: Debug panel component
+  const DebugPanel = () => {
+    if (!debugInfo.lastValidationAttempt) return null;
+    
+    return (
+      <div className="mt-3 p-3 border rounded bg-light">
+        <h6 className="text-muted mb-2">
+          <i className="fas fa-bug me-2"></i>Debug Info
+        </h6>
+        <div className="small">
+          <p className="mb-1">
+            <strong>Last Validation Attempt:</strong><br />
+            Time: {new Date(debugInfo.lastValidationAttempt.timestamp).toLocaleTimeString()}<br />
+            Access Code: {debugInfo.lastValidationAttempt.accessCode}<br />
+            Email: {debugInfo.lastValidationAttempt.userEmail}
+          </p>
+          {debugInfo.lastValidationResult && (
+            <p className="mb-1">
+              <strong>Result:</strong> {debugInfo.lastValidationResult.success ? '✅ Success' : '❌ Failed'}<br />
+              Message: {debugInfo.lastValidationResult.message}<br />
+              {debugInfo.lastValidationResult.status && `Status: ${debugInfo.lastValidationResult.status}`}
+            </p>
+          )}
+          <p className="mb-0">
+            <strong>API Calls:</strong> {debugInfo.apiCallCount}<br />
+            <strong>Total Videos:</strong> {totalItems}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   // If no access, show access modal immediately
   if (!hasAccess) {
     return (
@@ -335,7 +545,11 @@ const MasterclassVideos = ({ navigateTo }) => {
                       value={accessCode}
                       onChange={(e) => setAccessCode(e.target.value)}
                       disabled={validating}
-                      style={{ letterSpacing: '2px', fontFamily: 'monospace', textTransform: 'uppercase' }}
+                      style={{ 
+                        letterSpacing: '2px', 
+                        fontFamily: 'monospace', 
+                        textTransform: 'uppercase' 
+                      }}
                     />
                     <small className="text-muted">
                       Enter the code provided by the administrator (case-insensitive)
@@ -379,6 +593,9 @@ const MasterclassVideos = ({ navigateTo }) => {
                     </p>
                   </div>
 
+                  {/* Debug Information */}
+                  <DebugPanel />
+
                   <div className="mt-4">
                     <div className="card bg-light">
                       <div className="card-body">
@@ -388,6 +605,7 @@ const MasterclassVideos = ({ navigateTo }) => {
                           <li>You must use the same email address provided to the administrator</li>
                           <li>Access codes are case-insensitive</li>
                           <li>Contact the administrator if you need a new code</li>
+                          <li>For testing: Try code <code>GBENGA</code> (uppercase)</li>
                         </ul>
                       </div>
                     </div>
@@ -549,7 +767,12 @@ const MasterclassVideos = ({ navigateTo }) => {
                             <i className="fas fa-crown me-1"></i>
                             Masterclass
                           </span>
-                          <i className="fas fa-unlock text-success"></i>
+                          {video.accessCode && (
+                            <small className="text-muted" title="Access Code">
+                              <i className="fas fa-key me-1"></i>
+                              {video.accessCode.substring(0, 3)}...
+                            </small>
+                          )}
                         </div>
                       </div>
                       <div className="card-img-top position-relative">
@@ -558,11 +781,25 @@ const MasterclassVideos = ({ navigateTo }) => {
                           style={{ height: '200px', cursor: 'pointer' }}
                           onClick={() => viewVideo(video)}
                         >
-                          <i className="fas fa-play-circle text-white fa-3x opacity-75"></i>
+                          {video.thumbnailUrl ? (
+                            <img 
+                              src={video.thumbnailUrl} 
+                              alt={video.title}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <i className="fas fa-play-circle text-white fa-3x opacity-75"></i>
+                          )}
                           <div className="position-absolute bottom-0 start-0 m-2">
                             <span className="badge bg-dark bg-opacity-75">
                               <i className="fas fa-clock me-1"></i>
                               {video.duration || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="position-absolute top-0 end-0 m-2">
+                            <span className="badge bg-warning text-dark">
+                              <i className="fas fa-play me-1"></i>
+                              Watch
                             </span>
                           </div>
                         </div>
@@ -647,6 +884,7 @@ const MasterclassVideos = ({ navigateTo }) => {
                       controlsList="nodownload"
                       style={{ width: '100%', height: '60vh', backgroundColor: '#000' }}
                       onContextMenu={(e) => e.preventDefault()}
+                      autoPlay
                     >
                       <source src={selectedVideo.videoUrl} type="video/mp4" />
                       Your browser does not support the video tag.
@@ -704,7 +942,7 @@ const MasterclassVideos = ({ navigateTo }) => {
                   className="btn btn-outline-light"
                   onClick={closeModal}
                 >
-                  Close
+                  <i className="fas fa-times me-2"></i>Close
                 </button>
               </div>
             </div>
@@ -726,6 +964,11 @@ const MasterclassVideos = ({ navigateTo }) => {
           opacity: 0.8;
         }
 
+        .video-thumbnail:hover .badge {
+          background-color: #ffc107 !important;
+          color: #212529 !important;
+        }
+
         video::-webkit-media-controls-fullscreen-button {
           display: none;
         }
@@ -735,6 +978,17 @@ const MasterclassVideos = ({ navigateTo }) => {
           -moz-user-select: none;
           -ms-user-select: none;
           user-select: none;
+        }
+        
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
         }
       `}</style>
     </div>

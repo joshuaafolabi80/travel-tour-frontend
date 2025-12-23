@@ -259,76 +259,10 @@ const MasterclassVideos = ({ navigateTo }) => {
       
       setValidationError(errorMessage);
       
-      // FALLBACK: Try to access videos directly if validation endpoint fails
-      console.log('🔄 Trying fallback: Checking if we can access videos directly...');
-      await tryDirectAccessFallback(requestData);
+      // NO FALLBACK - Just show error
+      console.log('❌ Validation failed, showing error to user');
     } finally {
       setValidating(false);
-    }
-  };
-
-  // FALLBACK METHOD: Try to access videos directly if validation fails
-  const tryDirectAccessFallback = async (requestData) => {
-    try {
-      console.log('🔄 Attempting direct access fallback...');
-      
-      const response = await api.get('/videos', {
-        params: {
-          type: 'masterclass',
-          page: 1,
-          limit: 1
-        }
-      });
-      
-      console.log('🔄 Direct access response:', response.data);
-      
-      if (response.data.success && response.data.videos && response.data.videos.length > 0) {
-        console.log('✅ Direct access successful - user may already have access');
-        
-        // Check if any video has this access code
-        const videoWithCode = response.data.videos.find(video => 
-          video.accessCode && 
-          video.accessCode.toUpperCase() === requestData.accessCode.toUpperCase()
-        );
-        
-        if (videoWithCode) {
-          console.log(`✅ Found video with matching access code: ${videoWithCode.title}`);
-          
-          // Grant access
-          setHasAccess(true);
-          localStorage.setItem('masterclassVideoAccess', 'granted');
-          localStorage.setItem('masterclassVideoUserEmail', requestData.userEmail);
-          localStorage.setItem('masterclassVideoUserName', requestData.userEmail.split('@')[0]);
-          
-          setUserInfo({
-            email: requestData.userEmail,
-            name: requestData.userEmail.split('@')[0]
-          });
-          
-          setShowAccessModal(false);
-          showCustomAlert('Access granted via fallback method! Welcome to Masterclass Videos.', 'success');
-          
-          // Fetch all videos
-          await fetchVideos();
-          
-          // Update debug info
-          setDebugInfo(prev => ({
-            ...prev,
-            lastValidationResult: {
-              success: true,
-              message: 'Access granted via fallback',
-              timestamp: new Date().toISOString()
-            }
-          }));
-          
-          return;
-        }
-      }
-      
-      console.log('❌ Direct access fallback also failed');
-      
-    } catch (fallbackError) {
-      console.error('❌ Direct access fallback error:', fallbackError);
     }
   };
 

@@ -403,37 +403,7 @@ const MasterclassVideos = ({ navigateTo }) => {
     );
   };
 
-  // NEW: Debug panel component
-  const DebugPanel = () => {
-    if (!debugInfo.lastValidationAttempt) return null;
-    
-    return (
-      <div className="mt-3 p-3 border rounded bg-light">
-        <h6 className="text-muted mb-2">
-          <i className="fas fa-bug me-2"></i>Debug Info
-        </h6>
-        <div className="small">
-          <p className="mb-1">
-            <strong>Last Validation Attempt:</strong><br />
-            Time: {new Date(debugInfo.lastValidationAttempt.timestamp).toLocaleTimeString()}<br />
-            Access Code: {debugInfo.lastValidationAttempt.accessCode}<br />
-            Email: {debugInfo.lastValidationAttempt.userEmail}
-          </p>
-          {debugInfo.lastValidationResult && (
-            <p className="mb-1">
-              <strong>Result:</strong> {debugInfo.lastValidationResult.success ? '✅ Success' : '❌ Failed'}<br />
-              Message: {debugInfo.lastValidationResult.message}<br />
-              {debugInfo.lastValidationResult.status && `Status: ${debugInfo.lastValidationResult.status}`}
-            </p>
-          )}
-          <p className="mb-0">
-            <strong>API Calls:</strong> {debugInfo.apiCallCount}<br />
-            <strong>Total Videos:</strong> {totalItems}
-          </p>
-        </div>
-      </div>
-    );
-  };
+  
 
   // If no access, show access modal immediately
   if (!hasAccess) {
@@ -539,7 +509,6 @@ const MasterclassVideos = ({ navigateTo }) => {
                           <li>You must use the same email address provided to the administrator</li>
                           <li>Access codes are case-insensitive</li>
                           <li>Contact the administrator if you need a new code</li>
-                          <li>For testing: Try code <code>GBENGA</code> (uppercase)</li>
                         </ul>
                       </div>
                     </div>

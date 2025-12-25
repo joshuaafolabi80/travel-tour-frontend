@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { jwtDecode } from 'jwt-decode';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { GoogleAuthProvider } from './contexts/GoogleAuthContext';
+import { GoogleAuthProvider } from './context/GoogleAuthContext';
 import api from './services/api';
 import blogApi from './services/blogApi';
 

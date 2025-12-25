@@ -1,7 +1,7 @@
 // travel-tour-frontend/src/components/auth/GoogleSignInButton.jsx
 
 import React from 'react';
-import { useGoogleAuth } from '../../contexts/GoogleAuthContext';
+import { useGoogleAuth } from '../../context/GoogleAuthContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './GoogleSignInButton.css';
 

@@ -1,5 +1,8 @@
+// travel-tour-frontend/src/LoginRegister.jsx
+
 import React, { useState } from 'react';
 import PasswordResetForm from './PasswordResetForm';
+import { GoogleSignInButton } from './components/GoogleSignInButton';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './LoginRegister.css';
 
@@ -51,24 +54,6 @@ const LoginRegister = ({ onLogin, onRegister }) => {
         password: formData.password,
       });
     }
-  };
-
-  const handleGoogleSignIn = () => {
-    setMessage({ text: "Google sign-in would be implemented here.", type: 'info' });
-    const googleUser = {
-      username: 'Google User',
-      email: 'googleuser@example.com',
-    };
-    onRegister(googleUser);
-  };
-  
-  const togglePasswordReset = () => {
-    setIsPasswordReset(true);
-  };
-
-  const handleResetSuccess = async (email, password) => {
-    // Use the existing login function with the new credentials
-    await onLogin(email, password);
   };
 
   return (
@@ -191,10 +176,15 @@ const LoginRegister = ({ onLogin, onRegister }) => {
                 <span className="text-muted">Or continue with</span>
               </div>
 
-              <button className="btn btn-outline-secondary w-100 py-2 d-flex align-items-center justify-content-center fw-bold" onClick={handleGoogleSignIn}>
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="me-2" style={{ width: '20px' }} />
-                Sign up with Google
-              </button>
+              <GoogleSignInButton 
+                buttonText={isLogin ? "Sign in with Google" : "Sign up with Google"}
+                onSuccess={() => {
+                  setMessage({ text: "Google sign-in successful!", type: 'success' });
+                }}
+                onError={(error) => {
+                  setMessage({ text: "Google sign-in failed. Please try again.", type: 'danger' });
+                }}
+              />
 
               <div className="text-center mt-3">
                 <p className="text-muted">

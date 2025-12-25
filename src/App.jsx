@@ -1,7 +1,9 @@
-// travel-tour-frontend/src/App.jsx - UPDATED WITH BUSINESS COURSE
+// travel-tour-frontend/src/App.jsx - UPDATED WITH BUSINESS COURSE & GOOGLE OAUTH
 import React, { useState, useEffect } from 'react';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { jwtDecode } from 'jwt-decode';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import { GoogleAuthProvider } from './contexts/GoogleAuthContext';
 import api from './services/api';
 import blogApi from './services/blogApi';
 
@@ -180,6 +182,33 @@ const App = () => {
         adminSubmissions: 0,
         userSubmissions: 0
     });
+
+    // Add Google Auth event listener
+    useEffect(() => {
+        const handleGoogleLoginSuccess = (event) => {
+            const { user, token } = event.detail;
+            setIsLoggedIn(true);
+            setUserRole(user.role);
+            setUserData(user);
+            setAuthToken(token);
+            
+            // Fetch notifications
+            fetchNotificationCounts();
+            
+            // Redirect based on role
+            if (user.role === 'admin') {
+                setCurrentPage('admin-students');
+            } else {
+                setCurrentPage('home');
+            }
+        };
+
+        window.addEventListener('googleLoginSuccess', handleGoogleLoginSuccess);
+        
+        return () => {
+            window.removeEventListener('googleLoginSuccess', handleGoogleLoginSuccess);
+        };
+    }, []);
 
     const validateToken = (token) => {
         try {
@@ -1035,4 +1064,15 @@ const App = () => {
     );
 };
 
-export default App;
+// Wrap the App component with Google OAuth providers
+function MainApp() {
+    return (
+        <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
+            <GoogleAuthProvider>
+                <App />
+            </GoogleAuthProvider>
+        </GoogleOAuthProvider>
+    );
+}
+
+export default MainApp;

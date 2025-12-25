@@ -1,7 +1,4 @@
-// travel-tour-frontend/src/context/GoogleAuthContext.jsx
-
-
-// contexts/GoogleAuthContext.jsx
+// travel-tour-frontend/src/context/GoogleAuthContext.jsx - FIXED VERSION
 import React, { createContext, useState, useContext } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import api from '../services/api';
@@ -18,27 +15,58 @@ export const GoogleAuthProvider = ({ children }) => {
     onSuccess: async (tokenResponse) => {
       setIsLoading(true);
       try {
-        console.log('🔄 Sending Google token to backend...', tokenResponse);
+        console.log('🔄 Google login successful, fetching user info...', tokenResponse);
         
-        const response = await api.post('/auth/google', {
-          token: tokenResponse.access_token
+        // ✅ FIXED: Get user info from Google API using access_token
+        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { 
+            Authorization: `Bearer ${tokenResponse.access_token}`,
+            'Content-Type': 'application/json'
+          }
         });
         
-        console.log('✅ Backend response:', response.data);
+        if (!userInfoResponse.ok) {
+          throw new Error(`Google API error: ${userInfoResponse.status}`);
+        }
         
-        if (response.data.success) {
-          const { token, user } = response.data;
+        const userInfo = await userInfoResponse.json();
+        console.log('✅ Google user info retrieved:', userInfo);
+        
+        // ✅ FIXED: Send the correct data to your backend
+        // We send the access_token AND user info
+        const backendResponse = await api.post('/auth/google', {
+          access_token: tokenResponse.access_token, // Send access_token
+          googleId: userInfo.sub, // This is the ID token (sub)
+          email: userInfo.email,
+          name: userInfo.name,
+          picture: userInfo.picture,
+          given_name: userInfo.given_name,
+          family_name: userInfo.family_name,
+          email_verified: userInfo.email_verified
+        });
+        
+        console.log('✅ Backend response:', backendResponse.data);
+        
+        if (backendResponse.data.success) {
+          const { token, user } = backendResponse.data;
           localStorage.setItem('authToken', token);
           localStorage.setItem('userData', JSON.stringify(user));
           setGoogleUser(user);
           
+          // Trigger the success event
           window.dispatchEvent(new CustomEvent('googleLoginSuccess', { 
             detail: { user, token } 
           }));
+          
+          // Optional: Auto-refresh to trigger app state update
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+          
         } else {
           // Handle backend success: false
-          console.error('❌ Backend returned success: false:', response.data);
-          throw new Error(response.data.message || 'Authentication failed');
+          console.error('❌ Backend returned success: false:', backendResponse.data);
+          throw new Error(backendResponse.data.message || 'Authentication failed');
         }
       } catch (error) {
         console.error('❌ Google auth failed with details:', {
@@ -49,7 +77,7 @@ export const GoogleAuthProvider = ({ children }) => {
         });
         
         // Show user-friendly error
-        alert(`Google Sign-In failed: ${error.response?.data?.message || error.message}`);
+        alert(`Google Sign-In failed: ${error.response?.data?.message || error.message || 'Please try again.'}`);
         
         throw error;
       } finally {
@@ -61,13 +89,18 @@ export const GoogleAuthProvider = ({ children }) => {
       alert('Google Sign-In failed. Please try again.');
       setIsLoading(false);
     },
-    flow: 'implicit'
+    flow: 'implicit',
+    scope: 'openid email profile' // ✅ Request proper scopes
   });
 
   const logout = () => {
     setGoogleUser(null);
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
+    // Clear any Google session
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      window.google.accounts.id.disableAutoSelect();
+    }
   };
 
   return (

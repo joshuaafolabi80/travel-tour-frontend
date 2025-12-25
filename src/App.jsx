@@ -1068,7 +1068,9 @@ const App = () => {
 function MainApp() {
     return (
         <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-            <App />
+            <GoogleAuthProvider>
+                <App />
+            </GoogleAuthProvider>
         </GoogleOAuthProvider>
     );
 }

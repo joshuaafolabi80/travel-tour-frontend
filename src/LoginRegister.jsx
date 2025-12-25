@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import PasswordResetForm from './PasswordResetForm';
-import { GoogleSignInButton } from './components/auth/GoogleSignInButton';
+import GoogleSignInButton from './components/auth/GoogleSignInButton';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './LoginRegister.css';
 

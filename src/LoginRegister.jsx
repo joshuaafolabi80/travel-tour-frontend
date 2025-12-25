@@ -1,6 +1,6 @@
-// travel-tour-frontend/src/LoginRegister.jsx
+// travel-tour-frontend/src/LoginRegister.jsx - UPDATED WITH ANIMATED MESSAGES
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PasswordResetForm from './PasswordResetForm';
 import GoogleSignInButton from './components/auth/GoogleSignInButton';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -16,6 +16,30 @@ const LoginRegister = ({ onLogin, onRegister }) => {
     confirmPassword: ''
   });
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [isMessageVisible, setIsMessageVisible] = useState(false);
+
+  // Auto-hide message after 4 seconds
+  useEffect(() => {
+    if (message.text && message.type === 'success') {
+      setIsMessageVisible(true);
+      
+      const hideTimer = setTimeout(() => {
+        setIsMessageVisible(false);
+        // Clear message after fade out animation completes
+        setTimeout(() => {
+          setMessage({ text: '', type: '' });
+        }, 500);
+      }, 4000); // Show for 4 seconds
+      
+      return () => clearTimeout(hideTimer);
+    } else if (message.text) {
+      // For non-success messages, show immediately
+      setIsMessageVisible(true);
+    } else {
+      // No message, hide it
+      setIsMessageVisible(false);
+    }
+  }, [message]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -28,6 +52,7 @@ const LoginRegister = ({ onLogin, onRegister }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setMessage({ text: '', type: '' });
+    setIsMessageVisible(false);
     
     if (isLogin) {
       if (!formData.email || !formData.password) {
@@ -54,6 +79,15 @@ const LoginRegister = ({ onLogin, onRegister }) => {
         password: formData.password,
       });
     }
+  };
+
+  const togglePasswordReset = () => {
+    setIsPasswordReset(true);
+  };
+
+  const handleResetSuccess = async (email, password) => {
+    // Use the existing login function with the new credentials
+    await onLogin(email, password);
   };
 
   return (
@@ -90,9 +124,34 @@ const LoginRegister = ({ onLogin, onRegister }) => {
                 </p>
               </div>
               
+              {/* Animated message alert */}
               {message.text && (
-                <div className={`alert alert-${message.type}`} role="alert">
-                  {message.text}
+                <div 
+                  className={`alert alert-${message.type} message-alert ${isMessageVisible ? 'visible' : 'hidden'}`}
+                  role="alert"
+                  style={{
+                    transition: 'all 0.5s ease-in-out',
+                    transform: isMessageVisible ? 'translateY(0)' : 'translateY(-20px)',
+                    opacity: isMessageVisible ? 1 : 0,
+                    maxHeight: isMessageVisible ? '100px' : '0',
+                    overflow: 'hidden',
+                    marginBottom: isMessageVisible ? '1rem' : '0'
+                  }}
+                >
+                  <div className="d-flex justify-content-between align-items-center">
+                    <span>{message.text}</span>
+                    {message.type === 'success' && (
+                      <button 
+                        type="button" 
+                        className="btn-close" 
+                        onClick={() => {
+                          setIsMessageVisible(false);
+                          setTimeout(() => setMessage({ text: '', type: '' }), 500);
+                        }}
+                        aria-label="Close"
+                      ></button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -166,7 +225,14 @@ const LoginRegister = ({ onLogin, onRegister }) => {
               
               {isLogin && (
                 <div className="text-end mt-2">
-                  <a href="#" onClick={(e) => { e.preventDefault(); togglePasswordReset(); }} className="text-primary text-decoration-none fw-bold">
+                  <a 
+                    href="#" 
+                    onClick={(e) => { 
+                      e.preventDefault(); 
+                      togglePasswordReset(); 
+                    }} 
+                    className="text-primary text-decoration-none fw-bold"
+                  >
                     Forgot Password?
                   </a>
                 </div>
@@ -179,7 +245,7 @@ const LoginRegister = ({ onLogin, onRegister }) => {
               <GoogleSignInButton 
                 buttonText={isLogin ? "Sign in with Google" : "Sign up with Google"}
                 onSuccess={() => {
-                  setMessage({ text: "Google sign-in successful!", type: 'success' });
+                  setMessage({ text: "Google sign-in successful! Redirecting...", type: 'success' });
                 }}
                 onError={(error) => {
                   setMessage({ text: "Google sign-in failed. Please try again.", type: 'danger' });
@@ -192,7 +258,16 @@ const LoginRegister = ({ onLogin, onRegister }) => {
                     ? "Don't have an account yet? "
                     : "Already have an account? "
                   }
-                  <a href="#" onClick={(e) => { e.preventDefault(); setIsLogin(!isLogin); }} className="text-primary text-decoration-none fw-bold">
+                  <a 
+                    href="#" 
+                    onClick={(e) => { 
+                      e.preventDefault(); 
+                      setIsLogin(!isLogin); 
+                      setMessage({ text: '', type: '' });
+                      setIsMessageVisible(false);
+                    }} 
+                    className="text-primary text-decoration-none fw-bold"
+                  >
                     {isLogin ? 'Join The Conclave Now!' : 'Sign In'}
                   </a>
                 </p>

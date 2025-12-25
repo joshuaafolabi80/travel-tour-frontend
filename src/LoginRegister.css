@@ -94,3 +94,99 @@
 }
 
 /* You can remove the original, lengthy CSS code you provided and replace it with this refined version. */
+
+/* Add these styles to your LoginRegister.css file */
+
+/* Message animation styles */
+.message-alert {
+  transition: all 0.5s ease-in-out;
+  transform: translateY(-20px);
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  margin-bottom: 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.message-alert.visible {
+  transform: translateY(0);
+  opacity: 1;
+  max-height: 100px;
+  margin-bottom: 1rem;
+}
+
+.message-alert.hidden {
+  transform: translateY(-20px);
+  opacity: 0;
+  max-height: 0;
+  margin-bottom: 0;
+}
+
+/* Success message specific styles */
+.alert-success {
+  background-color: #d1fae5;
+  border-color: #34d399;
+  color: #065f46;
+  border-left: 4px solid #34d399;
+}
+
+.alert-success .btn-close {
+  color: #065f46;
+  opacity: 0.8;
+}
+
+.alert-success .btn-close:hover {
+  opacity: 1;
+}
+
+/* Danger message specific styles */
+.alert-danger {
+  background-color: #fee2e2;
+  border-color: #f87171;
+  color: #991b1b;
+  border-left: 4px solid #f87171;
+}
+
+.alert-danger .btn-close {
+  color: #991b1b;
+  opacity: 0.8;
+}
+
+.alert-danger .btn-close:hover {
+  opacity: 1;
+}
+
+/* Info message specific styles */
+.alert-info {
+  background-color: #e0f2fe;
+  border-color: #60a5fa;
+  color: #1e40af;
+  border-left: 4px solid #60a5fa;
+}
+
+/* Smooth transition for all alerts */
+.alert {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Animation for the close button */
+.btn-close {
+  transition: all 0.2s ease;
+  transform: scale(0.9);
+}
+
+.btn-close:hover {
+  transform: scale(1);
+}
+
+/* For better visual feedback on success */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.alert-success.visible {
+  animation: pulse 0.5s ease;
+}

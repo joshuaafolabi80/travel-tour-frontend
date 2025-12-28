@@ -67,6 +67,11 @@ import MyBookmarksPage from './components/blog/MyBookmarksPage';
 // --- NEW: Business Course Component ---
 import BusinessCourse from './components/BusinessCourse';
 
+// --- NEW: Share & Rate Components ---
+import ShareAndRatePage from './components/share-rate/ShareAndRatePage';
+import RateAppStore from './components/share-rate/RateAppStore';
+import ReviewConfirmation from './components/share-rate/ReviewConfirmation';
+
 import './App.css';
 
 // Reusable Slider Component
@@ -164,6 +169,12 @@ const App = () => {
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [hotelSearchCriteria, setHotelSearchCriteria] = useState({});
     const [currentHotelDetail, setCurrentHotelDetail] = useState(null);
+    
+    // NEW: Add state for Share & Rate navigation data
+    const [shareRateData, setShareRateData] = useState({
+        storeId: null,
+        reviewData: null
+    });
     
     const [notificationCounts, setNotificationCounts] = useState({
         quizScores: 0,
@@ -579,21 +590,52 @@ const App = () => {
     const navigateTo = (page, data = null) => {
         console.log('📍 Navigating to:', page, data);
         
-        if (page === 'hotel-details' && data?.hotelId) {
+        // Handle Share & Rate pages
+        if (page === 'rate-app-store' && data?.storeId) {
+            setShareRateData({
+                storeId: data.storeId,
+                reviewData: null
+            });
+            setBlogPostId(null);
+            setCurrentHotelDetail(null);
+        } 
+        else if (page === 'review-confirmation' && data) {
+            setShareRateData(prev => ({
+                ...prev,
+                reviewData: data
+            }));
+            setBlogPostId(null);
+            setCurrentHotelDetail(null);
+        }
+        else if (page === 'rate-share') {
+            // Reset share rate data when going back to main page
+            setShareRateData({
+                storeId: null,
+                reviewData: null
+            });
+            setBlogPostId(null);
+            setCurrentHotelDetail(null);
+        }
+        else if (page === 'hotel-details' && data?.hotelId) {
             setCurrentHotelDetail(data); 
-            setBlogPostId(null); 
+            setBlogPostId(null);
+            setShareRateData({ storeId: null, reviewData: null });
         } 
         else if (page === 'blog-detail' && data?.postId) {
             setBlogPostId(data.postId); 
-            setCurrentHotelDetail(null); 
+            setCurrentHotelDetail(null);
+            setShareRateData({ storeId: null, reviewData: null });
         }
         else if (page === 'admin-edit-post' && data?.postId) {
             setBlogPostId(data.postId); 
-            setCurrentHotelDetail(null); 
+            setCurrentHotelDetail(null);
+            setShareRateData({ storeId: null, reviewData: null });
         }
         else {
+            // For all other pages, clear all navigation data
             setCurrentHotelDetail(null);
             setBlogPostId(null);
+            setShareRateData({ storeId: null, reviewData: null });
         }
         
         setCurrentPage(page);
@@ -911,6 +953,23 @@ const App = () => {
                         {/* SIMPLE STATE-BASED PAGE RENDERING */}
                         {currentPage === 'home' && <HomePage />}
                         {currentPage === 'business-course' && <BusinessCourse navigateTo={navigateTo} />}
+                        
+                        {/* NEW: Share and Rate Pages - ADD THESE */}
+                        {currentPage === 'rate-share' && <ShareAndRatePage navigateTo={navigateTo} />}
+                        {currentPage === 'rate-app-store' && (
+                            <RateAppStore 
+                                navigateTo={navigateTo} 
+                                storeId={shareRateData.storeId}
+                            />
+                        )}
+                        {currentPage === 'review-confirmation' && (
+                            <ReviewConfirmation 
+                                navigateTo={navigateTo} 
+                                reviewData={shareRateData.reviewData}
+                            />
+                        )}
+                        
+                        {/* Existing pages continue below... */}
                         {currentPage === 'destinations' && <DestinationsPage onSelectDestination={handleSelectDestination} />}
                         {currentPage === 'destination-overview' && selectedCourse && (
                             <DestinationOverview course={selectedCourse} onStartCourse={handleStartCourse} />
@@ -1029,12 +1088,6 @@ const App = () => {
                             <div className="container py-4">
                                 <h2>Important Information</h2>
                                 <p>Content coming soon...</p>
-                            </div>
-                        )}
-                        {currentPage === 'rate-share' && (
-                            <div className="container py-4">
-                                <h2>Rate and Share</h2>
-                                <p>Rating and sharing features coming soon...</p>
                             </div>
                         )}
                         {currentPage === 'admin-send-information' && (

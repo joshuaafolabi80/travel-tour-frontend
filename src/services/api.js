@@ -73,7 +73,7 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// Request interceptor
+// Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
@@ -88,12 +88,11 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('❌ Request Interceptor Error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor
+// Response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
     if (isDevelopment) {
@@ -114,6 +113,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('authToken');
       localStorage.removeItem('userData');
+      window.location.href = '/';
     }
     
     return Promise.reject(error);

@@ -74,15 +74,17 @@
   color: #000;
 }
 
-/* Splash Controls */
+/* UPDATED: Splash Controls - Center aligned with smaller button */
 .splash-controls {
   position: absolute;
   bottom: 2rem;
   left: 0;
+  right: 0;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   z-index: 10;
   padding: 0 1rem;
   background: transparent;
@@ -100,29 +102,42 @@
   height: 0.75rem;
   border-radius: 9999px;
   background-color: rgba(255, 255, 255, 0.4);
+  transition: all 0.3s ease;
 }
 
 .splash-indicator.active {
   background-color: var(--white);
+  transform: scale(1.2);
 }
 
+/* UPDATED: Splash button - Centered and reduced size */
 .splash-button {
-  width: 100%;
-  max-width: 20rem;
-  padding: 0.75rem;
+  padding: 0.75rem 2.5rem;
   font-weight: 700;
-  border-radius: 9999px;
+  border-radius: 50px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
   color: var(--white);
-  background-color: var(--primary-orange);
+  background: linear-gradient(135deg, #007bff, #0056b3);
   z-index: 20;
   border: none;
   cursor: pointer;
+  font-size: 1rem;
+  min-width: 180px;
+  max-width: 220px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .splash-button:hover {
-  background-color: #e65100;
+  background: linear-gradient(135deg, #0056b3, #004494);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.splash-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* --- Reusable Slider - Different styles for homepage --- */
@@ -172,13 +187,13 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  align-items: center;
+  align-items: center; /* Centers horizontally */
   padding: 1rem;
-  text-align: center;
+  text-align: center; /* Centers text inside elements */
   color: var(--white);
   box-sizing: border-box;
   padding-bottom: 6rem;
-  margin-top: 10px;
+  margin: 0; /* Changed from margin-top: 10px */
 }
 
 .carousel-text {
@@ -189,9 +204,10 @@
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
   max-width: 90%;
-  margin: 0 auto;
+  margin: 0 auto; /* Ensures centering */
   margin-bottom: 1rem;
-  margin-top: 10px;
+  width: 100%; /* Makes it take full available width */
+  text-align: center; /* Explicitly center text */
 }
 
 .carousel-title {
@@ -202,6 +218,8 @@
   background-color: rgba(0, 0, 0, 0.5);
   padding: 0.5rem 1.5rem;
   border-radius: 0.5rem;
+  width: 100%; /* Makes it take full available width */
+  text-align: center; /* Explicitly center text */
 }
 
 /* Homepage Hero Section */
@@ -575,6 +593,18 @@
   
   .nav-text {
     font-size: 0.85rem;
+  }
+  
+  /* Mobile splash button adjustments */
+  .splash-controls {
+    bottom: 1.5rem;
+  }
+  
+  .splash-button {
+    padding: 0.6rem 2rem;
+    font-size: 0.9rem;
+    min-width: 150px;
+    max-width: 180px;
   }
 }
 
@@ -1706,6 +1736,11 @@
     width: 60px;
     height: 60px;
   }
+  
+  /* Mobile splash adjustments */
+  .carousel-overlay {
+    padding-bottom: 8rem;
+  }
 }
 
 @media (min-width: 769px) {
@@ -1763,6 +1798,14 @@
     font-size: 1.5rem;
     max-width: 80%;
   }
+  
+  /* Adjust splash button for tablet */
+  .splash-button {
+    font-size: 1.1rem;
+    padding: 0.85rem 3rem;
+    min-width: 200px;
+    max-width: 240px;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -1778,6 +1821,14 @@
 
   .hero-subtitle {
     font-size: 1.5rem;
+  }
+  
+  /* Desktop splash adjustments */
+  .splash-button {
+    font-size: 1.2rem;
+    padding: 1rem 3.5rem;
+    min-width: 220px;
+    max-width: 260px;
   }
 }
 

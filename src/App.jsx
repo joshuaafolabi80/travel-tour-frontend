@@ -1,1916 +1,1151 @@
-/* App.css - COMPLETE UPDATED WITH SUBMISSIONS DASHBOARD */
-
-/* FIX FOR CUT-OFF CONTENT AND NAVIGATION - ADDED AT TOP */
-* {
-  box-sizing: border-box;
-}
-
-:root {
-  --primary-orange: #ff6f00;
-  --dark-orange: #e65100;
-  --dark-blue-purple: #1a237e;
-  --white: #ffffff;
-  --gray-light: #f9fafb;
-  --gray-medium: #d1d5db;
-  --text-color-dark: #1f2937;
-  --text-color-medium: #4b5563;
-}
-
-.app-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background-color: #f3f4f6;
-  width: 100%;
-  overflow-x: hidden;
-}
-
-.hidden {
-  display: none;
-}
-
-/* --- Splash Screen --- */
-.splash-screen-wrapper {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1000;
-  background: transparent;
-}
-
-.splash-content {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-}
-
-/* SKIP Button */
-.splash-skip-container {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 30;
-}
-
-.splash-skip-button {
-  padding: 0.5rem 1.5rem;
-  border-radius: 9999px;
-  color: var(--white);
-  background-color: rgba(0, 0, 0, 0.5);
-  border: 1px solid var(--white);
-  transition: background-color 0.3s, color 0.3s;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.splash-skip-button:hover {
-  background-color: var(--white);
-  color: #000;
-}
-
-/* FIXED: Splash Controls - Perfectly centered with smaller container */
-.splash-controls {
-  position: absolute;
-  bottom: 2rem;
-  left: 0;
-  right: 0;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  padding: 0 1rem;
-  background: transparent;
-  margin: 0 auto;
-}
-
-.splash-indicators {
-  display: flex;
-  column-gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.splash-indicator {
-  display: block;
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.4);
-  transition: all 0.3s ease;
-}
-
-.splash-indicator.active {
-  background-color: var(--white);
-  transform: scale(1.2);
-}
-
-/* FIXED: Splash button - Perfectly centered and reduced size */
-.splash-button {
-  padding: 0.75rem 2rem;
-  font-weight: 700;
-  border-radius: 50px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  color: var(--white);
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  z-index: 20;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  min-width: 180px;
-  max-width: 200px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  text-align: center;
-  display: block;
-  margin: 0 auto;
-}
-
-.splash-button:hover {
-  background: linear-gradient(135deg, #0056b3, #004494);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
-}
-
-.splash-button:active {
-  transform: translateY(1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* --- Reusable Slider - Different styles for homepage --- */
-.hero-slider-section {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-}
-
-.hero-slider-section:not(.homepage-slider) {
-  height: 100%;
-}
-
-.hero-slider-section.homepage-slider {
-  height: 300px;
-  border-radius: 12px;
-  margin: 1rem 0 2rem 0;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-.carousel-wrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.carousel-image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* FIXED: Text overlay moved downward */
-.carousel-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: center; /* Centers horizontally */
-  padding: 1rem;
-  text-align: center; /* Centers text inside elements */
-  color: var(--white);
-  box-sizing: border-box;
-  padding-bottom: 8rem; /* Increased to accommodate button */
-  margin: 0; /* Changed from margin-top: 10px */
-}
-
-.carousel-text {
-  font-size: 1.25rem;
-  font-weight: 600;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-  background-color: rgba(0, 0, 0, 0.5);
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  max-width: 90%;
-  margin: 0 auto; /* Ensures centering */
-  margin-bottom: 1rem;
-  width: 100%; /* Makes it take full available width */
-  text-align: center; /* Explicitly center text */
-}
-
-.carousel-title {
-  font-size: 2rem;
-  font-weight: 700;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-  margin-bottom: 0.5rem;
-  background-color: rgba(0, 0, 0, 0.5);
-  padding: 0.5rem 1.5rem;
-  border-radius: 0.5rem;
-  width: 100%; /* Makes it take full available width */
-  text-align: center; /* Explicitly center text */
-}
-
-/* Homepage Hero Section */
-.homepage-hero {
-  position: relative;
-  margin-bottom: 2rem;
-}
-
-.hero-content {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  z-index: 5;
-  color: white;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
-}
-
-.hero-subtitle {
-  font-size: 1.2rem;
-  margin-bottom: 1rem;
-  font-weight: 500;
-}
-
-.hero-cta-button {
-  background-color: var(--primary-orange);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 30px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: background-color 0.3s;
-}
-
-.hero-cta-button:hover {
-  background-color: #e65100;
-}
-
-/* Slide Transitions */
-.slide-bg-enter {
-  transform: translateX(100%);
-}
-
-.slide-bg-enter-active {
-  transform: translateX(0);
-  transition: transform 1000ms ease-in-out;
-}
-
-.slide-bg-exit {
-  transform: translateX(0);
-}
-
-.slide-bg-exit-active {
-  transform: translateX(-100%);
-  transition: transform 1000ms ease-in-out;
-}
-
-/* --- Header - MULTI-ROW NAVIGATION --- */
-.app-header {
-  background-color: var(--primary-orange);
-  color: var(--white);
-  padding: 0.5rem 1rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  min-height: 80px;
-  width: 100%;
-  max-width: 100vw;
-  flex-wrap: nowrap;
-  gap: 1rem;
-}
-
-.hamburger-menu-icon {
-  font-size: 1.5rem;
-  padding: 0.5rem;
-  border-radius: 9999px;
-  transition: background-color 0.3s, color 0.3s;
-  background: none;
-  border: none;
-  color: var(--white);
-  cursor: pointer;
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  order: 3;
-  margin-top: 0.5rem;
-  margin-right: 0.5rem;
-}
-
-.hamburger-menu-icon:hover {
-  background-color: var(--white);
-  color: var(--primary-orange);
-}
-
-/* MULTI-ROW DESKTOP NAVIGATION */
-.desktop-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  flex: 1;
-  max-width: calc(100vw - 300px);
-  flex-shrink: 0;
-  max-height: 70px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 2px 0;
-  order: 2;
-  scrollbar-width: thin;
-  justify-content: center;
-  margin: 0 0.5rem;
-}
-
-.desktop-nav::-webkit-scrollbar {
-  height: 4px;
-}
-
-.desktop-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 2px;
-}
-
-.desktop-nav-item {
-  display: flex;
-  align-items: center;
-  column-gap: 0.4rem;
-  padding: 0.4rem 0.7rem;
-  border-radius: 0.375rem;
-  transition: background-color 0.3s, color 0.3s;
-  background: none;
-  border: none;
-  color: var(--white);
-  cursor: pointer;
-  font-size: 0.85rem;
-  position: relative;
-  white-space: nowrap;
-  flex-shrink: 0;
-  margin-bottom: 2px;
-}
-
-.desktop-nav-item:hover {
-  background-color: var(--white);
-  color: var(--primary-orange);
-}
-
-/* Logo on the left with balanced margin */
-.header-logo-container {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  flex-shrink: 0;
-  min-width: 150px;
-  order: 1;
-  margin-top: 0.5rem;
-  margin-left: 0.5rem;
-}
-
-.header-logo {
-  height: 50px;
-  width: auto;
-  max-width: 180px;
-  object-fit: contain;
-  border-radius: 4px;
-}
-
-.header-right-spacer {
-  width: 48px;
-  visibility: hidden;
-  flex-shrink: 0;
-  order: 4;
-}
-
-/* --- Mobile Menu --- */
-.mobile-menu-title-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1.5rem 1rem;
-  background-color: var(--primary-orange);
-}
-
-.mobile-menu-title {
-  color: var(--white);
-  font-size: 1.5rem;
-  font-weight: 700;
-  text-align: center;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.mobile-dropdown-menu {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 280px;
-  max-width: 85vw;
-  height: 100%;
-  background-color: var(--primary-orange);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.mobile-menu-scroll-container {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-bottom: 20px;
-}
-
-.mobile-menu-header {
-  display: flex;
-  justify-content: flex-end;
-  padding: 1rem;
-  background-color: var(--primary-orange);
-}
-
-.mobile-menu-close {
-  color: var(--white);
-  font-size: 1.5rem;
-  padding: 0.5rem;
-  border-radius: 9999px;
-  transition: background-color 0.3s, color 0.3s;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.mobile-menu-close:hover {
-  background-color: var(--white);
-  color: var(--primary-orange);
-}
-
-.mobile-menu-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.mobile-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  color: var(--white);
-  font-size: 1.125rem;
-  padding: 1rem 1.5rem;
-  width: 100%;
-  text-align: left;
-  transition: background-color 0.3s, color 0.3s;
-  background: none;
-  border: none;
-  cursor: pointer;
-  position: relative;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.mobile-menu-item:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: var(--white);
-}
-
-/* --- Main Content --- */
-.main-app-content {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  width: 100%;
-}
-
-.main-content-area {
-  flex: 1;
-  padding: 1rem;
-  background-color: var(--gray-light);
-  padding-bottom: 70px;
-  width: 100%;
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-.home-page-container {
-  max-width: 64rem;
-  margin-left: auto;
-  margin-right: auto;
-  padding-bottom: 60px;
-  min-height: calc(100vh - 140px);
-  width: 100%;
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-/* UPDATED: Bootstrap Grid Navigation - FIXED FOR MOBILE */
-.navigation-grid-container {
-  width: 100%;
-  margin-bottom: 2rem;
-}
-
-.nav-grid-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0.75rem 0.5rem;
-  background-color: var(--white);
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  border: none;
-  min-height: 90px;
-  height: 100%;
-  text-align: center;
-  word-wrap: break-word;
-  overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.nav-grid-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.1);
-  background-color: #f8f9fa;
-}
-
-/* UPDATED: Larger icon and text sizes */
-.nav-icon {
-  font-size: 2rem;
-  color: var(--dark-blue-purple);
-  margin-bottom: 0.5rem;
-  flex-shrink: 0;
-}
-
-.nav-text {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-color-dark);
-  line-height: 1.2;
-  word-break: break-word;
-  hyphens: auto;
-  margin: 0;
-}
-
-/* Mobile-specific grid fixes */
-@media (max-width: 575.98px) {
-  .navigation-grid-container .row {
-    margin: 0 -0.25rem;
-  }
-  
-  .navigation-grid-container .col-4 {
-    padding: 0 0.25rem;
-  }
-  
-  .nav-grid-item {
-    padding: 0.5rem 0.25rem;
-    min-height: 80px;
-  }
-  
-  .nav-icon {
-    font-size: 1.75rem;
-    margin-bottom: 0.25rem;
-  }
-  
-  .nav-text {
-    font-size: 0.85rem;
-  }
-  
-  /* Mobile splash button adjustments */
-  .splash-controls {
-    bottom: 1.5rem;
-  }
-  
-  .splash-button {
-    padding: 0.6rem 1.8rem;
-    font-size: 0.9rem;
-    min-width: 150px;
-    max-width: 170px;
-  }
-  
-  .carousel-overlay {
-    padding-bottom: 7rem;
-  }
-}
-
-/* Tablet and larger screens */
-@media (min-width: 768px) {
-  .nav-grid-item {
-    padding: 1rem 0.5rem;
-    min-height: 100px;
-  }
-  
-  .nav-icon {
-    font-size: 2.25rem;
-  }
-  
-  .nav-text {
-    font-size: 1rem;
-  }
-}
-
-/* Large screens */
-@media (min-width: 1024px) {
-  .nav-grid-item {
-    padding: 1.25rem 0.75rem;
-  }
-  
-  .nav-text {
-    font-size: 1.1rem;
-  }
-}
-
-.packages-section {
-  background-color: var(--white);
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
-.packages-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--dark-blue-purple);
-  margin-bottom: 1rem;
-}
-
-.packages-description {
-  color: var(--text-color-medium);
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-}
-
-.packages-button {
-  padding: 0.75rem 2rem;
-  background-color: var(--primary-orange);
-  color: var(--white);
-  font-weight: 600;
-  border-radius: 30px;
-  transition: background-color 0.3s;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.packages-button:hover {
-  background-color: #e65100;
-}
-
-.generic-page-content {
-  padding: 1rem;
-  text-align: center;
-  color: var(--text-color-medium);
-  min-height: 60vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-.generic-page-title {
-  font-size: 1.875rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-}
-
-/* Footer */
-.app-footer {
-  background-color: var(--dark-blue-purple);
-  color: var(--white);
-  padding: 1rem;
-  text-align: center;
-  font-size: 0.875rem;
-  width: 100%;
-  max-width: 100vw;
-  position: relative;
-  margin-top: auto;
-}
-
-/* Menu Animations */
-.menu-enter {
-  transform: translateX(-100%);
-}
-
-.menu-enter-active {
-  transform: translateX(0);
-  transition: transform 300ms ease-in-out;
-}
-
-.menu-exit {
-  transform: translateX(0);
-}
-
-.menu-exit-active {
-  transform: translateX(-100%);
-  transition: transform 300ms ease-in-out;
-}
-
-/* --- Admin Dashboard --- */
-.admin-dashboard {
-  padding: 2rem;
-  text-align: center;
-}
-
-.admin-dashboard h2 {
-  color: #ff6f00;
-  margin-bottom: 1rem;
-}
-
-/* --- NOTIFICATION BADGES (UNIFIED & UPDATED) --- */
-.notification-badge {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background-color: #dc3545;
-  color: white;
-  border-radius: 50%;
-  padding: 2px 6px;
-  font-size: 11px;
-  font-weight: bold;
-  min-width: 18px;
-  text-align: center;
-  z-index: 10;
-}
-
-/* Mobile menu notification badge */
-.mobile-menu-item .notification-badge {
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.nav-superscript {
-  position: relative;
-  top: -8px;
-  background-color: #ff4757;
-  color: white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: bold;
-  margin-left: 4px;
-  animation: pulse 2s infinite;
-}
-
-.nav-superscript.video-count {
-  background-color: #28a745;
-}
-
-.nav-superscript.general-videos {
-  background-color: #17a2b8;
-}
-
-.nav-superscript.masterclass-videos {
-  background-color: #ffc107;
-  color: #000;
-}
-
-/* Additional improvements for notifications */
-.notification-container {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  z-index: 1060;
-  max-width: 300px;
-}
-
-.notification-item {
-  backdrop-filter: blur(10px);
-  background: rgba(23, 162, 184, 0.95);
-  border: none;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* Ensure modal backdrop doesn't interfere with notifications */
-.modal-backdrop {
-  z-index: 1050;
-}
-
-.modal {
-  z-index: 1060;
-}
-
-/* --- SUBMISSIONS DASHBOARD STYLES --- */
-/* Unread row highlighting for submissions */
-.table-warning {
-  background-color: rgba(255, 193, 7, 0.15) !important;
-}
-
-.table-warning:hover {
-  background-color: rgba(255, 193, 7, 0.25) !important;
-}
-
-.table-info {
-  background-color: rgba(13, 110, 253, 0.1) !important;
-}
-
-.table-info:hover {
-  background-color: rgba(13, 110, 253, 0.2) !important;
-}
-
-/* Socket connection indicator */
-.socket-indicator {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 5px;
-}
-
-.socket-connected {
-  background-color: #28a745;
-  animation: pulse 2s infinite;
-}
-
-.socket-disconnected {
-  background-color: #dc3545;
-}
-
-/* Submission status badges */
-.badge-status-new {
-  background-color: #dc3545 !important;
-}
-
-.badge-status-viewed {
-  background-color: #17a2b8 !important;
-}
-
-.badge-status-replied {
-  background-color: #28a745 !important;
-}
-
-.badge-status-closed {
-  background-color: #6c757d !important;
-}
-
-/* Dashboard cards */
-.stats-card {
-  transition: transform 0.2s;
-}
-
-.stats-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-}
-
-/* Responsive tables for submissions */
-@media (max-width: 768px) {
-  .table-responsive {
-    font-size: 14px;
-  }
-  
-  .admin-submissions-dashboard .btn-group {
-    flex-direction: column;
-    gap: 5px;
-  }
-  
-  .admin-submissions-dashboard .btn-group .btn {
-    border-radius: 4px !important;
-    margin-bottom: 5px;
-  }
-}
-
-/* Community Chat Input Styling */
-.chat-input-container .form-control {
-  background-color: #f8f9fa !important;
-  border: 1px solid #ced4da;
-  color: #212529 !important;
-  transition: all 0.2s ease;
-}
-
-.chat-input-container .form-control:focus {
-  background-color: #ffffff !important;
-  border-color: #86b7fe;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-  color: #212529 !important;
-}
-
-.chat-input-container .form-control::placeholder {
-  color: #6c757d;
-}
-
-/* Hotel Search Specific Styles - Minimal clashes */
-.hotel-search-container {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-}
-
-/* These already exist in your CSS, so they'll work perfectly */
-.bg-orange {
-  background: linear-gradient(135deg, var(--primary-orange), var(--dark-orange)) !important;
-}
-
-.btn-orange {
-  background: linear-gradient(135deg, var(--primary-orange), var(--dark-orange));
-  color: white;
-  border: none;
-  font-weight: 600;
-}
-
-.btn-orange:hover {
-  background: linear-gradient(135deg, var(--dark-orange), var(--primary-orange));
-  color: white;
-}
-
-.btn-outline-orange {
-  color: var(--primary-orange);
-  border-color: var(--primary-orange);
-}
-
-.btn-outline-orange:hover {
-  background-color: var(--primary-orange);
-  color: white;
-}
-
-/* Hotel Search Orange Theme */
-.hotel-search-container {
-  background: linear-gradient(135deg, var(--primary-orange) 0%, var(--dark-orange) 100%) !important;
-  min-height: 100vh;
-  padding: 20px 0;
-}
-
-.hotel-search-container .card {
-  border: none;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-}
-
-.hotel-search-container .card-header {
-  background: linear-gradient(135deg, var(--primary-orange), var(--dark-orange)) !important;
-  border-radius: 15px 15px 0 0 !important;
-  padding: 30px 20px;
-}
-
-.hotel-search-container .card-header h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.hotel-search-container .btn-orange {
-  background: linear-gradient(135deg, var(--primary-orange), var(--dark-orange));
-  color: white;
-  border: none;
-  font-weight: 600;
-  padding: 15px 30px;
-  border-radius: 10px;
-  transition: all 0.3s ease;
-}
-
-.hotel-search-container .btn-orange:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(255, 111, 0, 0.3);
-}
-
-.hotel-search-container .btn-outline-orange {
-  color: var(--primary-orange);
-  border: 2px solid var(--primary-orange);
-  background: transparent;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.hotel-search-container .btn-outline-orange:hover {
-  background: var(--primary-orange);
-  color: white;
-  transform: translateY(-1px);
-}
-
-/* Blog Hero Slider */
-.blog-hero-slider {
-  position: relative;
-  height: 400px;
-  overflow: hidden;
-  border-radius: 0 0 20px 20px;
-}
-
-.blog-carousel-wrapper {
-  height: 100%;
-}
-
-.blog-carousel-image {
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  transition: background-image 1s ease-in-out;
-}
-
-.blog-carousel-overlay {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  text-align: center;
-  padding: 2rem;
-}
-
-.blog-carousel-title {
-  font-size: 3rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-}
-
-.blog-carousel-text {
-  font-size: 1.2rem;
-  max-width: 600px;
-  margin-bottom: 2rem;
-}
-
-.blog-slider-indicators {
-  position: absolute;
-  bottom: 20px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-
-.blog-slider-indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.blog-slider-indicator.active {
-  background: white;
-  transform: scale(1.2);
-}
-
-/* Blog Cards */
-.blog-card {
-  transition: transform 0.3s, box-shadow 0.3s;
-  border: 1px solid #e9ecef;
-}
-
-.blog-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-}
-
-.blog-card-img-container {
-  position: relative;
-  height: 200px;
-  overflow: hidden;
-}
-
-.blog-card-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s;
-}
-
-.blog-card:hover .blog-card-img {
-  transform: scale(1.05);
-}
-
-.blog-card-badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-}
-
-.cursor-pointer {
-  cursor: pointer;
-}
-
-/* Issue 1 & 2: Summary justification and tag spacing */
-.text-justify {
-  text-align: justify !important;
-}
-
-/* Issue 2: Better tag spacing on mobile */
-@media (max-width: 768px) {
-  .blog-detail-container .badge {
-    margin-bottom: 8px !important;
-    margin-right: 8px !important;
-  }
-}
-
-/* Issue 3: Social media icons responsiveness */
-.social-share-container {
-  max-width: 100%;
-  overflow-x: auto;
-  padding-bottom: 5px;
-}
-
-.social-icon {
-  flex: 0 0 auto;
-}
-
-@media (max-width: 768px) {
-  .social-share-container {
-    justify-content: flex-start !important;
-  }
-  
-  .social-icon {
-    margin-right: 4px !important;
-    margin-bottom: 8px !important;
-  }
-}
-
-/* Issue 4: UserBlogPage Call to Action visibility */
-.blog-page-container .card.bg-light {
-  background-color: #f8f9fa !important;
-  border: 1px solid #dee2e6 !important;
-}
-
-/* Center text utility */
-.text-center {
-  text-align: center !important;
-}
-
-/* Rotate utility for arrows */
-.rotate-180 {
-  transform: rotate(180deg);
-}
-
-/* Cursor pointer utility */
-.cursor-pointer {
-  cursor: pointer !important;
-}
-
-/* Justified Text Styles */
-.justified-text-container {
-  text-align: justify;
-  text-justify: inter-word;
-  line-height: 1.8;
-  font-size: 1.1rem;
-}
-
-.justified-text-container p {
-  margin-bottom: 1.5rem;
-  text-align: justify;
-}
-
-.justified-text-container h1,
-.justified-text-container h2,
-.justified-text-container h3,
-.justified-text-container h4 {
-  margin-top: 2rem;
-  margin-bottom: 1rem;
-  color: #2c3e50;
-}
-
-.justified-text-preview {
-  text-align: justify;
-  text-justify: inter-word;
-  line-height: 1.6;
-}
-
-/* Admin Blog Dashboard Styles */
-.admin-blog-container {
-  background-color: #f8f9fa;
-  min-height: calc(100vh - 200px);
-}
-
-.admin-blog-table tbody tr {
-  transition: background-color 0.2s ease;
-}
-
-.admin-blog-table tbody tr:hover {
-  background-color: rgba(0, 123, 255, 0.05);
-}
-
-/* Spinner Animation */
-.spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* Blog Form Styles */
-.image-upload-area {
-  transition: all 0.3s ease;
-}
-
-.image-upload-area:hover {
-  background-color: #e9ecef !important;
-  border-color: #0d6efd !important;
-}
-
-/* Blog Detail Styles */
-.detail-hero-image {
-  border-radius: 10px 10px 0 0 !important;
-}
-
-.blog-content {
-  font-size: 1.1rem;
-  line-height: 1.8;
-}
-
-.blog-content img {
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.author-avatar {
-  width: 80px;
-  height: 80px;
-  background-color: #e3f2fd;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Mobile optimization for chat input */
-@media (max-width: 768px) {
-  .chat-input-container {
-    padding: 0.5rem;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 0.375rem;
-  }
-  
-  .chat-input-container .form-control {
-    font-size: 0.875rem;
-    padding: 0.5rem 0.75rem;
-  }
-}
-
-/* Notification animations */
-@keyframes slideInLeft {
-  from {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideOutLeft {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-}
-
-.slide-in-left {
-  animation: slideInLeft 0.3s ease-out;
-}
-
-.slide-out-left {
-  animation: slideOutLeft 0.3s ease-out forwards;
-}
-
-/* Mobile-specific improvements for video call */
-@media (max-width: 768px) {
-  /* Chat container improvements */
-  .chat-messages-container {
-    max-height: 150px !important;
-    min-height: 120px !important;
-  }
-  
-  /* Video call modal improvements */
-  .modal-dialog.modal-fullscreen {
-    margin: 0 !important;
-  }
-  
-  .modal-body {
-    padding: 0.5rem !important;
-  }
-  
-  /* Better button sizing on mobile */
-  .btn-group .btn {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.875rem;
-  }
-  
-  /* Improved chat input on mobile */
-  .chat-input-container {
-    padding: 0.5rem !important;
-  }
-  
-  .chat-input-container .form-control {
-    font-size: 0.875rem;
-  }
-}
-
-/* Enhanced video grid for mobile */
-@media (max-width: 576px) {
-  #video-grid-container .col-12 {
-    padding: 0.25rem !important;
-  }
-  
-  .video-player {
-    min-height: 180px !important;
-  }
-}
-
-/* Stream creation loading state */
-.creating-stream {
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-/* Permission request styling */
-.permission-request {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  color: white;
-}
-
-.permission-request:hover {
-  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-  color: white;
-}
-
-/* Agora video call specific styles */
-.video-player {
-  background: #000;
-  border-radius: 8px;
-}
-
-.video-player video {
-  border-radius: 8px;
-  object-fit: cover;
-}
-
-/* Community chat enhancements */
-.community-chat-container {
-  background: #1a1a1a;
-  border: 1px solid #333;
-}
-
-.chat-message {
-  transition: all 0.2s ease;
-}
-
-.chat-message:hover {
-  transform: translateX(2px);
-}
-
-/* Ensure menu items have proper spacing for superscript */
-.mobile-menu-item, .desktop-nav-item {
-  position: relative;
-}
-
-/* Alert Bar */
-.alert-bar {
-  position: absolute;
-  top: 10%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 90%;
-  max-width: 400px;
-  padding: 12px 20px;
-  border-radius: 8px;
-  text-align: center;
-  font-weight: bold;
-  font-size: 16px;
-  color: #333;
-  z-index: 1000;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  animation: fadeIn 0.5s ease-in-out;
-}
-
-.alert-bar.success {
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
-  color: #155724;
-}
-
-.alert-bar.error {
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  color: #721c24;
-}
-
-/* Quiz Platform Styles */
-.quiz-platform {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  padding: 2rem 0;
-}
-
-.quiz-option {
-  padding: 1rem 1.5rem;
-  margin-bottom: 0.75rem;
-  border: 2px solid #e9ecef;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: white;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.quiz-option:hover {
-  border-color: #ff6f00;
-  background-color: #f8f9fa;
-  transform: translateX(5px);
-}
-
-.quiz-option.correct {
-  border-color: #28a745;
-  background-color: #d4edda;
-}
-
-.quiz-option.incorrect {
-  border-color: #dc3545;
-  background-color: #f8d7da;
-}
-
-.option-letter {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  background: #ff6f00;
-  color: white;
-  border-radius: 50%;
-  font-weight: bold;
-}
-
-/* Full Course Content */
-.full-course-container {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  min-height: 100vh;
-  padding: 2rem 0;
-}
-
-.section-card {
-  border-radius: 20px;
-  overflow: hidden;
-  background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
-  border: 1px solid rgba(255, 111, 0, 0.1);
-}
-
-/* Image Slider */
-.image-slider-container {
-  margin-top: 2rem;
-}
-
-.slider-wrapper {
-  position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-.slider-inner {
-  height: 300px;
-  position: relative;
-}
-
-.slider-image {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  opacity: 0;
-  transition: opacity 1s ease-in-out;
-}
-
-.slider-image.active {
-  opacity: 1;
-}
-
-.slider-dots {
-  position: absolute;
-  bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 0.5rem;
-}
-
-/* Progress bars */
-.progress {
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.progress-bar {
-  background-color: #ff6f00;
-  transition: width 0.5s ease-in-out;
-}
-
-/* Success message animation */
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes fadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-/* Animation for quiz elements */
-@keyframes slideIn {
-  from { transform: translateY(-10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.feedback-card {
-  animation: slideIn 0.5s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-
-/* Theme compatibility */
-.text-primary {
-  color: #ff6f00 !important;
-}
-
-.bg-primary {
-  background-color: #ff6f00 !important;
-}
-
-.border-primary {
-  border-color: #ff6f00 !important;
-}
-
-/* ============================================
-   NEWSLETTER SUCCESS MODAL ANIMATION
-   ============================================ */
-
-/* Newsletter Success Modal Animation - Added with unique classes to avoid conflicts */
-.newsletter-success-modal .modal-content {
-  animation: bounceIn 0.5s ease-out;
-  border: none;
-  border-radius: 15px;
-  overflow: hidden;
-}
-
-.newsletter-success-modal .success-icon-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-}
-
-.newsletter-success-modal .success-icon-circle {
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, #28a745, #20c997);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: pulse 2s infinite;
-}
-
-/* Bounce In Animation for newsletter modal */
-@keyframes bounceIn {
-  0% {
-    transform: scale(0.3);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 1;
-  }
-  70% {
-    transform: scale(0.9);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-/* Pulse Animation for newsletter success icon */
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 15px rgba(40, 167, 69, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
-  }
-}
-
-/* Copy notification animation - Already exists above, but ensuring it's unique */
-.copy-notification-animation {
-  animation: slideInRight 0.3s ease-out, fadeOut 0.3s ease-out 3.7s;
-}
-
-/* ============================================
-   END NEWSLETTER ANIMATIONS
-   ============================================ */
-
-/* --- Responsive Design --- */
-@media (max-width: 768px) {
-  .desktop-nav {
-    display: none !important;
-  }
-  
-  .header-logo-container {
-    margin: 0 auto;
-    padding: 0 10px;
-    justify-content: center;
-    margin-left: 0;
-  }
-  
-  .header-right-spacer {
-    width: 48px;
-  }
-  
-  .app-header {
-    padding: 0.5rem;
-    min-height: 60px;
-    align-items: center;
-    justify-content: space-between;
-  }
-  
-  .hamburger-menu-icon {
-    margin-right: 0;
-    order: 2;
-  }
-  
-  .header-logo-container {
-    order: 1;
-    margin-left: 0;
-  }
-  
-  .app-footer {
-    position: relative;
-    margin-top: auto;
-  }
-  
-  .home-page-container {
-    min-height: calc(100vh - 120px);
-  }
-  
-  .quiz-platform {
-    padding: 1rem 0;
-  }
-  
-  .quiz-option {
-    padding: 0.75rem 1rem;
-    font-size: 0.9rem;
-  }
-  
-  .full-course-container {
-    padding: 1rem 0;
-  }
-  
-  .header-logo {
-    height: 40px;
-    max-width: 140px;
-  }
-  
-  /* Blog Responsive Adjustments */
-  .justified-text-container {
-    font-size: 1rem;
-    line-height: 1.6;
-  }
-  
-  .admin-blog-table td, 
-  .admin-blog-table th {
-    padding: 0.5rem;
-    font-size: 0.9rem;
-  }
-  
-  .stats-icon {
-    width: 50px;
-    height: 50px;
-  }
-  
-  /* Newsletter modal on mobile */
-  .newsletter-success-modal .modal-dialog {
-    margin: 1rem;
-  }
-  
-  .newsletter-success-modal .success-icon-circle {
-    width: 60px;
-    height: 60px;
-  }
-  
-  /* Mobile splash adjustments */
-  .carousel-overlay {
-    padding-bottom: 7rem;
-  }
-}
-
-@media (min-width: 769px) {
-  .hamburger-menu-icon {
-    display: none !important;
-  }
-  
-  .desktop-nav {
-    display: flex;
-  }
-  
-  .mobile-dropdown-menu {
-    display: none !important;
-  }
-  
-  .app-header {
-    padding: 0.5rem 1.5rem;
-  }
-  
-  .hero-slider-section.homepage-slider {
-    height: 350px;
-  }
-}
-
-/* Responsive fixes for medium screens */
-@media (max-width: 1024px) {
-  .desktop-nav {
-    max-width: calc(100vw - 250px);
-    gap: 4px;
-    margin: 0 0.25rem;
-  }
-  
-  .desktop-nav-item {
-    font-size: 0.8rem;
-    padding: 0.3rem 0.6rem;
-  }
-  
-  .header-logo-container {
-    min-width: 120px;
-    margin-left: 0.25rem;
-  }
-  
-  .hamburger-menu-icon {
-    margin-right: 0.25rem;
-  }
-  
-  .header-logo {
-    height: 45px;
-    max-width: 160px;
-  }
-}
-
-@media (min-width: 640px) {
-  .carousel-text {
-    font-size: 1.5rem;
-    max-width: 80%;
-  }
-  
-  /* Adjust splash button for tablet */
-  .splash-button {
-    font-size: 1.1rem;
-    padding: 0.85rem 2.5rem;
-    min-width: 200px;
-    max-width: 220px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .carousel-text {
-    font-size: 1.75rem;
-    max-width: 70%;
-  }
-
-  .hero-content {
-    bottom: 40px;
-    left: 40px;
-  }
-
-  .hero-subtitle {
-    font-size: 1.5rem;
-  }
-  
-  /* Desktop splash adjustments */
-  .splash-button {
-    font-size: 1.2rem;
-    padding: 1rem 3rem;
-    min-width: 220px;
-    max-width: 240px;
-  }
-}
-
-/* For very large screens */
-@media (min-width: 1440px) {
-  .desktop-nav {
-    max-width: calc(100vw - 400px);
-    margin: 0 1rem;
-  }
-  
-  .header-logo-container {
-    margin-left: 1rem;
-  }
-  
-  .hamburger-menu-icon {
-    margin-right: 1rem;
-  }
-}
-
-/* Ensure body doesn't have horizontal scroll */
-body {
-  overflow-x: hidden;
-  width: 100%;
-}
-
-/* Print Styles for Blog */
-@media print {
-  .blog-detail-container .btn,
-  .blog-detail-container .card-header,
-  .blog-detail-container .breadcrumb,
-  .blog-detail-container .col-lg-4 {
-    display: none !important;
-  }
-  
-  .blog-detail-container .col-lg-8 {
-    width: 100% !important;
-    max-width: 100% !important;
-    flex: 0 0 100% !important;
-  }
-  
-  .justified-text-container {
-    font-size: 12pt !important;
-    line-height: 1.5 !important;
-  }
-}
-
-/* Submissions Dashboard Specific */
-.user-submissions-dashboard,
-.admin-submissions-dashboard {
-  background-color: #f8f9fa;
-  min-height: calc(100vh - 200px);
-}
-
-.empty-state-icon {
-  color: #6c757d;
-  opacity: 0.5;
-}
-
-/* Animation keyframes - consolidated to avoid duplicates */
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-/* Additional animation for nav-superscript */
-.nav-superscript {
-  animation: pulse 2s infinite;
-}
-
-/* END OF FILE */
+// travel-tour-frontend/src/App.jsx - UPDATED WITH BUSINESS COURSE, GOOGLE OAUTH & APP REVIEWS
+import React, { useState, useEffect } from 'react';
+import { TransitionGroup, CSSTransition } from 'react-transition-group';
+import { jwtDecode } from 'jwt-decode';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import { GoogleAuthProvider } from './context/GoogleAuthContext';
+import api from './services/api';
+import blogApi from './services/blogApi';
+
+// --- Core Components ---
+import LoginRegister from './LoginRegister';
+import ContactUs from './components/ContactUs';
+
+// --- Course & Quiz Components ---
+import DestinationsPage from './destinations/DestinationsPage';
+import DestinationOverview from './destinations/DestinationOverview';
+import FullCourseContent from './destinations/FullCourseContent';
+import QuizPlatform from './components/QuizPlatform';
+import QuizScores from './components/QuizScores';
+import GeneralCourses from './components/GeneralCourses';
+import MasterclassCourses from './components/MasterclassCourses';
+import CourseAndRemarks from './components/CourseAndRemarks';
+import GeneralCourseQuestions from './components/GeneralCourseQuestions';
+import MasterclassCourseQuestions from './components/MasterclassCourseQuestions';
+import QuizAttempt from './components/QuizAttempt';
+
+// --- Admin Components ---
+import AdminQuizCompleted from './components/AdminQuizCompleted';
+import AdminCourseCompleted from './components/AdminCourseCompleted';
+import MessageFromStudents from './components/MessageFromStudents';
+import MessageFromAdmin from './components/MessageFromAdmin';
+import AdminStudents from './components/AdminStudents';
+import AdminMessageStudents from './components/AdminMessageStudents';
+import AdminManageCourses from './components/AdminManageCourses';
+
+// --- Video Components ---
+import VideoCourses from './components/VideoCourses';
+import MasterclassVideos from './components/MasterclassVideos';
+import AdminVideoCourses from './components/AdminVideoCourses';
+
+// --- Community Components ---
+import AdminCommunityTab from './components/AdminCommunityTab';
+import UserCommunityTab from './components/UserCommunityTab';
+
+// --- Hotel Components ---
+import HotelSearchHome from './components/hotel-search/HomePage';
+import HotelSearchResults from './components/hotel-search/SearchResultsPage';
+import HotelDetailPage from './components/hotel-search/HotelDetailPage';
+
+// --- Experiences Components ---
+import ExperiencesPage from './components/experiences/ExperiencesPage';
+
+// --- Blog Components ---
+import AdminBlogPage from './components/blog/AdminBlogPage';
+import AdminCreateEditBlog from './components/blog/AdminCreateEditBlog';
+import UserBlogPage from './components/blog/UserBlogPage';
+import SingleBlogDetail from './components/blog/SingleBlogDetail';
+
+// --- Contact and Submission Components ---
+import ContactForm from './components/blog/ContactForm';
+import AdminSubmissionsDashboard from './components/blog/AdminSubmissionsDashboard';
+import UserSubmissionsDashboard from './components/blog/UserSubmissionsDashboard';
+
+// --- Bookmarks Component ---
+import MyBookmarksPage from './components/blog/MyBookmarksPage';
+
+// --- NEW: Business Course Component ---
+import BusinessCourse from './components/BusinessCourse';
+
+// --- NEW: Share & Rate Components ---
+import ShareAndRatePage from './components/share-rate/ShareAndRatePage';
+import RateAppStore from './components/share-rate/RateAppStore';
+import ReviewConfirmation from './components/share-rate/ReviewConfirmation';
+
+// --- NEW: App Reviews Components ---
+import AppReviewsList from './components/share-rate/AppReviewsList';
+import AdminReviewApproval from './components/share-rate/AdminReviewApproval';
+
+import './App.css';
+
+// Reusable Slider Component
+export const HeroSlider = ({ images, texts, staticTitle, onLastSlide, onNextClick, isHomepage = false }) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+        }, 4000);
+        return () => clearInterval(timer);
+    }, [images.length]);
+
+    const handleNextClickInternal = () => {
+        if (currentIndex === images.length - 1) {
+            if (onNextClick) {
+                onNextClick();
+            }
+        } else {
+            setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+        }
+    };
+
+    return (
+        <div className={`hero-slider-section ${isHomepage ? 'homepage-slider' : ''}`}>
+            <TransitionGroup className="carousel-wrapper">
+                <CSSTransition
+                    key={currentIndex}
+                    timeout={1000}
+                    classNames="slide-bg"
+                >
+                    <div
+                        className="carousel-image"
+                        style={{ backgroundImage: `url(${images[currentIndex]})` }}
+                    >
+                        <div className="carousel-overlay">
+                            <p className="carousel-text">{texts[currentIndex]}</p>
+                            {staticTitle && (
+                                <h2 className="carousel-title">{staticTitle}</h2>
+                            )}
+                        </div>
+                    </div>
+                </CSSTransition>
+            </TransitionGroup>
+            {onLastSlide && (
+                <div className="splash-controls">
+                    <div className="splash-indicators">
+                        {images.map((_, index) => (
+                            <span
+                                key={index}
+                                className={`splash-indicator ${
+                                    currentIndex === index ? 'active' : ''
+                                }`}
+                            ></span>
+                        ))}
+                    </div>
+                    <button
+                        onClick={handleNextClickInternal}
+                        className="splash-button primary-button"
+                    >
+                        {currentIndex === images.length - 1 ? 'START' : 'NEXT'}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const splashImages = [
+    "/images/travelling_and_tour_1.jpg",
+    "/images/travelling_and_tour_2.jpg",
+    "/images/travelling_and_tour_3.jpg",
+    "/images/travelling_and_tour_4.jpg",
+    "/images/travelling_and_tour_5.jpg"
+];
+
+const splashTexts = [
+    "Variety of learning modules among destinations, sightseeing attractions, business skills and much more",
+    "FREE LIVE Trainings organized by industry experts, from the comfort of your office/ home.",
+    "Audio-Visual tutorials and introductory videos will make your learning experience par excellence",
+    "Explore personalized learning paths designed to fit your unique travel and tourism career goals.",
+    "Connect with a vibrant community of travel enthusiasts and industry professionals."
+];
+
+const App = () => {
+    const [showSplash, setShowSplash] = useState(true);
+    const [showMenu, setShowMenu] = useState(false);
+    const [currentPage, setCurrentPage] = useState('home');
+    const [blogPostId, setBlogPostId] = useState(null); 
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [userRole, setUserRole] = useState('');
+    const [userData, setUserData] = useState(null);
+    const [authToken, setAuthToken] = useState(null);
+    const [alert, setAlert] = useState({ type: '', message: '' });
+    const [selectedCourse, setSelectedCourse] = useState(null);
+    const [hotelSearchCriteria, setHotelSearchCriteria] = useState({});
+    const [currentHotelDetail, setCurrentHotelDetail] = useState(null);
+    
+    // NEW: Add state for Share & Rate navigation data
+    const [shareRateData, setShareRateData] = useState({
+        storeId: null,
+        reviewData: null
+    });
+    
+    const [notificationCounts, setNotificationCounts] = useState({
+        quizScores: 0,
+        courseRemarks: 0,
+        generalCourses: 0,
+        masterclassCourses: 0,
+        importantInfo: 0,
+        adminMessages: 0,
+        quizCompleted: 0,
+        courseCompleted: 0,
+        manageCourses: 0,
+        messagesFromStudents: 0,
+        videoCourses: 0,
+        generalVideos: 0,
+        masterclassVideos: 0,
+        adminSubmissions: 0,
+        userSubmissions: 0
+    });
+
+    // Add Google Auth event listener
+    useEffect(() => {
+        const handleGoogleLoginSuccess = (event) => {
+            const { user, token } = event.detail;
+            setIsLoggedIn(true);
+            setUserRole(user.role);
+            setUserData(user);
+            setAuthToken(token);
+            
+            // Fetch notifications
+            fetchNotificationCounts();
+            
+            // Redirect based on role
+            if (user.role === 'admin') {
+                setCurrentPage('admin-students');
+            } else {
+                setCurrentPage('home');
+            }
+        };
+
+        window.addEventListener('googleLoginSuccess', handleGoogleLoginSuccess);
+        
+        return () => {
+            window.removeEventListener('googleLoginSuccess', handleGoogleLoginSuccess);
+        };
+    }, []);
+
+    const validateToken = (token) => {
+        try {
+            const decoded = jwtDecode(token);
+            if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
+                return null;
+            }
+            return decoded;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    const fetchSubmissionCounts = async () => {
+        if (!isLoggedIn || !userData) return;
+        
+        try {
+            if (userRole === 'admin') {
+                const response = await blogApi.get('/submissions/admin/unread-count');
+                if (response.data.success) {
+                    setNotificationCounts(prev => ({
+                        ...prev,
+                        adminSubmissions: response.data.count || 0
+                    }));
+                }
+            } else if (userRole === 'student') {
+                const response = await blogApi.get(`/submissions/user/${userData.email}/unread-count`);
+                if (response.data.success) {
+                    setNotificationCounts(prev => ({
+                        ...prev,
+                        userSubmissions: response.data.count || 0
+                    }));
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching submission counts:', error);
+        }
+    };
+
+    const fetchNotificationCounts = async () => {
+        if (!isLoggedIn || !userData) return;
+        
+        try {
+            const response = await api.get('/courses/notification-counts');
+            
+            if (response.data.success) {
+                const clearedNotifications = JSON.parse(localStorage.getItem('clearedNotifications') || '{}');
+                const currentTime = Date.now();
+                const oneHour = 60 * 60 * 1000;
+                
+                const updatedCounts = { ...response.data.counts };
+
+                try {
+                    const videoCountsResponse = await api.get('/videos/count');
+                    if (videoCountsResponse.data.success) {
+                        updatedCounts.generalVideos = videoCountsResponse.data.generalVideos || 0;
+                        updatedCounts.masterclassVideos = videoCountsResponse.data.masterclassVideos || 0;
+                        updatedCounts.videoCourses = updatedCounts.generalVideos + updatedCounts.masterclassVideos;
+                    }
+                } catch (videoError) {
+                    console.error('Error fetching video counts:', videoError);
+                    updatedCounts.videoCourses = 0;
+                }
+
+                if (userRole === 'student') {
+                    try {
+                        updatedCounts.generalCourses = response.data.generalCourses || 0;
+                        updatedCounts.masterclassCourses = response.data.masterclassCourses || 0;
+                        
+                        const messagesResponse = await api.get('/notifications/admin-messages/' + userData.id);
+                        if (messagesResponse.data.success) {
+                            updatedCounts.adminMessages = messagesResponse.data.unreadCount || 0;
+                        }
+                    } catch (courseError) {
+                        console.error('Error fetching course notifications:', courseError);
+                        updatedCounts.generalCourses = 0;
+                        updatedCounts.masterclassCourses = 0;
+                        updatedCounts.adminMessages = 0;
+                    }
+                }
+
+                if (userRole === 'admin') {
+                    try {
+                        const messagesResponse = await api.get('/admin/messages/count');
+                        if (messagesResponse.data.success) {
+                            updatedCounts.messagesFromStudents = messagesResponse.data.unreadCount || 0;
+                        }
+                    } catch (error) {
+                        console.error('Error fetching admin message count:', error);
+                        updatedCounts.messagesFromStudents = 0;
+                    }
+                }
+                
+                Object.keys(clearedNotifications).forEach(key => {
+                    if (currentTime - clearedNotifications[key] < oneHour) {
+                        updatedCounts[key] = 0;
+                    }
+                });
+                
+                setNotificationCounts(prev => ({
+                    ...prev,
+                    ...updatedCounts
+                }));
+                
+                fetchSubmissionCounts();
+            }
+        } catch (error) {
+            console.error('Error fetching notification counts:', error);
+            setNotificationCounts({
+                quizScores: 0, courseRemarks: 0, generalCourses: 0, masterclassCourses: 0,
+                importantInfo: 0, adminMessages: 0, quizCompleted: 0, courseCompleted: 0,
+                messagesFromStudents: 0, videoCourses: 0, generalVideos: 0, masterclassVideos: 0,
+                adminSubmissions: 0, userSubmissions: 0
+            });
+        }
+    };
+
+    const clearNotification = (notificationType) => {
+        setNotificationCounts(prev => ({
+            ...prev,
+            [notificationType]: 0
+        }));
+        
+        const clearedNotifications = JSON.parse(localStorage.getItem('clearedNotifications') || '{}');
+        clearedNotifications[notificationType] = Date.now();
+        localStorage.setItem('clearedNotifications', JSON.stringify(clearedNotifications));
+    };
+
+    const markNotificationsAsRead = async (notificationType) => {
+        try {
+            if (notificationType === 'quizScores' && userData) {
+                await api.put('/notifications/mark-read', { 
+                    type: 'quiz_completed',
+                    userId: userData.name || userData.userName || userData.email
+                });
+            } else if (notificationType === 'quizCompleted' && userRole === 'admin') {
+                await api.put('/quiz/results/mark-read-admin');
+                fetchNotificationCounts();
+            } else if (notificationType === 'adminMessages' && userRole === 'student') {
+                await api.put('/notifications/mark-admin-messages-read');
+            } else if (notificationType === 'messagesFromStudents' && userRole === 'admin') {
+                await api.put('/notifications/mark-admin-messages-read');
+            } else if (notificationType === 'adminSubmissions' && userRole === 'admin') {
+                console.log('Marking admin submissions as read');
+            } else if (notificationType === 'userSubmissions' && userRole === 'student') {
+                console.log('Marking user submissions as read');
+            }
+        } catch (error) {
+            console.error('Error marking notifications as read:', error);
+        }
+    };
+
+    const handleMenuClick = (item) => {
+        console.log('🔄 Menu clicked:', item.name);
+        
+        if (item.notificationKey && item.notification > 0) {
+            clearNotification(item.notificationKey);
+            markNotificationsAsRead(item.notificationKey);
+        }
+        
+        if (item.action) {
+            item.action();
+        }
+    };
+
+    useEffect(() => {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            const decoded = validateToken(token);
+            if (decoded) {
+                setIsLoggedIn(true);
+                setUserRole(decoded.role);
+                setUserData(decoded);
+                setShowSplash(false);
+                fetchNotificationCounts();
+                
+                if (decoded.role === 'admin') {
+                    setCurrentPage('admin-students');
+                } else {
+                    setCurrentPage('home');
+                }
+            } else {
+                localStorage.removeItem('authToken');
+                setShowSplash(true);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        let interval;
+        if (isLoggedIn) {
+            fetchNotificationCounts();
+            interval = setInterval(fetchNotificationCounts, 30000);
+        }
+        return () => clearInterval(interval);
+    }, [isLoggedIn, userData, userRole]);
+
+    useEffect(() => {
+        const handleVideoCountsUpdate = () => {
+            fetchNotificationCounts();
+        };
+
+        window.addEventListener('videoCountsUpdated', handleVideoCountsUpdate);
+        
+        return () => {
+            window.removeEventListener('videoCountsUpdated', handleVideoCountsUpdate);
+        };
+    }, []);
+
+    const handleStartClick = () => {
+        setShowSplash(false);
+    };
+
+    const handleSkipClick = () => {
+        setShowSplash(false);
+    };
+
+    const handleLogin = async (email, password) => {
+        try {
+            const response = await api.post('/auth/login', { email, password });
+            
+            if (response.data.success) {
+                const { token, user } = response.data;
+                
+                localStorage.setItem('authToken', token);
+                localStorage.setItem('userData', JSON.stringify(user));
+                setAuthToken(token);
+                setUserData(user);
+
+                setAlert({ type: 'success', message: 'Login successful! Redirecting...' });
+                
+                setTimeout(() => {
+                    setIsLoggedIn(true);
+                    setUserRole(user.role);
+                    fetchNotificationCounts();
+                    
+                    if (user.role === 'admin') {
+                        setCurrentPage('admin-students');
+                    } else {
+                        setCurrentPage('home');
+                    }
+                    setAlert({ type: '', message: '' });
+                }, 2000);
+
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            setAlert({ type: 'error', message: 'Login failed. Please check your credentials.' });
+            setTimeout(() => setAlert({ type: '', message: '' }), 5000);
+        }
+    };
+
+    const handleRegister = async (userData) => {
+        try {
+            const response = await api.post('/auth/register', userData);
+            
+            if (response.data.success) {
+                const { token, user } = response.data;
+                
+                localStorage.setItem('authToken', token);
+                localStorage.setItem('userData', JSON.stringify(user));
+                setAuthToken(token);
+                setUserData(user);
+
+                setAlert({ type: 'success', message: 'Registration successful! Redirecting...' });
+                
+                setTimeout(() => {
+                    setIsLoggedIn(true);
+                    setUserRole(user.role);
+                    fetchNotificationCounts();
+                    
+                    if (user.role === 'admin') {
+                        setCurrentPage('admin-students');
+                    } else {
+                        setCurrentPage('home');
+                    }
+                    setAlert({ type: '', message: '' });
+                }, 2000);
+
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            setAlert({ type: 'error', message: 'Registration failed. Please try again.' });
+            setTimeout(() => setAlert({ type: '', message: '' }), 5000);
+        }
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        setAuthToken(null);
+        setUserData(null);
+        setIsLoggedIn(false);
+        setUserRole('');
+        setCurrentPage('home');
+        setShowMenu(false);
+        setShowSplash(true); 
+    };
+
+    const handleSelectDestination = async (destinationId) => {
+        console.log('📍 Selecting destination:', destinationId);
+        setCurrentPage('loading');
+        
+        try {
+            const response = await api.get(`/courses/destination/${destinationId}`);
+            
+            if (response.data.success && response.data.course) {
+                console.log('✅ Course found via destination route:', response.data.course.name);
+                setSelectedCourse(response.data.course);
+                setCurrentPage('destination-overview');
+            } else {
+                console.log('❌ Course not found in response');
+                setAlert({ type: 'error', message: 'Could not find course details.' });
+                setCurrentPage('destinations');
+            }
+        } catch (error) {
+            console.error('❌ Error with destination route, trying fallback:', error);
+            
+            try {
+                const fallbackResponse = await api.get(`/courses/${destinationId}`);
+                
+                if (fallbackResponse.data.success && fallbackResponse.data.course) {
+                    console.log('✅ Course found via fallback route:', fallbackResponse.data.course.name);
+                    setSelectedCourse(fallbackResponse.data.course);
+                    setCurrentPage('destination-overview');
+                } else {
+                    throw new Error('Course not found in fallback response');
+                }
+            } catch (fallbackError) {
+                console.error('❌ Both routes failed:', fallbackError);
+                
+                if (fallbackError.response?.status === 404) {
+                    setAlert({ type: 'error', message: `Course "${destinationId}" not found. Please try another destination.` });
+                } else if (fallbackError.response?.status === 500) {
+                    setAlert({ type: 'error', message: 'Server error while fetching course. Please try again.' });
+                } else {
+                    setAlert({ type: 'error', message: 'Failed to fetch course data. Please check your connection.' });
+                }
+                
+                setCurrentPage('destinations');
+            }
+        }
+    };
+
+    const handleStartCourse = () => {
+        if (selectedCourse) {
+            console.log('🚀 Starting course:', selectedCourse.name);
+            setCurrentPage('full-course-content');
+        } else {
+            console.error('❌ No course selected to start');
+            setAlert({ type: 'error', message: 'No course selected. Please select a course first.' });
+            setCurrentPage('destinations');
+        }
+    };
+
+    const handleQuizComplete = () => {
+        setCurrentPage('quiz-scores');
+    };
+
+    const handleTakeQuiz = () => {
+        setCurrentPage('quiz-platform');
+    };
+
+    const toggleMenu = () => {
+        setShowMenu(!showMenu);
+    };
+
+    const navigateTo = (page, data = null) => {
+        console.log('📍 Navigating to:', page, data);
+        
+        // Handle Share & Rate pages
+        if (page === 'rate-app-store' && data?.storeId) {
+            setShareRateData({
+                storeId: data.storeId,
+                reviewData: null
+            });
+            setBlogPostId(null);
+            setCurrentHotelDetail(null);
+        } 
+        else if (page === 'review-confirmation' && data) {
+            setShareRateData(prev => ({
+                ...prev,
+                reviewData: data
+            }));
+            setBlogPostId(null);
+            setCurrentHotelDetail(null);
+        }
+        else if (page === 'rate-share') {
+            // Reset share rate data when going back to main page
+            setShareRateData({
+                storeId: null,
+                reviewData: null
+            });
+            setBlogPostId(null);
+            setCurrentHotelDetail(null);
+        }
+        else if (page === 'hotel-details' && data?.hotelId) {
+            setCurrentHotelDetail(data); 
+            setBlogPostId(null);
+            setShareRateData({ storeId: null, reviewData: null });
+        } 
+        else if (page === 'blog-detail' && data?.postId) {
+            setBlogPostId(data.postId); 
+            setCurrentHotelDetail(null);
+            setShareRateData({ storeId: null, reviewData: null });
+        }
+        else if (page === 'admin-edit-post' && data?.postId) {
+            setBlogPostId(data.postId); 
+            setCurrentHotelDetail(null);
+            setShareRateData({ storeId: null, reviewData: null });
+        }
+        else {
+            // For all other pages, clear all navigation data
+            setCurrentHotelDetail(null);
+            setBlogPostId(null);
+            setShareRateData({ storeId: null, reviewData: null });
+        }
+        
+        setCurrentPage(page);
+        setShowMenu(false);
+    };
+
+    const handleHotelSearch = (searchCriteria) => {
+        console.log('🏨 Hotel search criteria:', searchCriteria);
+        setHotelSearchCriteria(searchCriteria); 
+        setCurrentPage('hotel-search-results');
+    };
+
+    const renderNotificationBadge = (count) => {
+        if (count > 0) {
+            return (
+                <span className="notification-badge">
+                    {count > 99 ? '99+' : count}
+                </span>
+            );
+        }
+        return null;
+    };
+
+    // UPDATED: Added "App Reviews" to user menu and "Review Moderation" to admin menu
+    const userMenuItems = [
+        { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
+        { name: "Business Course", icon: "fas fa-briefcase", action: () => navigateTo('business-course') },
+        { name: "Hotels", icon: "fas fa-hotel", action: () => navigateTo('hotel-search') },
+        { name: "Blog", icon: "fas fa-newspaper", action: () => navigateTo('blog-list-page') }, 
+        { 
+            name: "Jobs and Experiences", icon: "fas fa-briefcase",
+            action: () => navigateTo('experiences')
+        },
+        { 
+            name: "My Submissions", icon: "fas fa-envelope",
+            notificationKey: 'userSubmissions', notification: notificationCounts.userSubmissions,
+            action: () => navigateTo('user-submissions')
+        },
+        { 
+            name: "Quiz and Score", icon: "fa-solid fa-chart-line",
+            notificationKey: 'quizScores', notification: notificationCounts.quizScores,
+            action: () => navigateTo('quiz-scores')
+        },
+        { 
+            name: "Course and Remarks", icon: "fa-solid fa-graduation-cap",
+            notificationKey: 'courseRemarks', notification: notificationCounts.courseRemarks,
+            action: () => navigateTo('course-remarks')
+        },
+        { 
+            name: "General Courses", icon: "fa-solid fa-book",
+            notificationKey: 'generalCourses', notification: notificationCounts.generalCourses,
+            action: () => navigateTo('general-courses')
+        },
+        { 
+            name: "Masterclass Courses", icon: "fa-solid fa-crown",
+            notificationKey: 'masterclassCourses', notification: notificationCounts.masterclassCourses,
+            action: () => navigateTo('masterclass-courses')
+        },
+        { 
+            name: "Video Courses", icon: "fas fa-video",
+            notificationKey: 'videoCourses', notification: notificationCounts.videoCourses,
+            action: () => navigateTo('video-courses')
+        },
+        { 
+            name: "Important Information", icon: "fa-solid fa-info-circle",
+            notificationKey: 'importantInfo', notification: notificationCounts.importantInfo,
+            action: () => navigateTo('important-information')
+        },
+        { 
+            name: "Message from Admin", icon: "fa-solid fa-envelope",
+            notificationKey: 'adminMessages', notification: notificationCounts.adminMessages,
+            action: () => navigateTo('admin-messages')
+        },
+        { name: "Contact Us", icon: "fa-solid fa-phone", action: () => navigateTo('contact-us') },
+        { name: "Community", icon: "fa-solid fa-users", action: () => navigateTo('community') },
+        { name: "Rate and Share our App", icon: "fa-solid fa-share-alt", action: () => navigateTo('rate-share') },
+        // NEW: App Reviews menu item
+        { 
+            name: "App Reviews", 
+            icon: "fas fa-star", 
+            action: () => navigateTo('app-reviews') 
+        },
+        { name: "Logout", icon: "fa-solid fa-sign-out-alt", action: handleLogout },
+    ];
+
+    const adminMenuItems = [
+        { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
+        { name: "Hotels", icon: "fas fa-hotel", action: () => navigateTo('hotel-search') },
+        { name: "Blog Management", icon: "fas fa-newspaper", action: () => navigateTo('admin-blog-dashboard') }, 
+        { 
+            name: "Submissions", icon: "fas fa-envelope",
+            notificationKey: 'adminSubmissions', notification: notificationCounts.adminSubmissions,
+            action: () => navigateTo('admin-submissions-dashboard')
+        },
+        { name: "Registered Students", icon: "fa-solid fa-user-graduate", action: () => navigateTo('admin-students') },
+        { name: "Message your Students", icon: "fa-solid fa-comments", action: () => navigateTo('admin-message-students') },
+        { 
+            name: "Messages from Students", icon: "fa-solid fa-inbox",
+            notificationKey: 'messagesFromStudents', notification: notificationCounts.messagesFromStudents,
+            action: () => navigateTo('admin-messages-from-students')
+        },
+        { 
+            name: "Quiz Completed", icon: "fa-solid fa-tasks",
+            notificationKey: 'quizCompleted', notification: notificationCounts.quizCompleted,
+            action: () => navigateTo('admin-quiz-completed')
+        },
+        { 
+            name: "Course Completed", icon: "fa-solid fa-certificate",
+            notificationKey: 'courseCompleted', notification: notificationCounts.courseCompleted,
+            action: () => navigateTo('admin-course-completed')
+        },
+        { 
+            name: "Manage my Courses", icon: "fa-solid fa-cog",
+            notificationKey: 'manageCourses', notification: notificationCounts.manageCourses,
+            action: () => navigateTo('admin-manage-courses')
+        },
+        { 
+            name: "Video Courses", icon: "fas fa-video",
+            notificationKey: 'videoCourses', notification: notificationCounts.videoCourses,
+            action: () => navigateTo('admin-video-courses')
+        },
+        { name: "Send Information", icon: "fa-solid fa-bullhorn", action: () => navigateTo('admin-send-information') },
+        { name: "Community", icon: "fa-solid fa-users", action: () => navigateTo('admin-community') },
+        // NEW: Review Moderation menu item
+        { 
+            name: "Review Moderation", 
+            icon: "fas fa-check-circle", 
+            action: () => navigateTo('review-moderation') 
+        },
+        { name: "Logout", icon: "fa-solid fa-sign-out-alt", action: handleLogout },
+    ];
+
+    const getMenuItems = () => {
+        if (userRole === 'admin') {
+            return adminMenuItems;
+        }
+        return userMenuItems;
+    };
+
+    const HomePage = () => {
+        return (
+            <div className="home-page-container">
+                <div className="homepage-hero">
+                    <HeroSlider
+                        images={splashImages}
+                        texts={splashTexts}
+                        staticTitle="The Conclave Academy"
+                        isHomepage={true}
+                    />
+                    <div className="hero-content">
+                        <h2 className="hero-subtitle"></h2>
+                        <button className="hero-cta-button">
+                            Get Certified Today!
+                        </button>
+                    </div>
+                </div>
+                
+                <div className="navigation-grid-container">
+                    <div className="container-fluid">
+                        <div className="row g-2">
+                            <div className="col-4">
+                                <div className="nav-grid-item" onClick={() => navigateTo('destinations')}>
+                                    <i className="fas fa-umbrella-beach nav-icon"></i>
+                                    <span className="nav-text">Destinations</span>
+                                </div>
+                            </div>
+                            <div className="col-4">
+                                <div className="nav-grid-item" onClick={() => navigateTo('hotel-search')}>
+                                    <i className="fas fa-hotel nav-icon"></i>
+                                    <span className="nav-text">Hotels</span>
+                                    {userRole === 'admin' && <i className="fas fa-crown admin-icon"></i>}
+                                </div>
+                            </div>
+                            <div className="col-4">
+                                <div 
+                                    className="nav-grid-item" 
+                                    onClick={() => navigateTo('experiences')}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <i className="fas fa-briefcase nav-icon"></i>
+                                    <span className="nav-text">Jobs and Experiences</span>
+                                </div>
+                            </div>
+                            <div className="col-4">
+                                <div 
+                                    className="nav-grid-item" 
+                                    onClick={() => navigateTo('business-course')}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <i className="fas fa-briefcase nav-icon"></i>
+                                    <span className="nav-text">Business Course</span>
+                                </div>
+                            </div>
+                            <div className="col-4">
+                                <div className="nav-grid-item" onClick={() => navigateTo('blog-list-page')}>
+                                    <i className="fas fa-newspaper nav-icon"></i>
+                                    <span className="nav-text">Blog</span>
+                                </div>
+                            </div>
+                            <div className="col-4">
+                                <div className="nav-grid-item" onClick={() => navigateTo('community')}>
+                                    <i className="fas fa-video nav-icon"></i>
+                                    <span className="nav-text">Online Webinar</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <section className="packages-section">
+                    <h3 className="packages-title">Explore Travel Packages ✈️</h3>
+                    <p className="packages-description">
+                        Discover exciting travel packages that your students can learn to sell and earn commissions!
+                        From exotic destinations to unique experiences, we've got something for everyone.
+                    </p>
+                    <button className="packages-button primary-button">
+                        View Packages
+                    </button>
+                </section>
+            </div>
+        );
+    };
+
+    const LoadingPage = () => (
+        <div className="d-flex justify-content-center align-items-center" style={{height: '50vh'}}>
+            <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="app-container">
+            <link
+                rel="stylesheet"
+                href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+                crossOrigin="anonymous"
+                referrerPolicy="no-referrer"
+            />
+            <link
+                href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+                rel="stylesheet"
+            />
+
+            {showSplash ? (
+                <div className="splash-screen-wrapper">
+                    <div className="splash-content">
+                        <HeroSlider
+                            images={splashImages}
+                            texts={splashTexts}
+                            onLastSlide={true}
+                            onNextClick={handleStartClick}
+                        />
+                        <div className="splash-skip-container">
+                            <button onClick={handleSkipClick} className="splash-skip-button">
+                                SKIP
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : isLoggedIn ? (
+                <div className="main-app-content">
+                    <header className="app-header">
+                        <div className="header-logo-container">
+                            <img 
+                                src="https://res.cloudinary.com/dnc3s4u7q/image/upload/v1760389693/conclave_logo_ygplob.jpg" 
+                                alt="The Conclave Academy Logo" 
+                                className="header-logo" 
+                            />
+                        </div>
+                        <button className="hamburger-menu-icon" onClick={toggleMenu}>
+                            <i className="fas fa-bars"></i>
+                        </button>
+                        <div className="desktop-nav">
+                            {getMenuItems().map((item) => (
+                                <button 
+                                    key={item.name} 
+                                    className="desktop-nav-item" 
+                                    onClick={() => handleMenuClick(item)}
+                                    style={{position: 'relative'}}
+                                >
+                                    <i className={item.icon}></i>
+                                    <span>{item.name}</span>
+                                    {item.notification !== undefined && renderNotificationBadge(item.notification)}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="header-right-spacer"></div>
+                    </header>
+                    <CSSTransition
+                        in={showMenu}
+                        timeout={300}
+                        classNames="menu"
+                        unmountOnExit
+                    >
+                        <div className="mobile-dropdown-menu">
+                            <div className="mobile-menu-header">
+                                <button className="mobile-menu-close" onClick={toggleMenu}>
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div className="mobile-menu-title-container">
+                                <h1 className="mobile-menu-title">
+                                    The Conclave Academy
+                                </h1>
+                            </div>
+                            <div className="mobile-menu-scroll-container">
+                                <ul className="mobile-menu-list">
+                                    {getMenuItems().map((item) => (
+                                        <li key={item.name}>
+                                            <button
+                                                onClick={() => handleMenuClick(item)}
+                                                className="mobile-menu-item"
+                                                style={{position: 'relative'}}
+                                            >
+                                                <i className={item.icon}></i>
+                                                <span>{item.name}</span>
+                                                {item.notification !== undefined && renderNotificationBadge(item.notification)}
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    </CSSTransition>
+                    <main className="main-content-area">
+                        {/* SIMPLE STATE-BASED PAGE RENDERING */}
+                        {currentPage === 'home' && <HomePage />}
+                        {currentPage === 'business-course' && <BusinessCourse navigateTo={navigateTo} />}
+                        
+                        {/* NEW: Share and Rate Pages */}
+                        {currentPage === 'rate-share' && <ShareAndRatePage navigateTo={navigateTo} />}
+                        {currentPage === 'rate-app-store' && (
+                            <RateAppStore 
+                                navigateTo={navigateTo} 
+                                storeId={shareRateData.storeId}
+                            />
+                        )}
+                        {currentPage === 'review-confirmation' && (
+                            <ReviewConfirmation 
+                                navigateTo={navigateTo} 
+                                reviewData={shareRateData.reviewData}
+                            />
+                        )}
+                        
+                        {/* NEW: App Reviews Pages */}
+                        {currentPage === 'app-reviews' && <AppReviewsList navigateTo={navigateTo} />}
+                        {currentPage === 'review-moderation' && <AdminReviewApproval navigateTo={navigateTo} />}
+                        
+                        {/* Existing pages continue below... */}
+                        {currentPage === 'destinations' && <DestinationsPage onSelectDestination={handleSelectDestination} />}
+                        {currentPage === 'destination-overview' && selectedCourse && (
+                            <DestinationOverview course={selectedCourse} onStartCourse={handleStartCourse} />
+                        )}
+                        {currentPage === 'full-course-content' && selectedCourse && (
+                            <FullCourseContent course={selectedCourse} onTakeQuiz={handleTakeQuiz} />
+                        )}
+                        {currentPage === 'quiz-platform' && selectedCourse && (
+                            <QuizPlatform 
+                                course={selectedCourse} 
+                                onQuizComplete={handleQuizComplete}
+                            />
+                        )}
+                        
+                        {/* Course Question Quiz Routes */}
+                        {currentPage === 'general-quiz-attempt' && <QuizAttempt navigateTo={navigateTo} />}
+                        {currentPage === 'masterclass-quiz-attempt' && <QuizAttempt navigateTo={navigateTo} />}
+                        
+                        {currentPage === 'quiz-scores' && <QuizScores />}
+                        
+                        {/* 📝 BLOG PAGES */}
+                        {currentPage === 'blog-list-page' && <UserBlogPage navigateTo={navigateTo} />}
+                        
+                        {currentPage === 'blog-detail' && blogPostId && (
+                            <SingleBlogDetail 
+                                postId={blogPostId}
+                                navigate={navigateTo}
+                            />
+                        )}
+
+                        {currentPage === 'admin-blog-dashboard' && <AdminBlogPage navigateTo={navigateTo} />}
+                        
+                        {currentPage === 'admin-create-post' && <AdminCreateEditBlog mode="create" navigateTo={navigateTo} />}
+                        
+                        {currentPage === 'admin-edit-post' && blogPostId && (
+                            <AdminCreateEditBlog mode="edit" postId={blogPostId} navigateTo={navigateTo} />
+                        )}
+
+                        {/* 📝 NEW: My Bookmarks Page */}
+                        {currentPage === 'my-bookmarks' && (
+                            <MyBookmarksPage navigate={navigateTo} />
+                        )}
+
+                        {/* 📝 NEW: Write for Us Contact Form */}
+                        {currentPage === 'write-for-us' && (
+                            <ContactForm 
+                                navigateTo={navigateTo}
+                                userEmail={userData?.email}
+                                userName={userData?.name}
+                            />
+                        )}
+
+                        {/* 📝 NEW: Submission Dashboards */}
+                        {currentPage === 'admin-submissions-dashboard' && (
+                            <AdminSubmissionsDashboard navigateTo={navigateTo} />
+                        )}
+
+                        {currentPage === 'user-submissions' && (
+                            <UserSubmissionsDashboard 
+                                navigateTo={navigateTo}
+                                userEmail={userData?.email}
+                                userName={userData?.name}
+                            />
+                        )}
+
+                        {/* EXPERIENCES PAGE */}
+                        {currentPage === 'experiences' && <ExperiencesPage navigateTo={navigateTo} />}
+
+                        {/* User Pages */}
+                        {currentPage === 'general-courses' && <GeneralCourses navigateTo={navigateTo} />}
+                        {currentPage === 'masterclass-courses' && <MasterclassCourses navigateTo={navigateTo} />}
+                        {currentPage === 'video-courses' && <VideoCourses navigateTo={navigateTo} />}
+                        {currentPage === 'masterclass-videos' && <MasterclassVideos navigateTo={navigateTo} />}
+                        {currentPage === 'course-remarks' && <CourseAndRemarks />}
+                        {currentPage === 'contact-us' && <ContactUs />}
+                        {currentPage === 'admin-messages' && <MessageFromAdmin />}
+                        {currentPage === 'general-course-questions' && <GeneralCourseQuestions navigateTo={navigateTo} />}
+                        {currentPage === 'masterclass-course-questions' && <MasterclassCourseQuestions navigateTo={navigateTo} />}
+                        
+                        {/* Admin Pages */}
+                        {currentPage === 'admin-students' && <AdminStudents />}
+                        {currentPage === 'admin-message-students' && <AdminMessageStudents />}
+                        {currentPage === 'admin-quiz-completed' && <AdminQuizCompleted />}
+                        {currentPage === 'admin-course-completed' && <AdminCourseCompleted />}
+                        {currentPage === 'admin-messages-from-students' && <MessageFromStudents />}
+                        {currentPage === 'admin-manage-courses' && <AdminManageCourses />}
+                        {currentPage === 'admin-video-courses' && <AdminVideoCourses navigateTo={navigateTo} />}
+
+                        {/* Community Pages */}
+                        {currentPage === 'community' && userRole === 'admin' && <AdminCommunityTab />}
+                        {currentPage === 'community' && userRole !== 'admin' && <UserCommunityTab />}
+                        {currentPage === 'admin-community' && <AdminCommunityTab />}
+                        
+                        {/* Hotel Search Pages */}
+                        {currentPage === 'hotel-search' && (
+                            <HotelSearchHome onSearch={handleHotelSearch} />
+                        )}
+                        
+                        {currentPage === 'hotel-search-results' && (
+                            <HotelSearchResults 
+                                searchCriteria={hotelSearchCriteria}
+                                navigateTo={navigateTo}
+                            />
+                        )}
+                        
+                        {currentPage === 'hotel-details' && currentHotelDetail && (
+                            <HotelDetailPage 
+                                navigateTo={navigateTo} 
+                                hotelId={currentHotelDetail.hotelId}
+                                environment={currentHotelDetail.environment}
+                            />
+                        )}
+                        
+                        {/* Placeholder Pages */}
+                        {currentPage === 'important-information' && (
+                            <div className="container py-4">
+                                <h2>Important Information</h2>
+                                <p>Content coming soon...</p>
+                            </div>
+                        )}
+                        {currentPage === 'admin-send-information' && (
+                            <div className="container py-4">
+                                <h2>Send Information</h2>
+                                <p>Admin information sending features coming soon...</p>
+                            </div>
+                        )}
+                        
+                        {currentPage === 'loading' && <LoadingPage />}
+                    </main>
+                    <footer className="app-footer">
+                        &copy; {new Date().getFullYear()} The Conclave Academy. All rights reserved.
+                    </footer>
+                </div>
+            ) : (
+                <div className="login-overlay">
+                    {alert.message && (
+                        <div className={`alert-bar ${alert.type}`}>
+                            {alert.message}
+                        </div>
+                    )}
+                    <LoginRegister onLogin={handleLogin} onRegister={handleRegister} />
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Wrap the App component with Google OAuth providers
+function MainApp() {
+    return (
+        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+            <GoogleAuthProvider>
+                <App />
+            </GoogleAuthProvider>
+        </GoogleOAuthProvider>
+    );
+}
+
+export default MainApp;

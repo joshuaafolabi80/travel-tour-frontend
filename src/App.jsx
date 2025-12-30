@@ -135,6 +135,17 @@ export const HeroSlider = ({ images, texts, staticTitle, onLastSlide, onNextClic
                     <button
                         onClick={handleNextClickInternal}
                         className="splash-button primary-button"
+                        style={{
+                            display: 'flex',          // Enables Flexbox
+                            alignItems: 'center',     // Vertical centering
+                            justifyContent: 'center',    // Horizontal centering
+                            padding: '8px 20px',      // Reduced size (adjust these numbers to go smaller)
+                            minWidth: '100px',        // Ensures a consistent rectangle shape
+                            borderRadius: '25px',     // Keeps the curved edges
+                            fontSize: '14px',         // Slightly smaller font to match the smaller box
+                            border: 'none',           // Removes default borders
+                            cursor: 'pointer'
+                        }}
                     >
                         {currentIndex === images.length - 1 ? 'START' : 'NEXT'}
                     </button>

@@ -1,5 +1,3 @@
-// travel-tour-frontend/src/components/share-rate/AdminReviewApproval.jsx
-
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import './ShareRateStyles.css';
@@ -7,7 +5,7 @@ import './ShareRateStyles.css';
 const AdminReviewApproval = () => {
     const [pendingReviews, setPendingReviews] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [responseText, setResponseText] = useState('');
+    const [responseTexts, setResponseTexts] = useState({}); // Track responses per review ID
 
     useEffect(() => {
         fetchPendingReviews();
@@ -15,6 +13,7 @@ const AdminReviewApproval = () => {
 
     const fetchPendingReviews = async () => {
         try {
+            setLoading(true);
             const response = await api.get('/api/app-reviews/admin/reviews/pending');
             if (response.data.success) {
                 setPendingReviews(response.data.reviews);
@@ -26,21 +25,29 @@ const AdminReviewApproval = () => {
         }
     };
 
-    const handleApprove = async (reviewId, withResponse = false) => {
+    const handleResponseChange = (id, text) => {
+        setResponseTexts(prev => ({ ...prev, [id]: text }));
+    };
+
+    const handleApprove = async (reviewId) => {
         try {
-            const response = withResponse && responseText 
-                ? await api.put(`/api/app-reviews/admin/reviews/${reviewId}/status`, {
-                    status: 'approved',
-                    adminResponse: responseText
-                })
-                : await api.put(`/api/app-reviews/admin/reviews/${reviewId}/status`, {
-                    status: 'approved'
-                });
+            const adminResponse = responseTexts[reviewId];
+            const payload = { status: 'approved' };
+            
+            if (adminResponse && adminResponse.trim()) {
+                payload.adminResponse = adminResponse.trim();
+            }
+
+            const response = await api.put(`/api/app-reviews/admin/reviews/${reviewId}/status`, payload);
 
             if (response.data.success) {
-                setResponseText('');
+                // Clear the specific response text for this ID
+                const newResponses = { ...responseTexts };
+                delete newResponses[reviewId];
+                setResponseTexts(newResponses);
+                
                 fetchPendingReviews();
-                alert('Review approved!');
+                alert('Review approved successfully!');
             }
         } catch (error) {
             console.error('Error approving review:', error);
@@ -49,14 +56,16 @@ const AdminReviewApproval = () => {
     };
 
     const handleReject = async (reviewId) => {
-        if (!window.confirm('Reject this review?')) return;
+        if (!window.confirm('Are you sure you want to reject this review? It will not be shown to the public.')) return;
         
         try {
-            await api.put(`/api/app-reviews/admin/reviews/${reviewId}/status`, {
+            const response = await api.put(`/api/app-reviews/admin/reviews/${reviewId}/status`, {
                 status: 'rejected'
             });
-            fetchPendingReviews();
-            alert('Review rejected');
+            if (response.data.success) {
+                fetchPendingReviews();
+                alert('Review rejected');
+            }
         } catch (error) {
             console.error('Error rejecting review:', error);
             alert('Failed to reject review');
@@ -74,15 +83,21 @@ const AdminReviewApproval = () => {
 
     return (
         <div className="admin-approval-container">
-            <h2>Review Moderation Dashboard</h2>
-            <p className="subtitle">Approve or reject user reviews before they appear publicly</p>
+            <div className="admin-header">
+                <h2>Review Moderation Dashboard</h2>
+                <span className="badge-pending">{pendingReviews.length} Pending</span>
+            </div>
+            <p className="subtitle">Filter through user feedback and provide official responses.</p>
             
             {loading ? (
-                <div className="loading">Loading pending reviews...</div>
+                <div className="loading-state">
+                    <i className="fas fa-spinner fa-spin"></i>
+                    <p>Loading pending reviews...</p>
+                </div>
             ) : pendingReviews.length === 0 ? (
                 <div className="no-pending">
                     <i className="fas fa-check-circle"></i>
-                    <p>No pending reviews. All caught up!</p>
+                    <p>All reviews have been moderated!</p>
                 </div>
             ) : (
                 <div className="pending-reviews-list">
@@ -90,33 +105,37 @@ const AdminReviewApproval = () => {
                         <div key={review._id} className="pending-review-card">
                             <div className="pending-review-header">
                                 <div className="reviewer-info">
-                                    <div className="avatar">{review.userName?.charAt(0) || 'U'}</div>
+                                    <div className="avatar">
+                                        {review.userName?.charAt(0).toUpperCase() || 'U'}
+                                    </div>
                                     <div>
-                                        <h4>{review.userName}</h4>
+                                        <h4>{review.userName || 'Anonymous User'}</h4>
                                         <p className="email">{review.userEmail}</p>
                                     </div>
                                 </div>
-                                <div className="review-rating">
-                                    {renderStars(review.rating)}
-                                    <span className="rating-text">{review.rating}/5 stars</span>
+                                <div className="review-rating-block">
+                                    <div className="stars">
+                                        {renderStars(review.rating)}
+                                    </div>
+                                    <span className="rating-num">{review.rating}/5</span>
                                 </div>
                             </div>
                             
                             <div className="review-content">
-                                <p>{review.review || 'No review text'}</p>
+                                <blockquote>"{review.review || 'No written feedback provided.'}"</blockquote>
                             </div>
                             
                             <div className="review-meta">
-                                <span><i className="fas fa-calendar"></i> {new Date(review.createdAt).toLocaleDateString()}</span>
-                                <span><i className="fas fa-store"></i> {review.appStore || 'web'}</span>
+                                <span><i className="fas fa-calendar-alt"></i> {new Date(review.createdAt).toLocaleDateString()}</span>
+                                <span><i className="fas fa-mobile-alt"></i> Source: {review.appStore}</span>
                             </div>
                             
                             <div className="admin-actions">
-                                <div className="response-section">
+                                <div className="response-textarea-wrapper">
                                     <textarea
-                                        placeholder="Optional: Add a response to the user..."
-                                        value={responseText}
-                                        onChange={(e) => setResponseText(e.target.value)}
+                                        placeholder="Write an official response (optional)..."
+                                        value={responseTexts[review._id] || ''}
+                                        onChange={(e) => handleResponseChange(review._id, e.target.value)}
                                         rows="3"
                                     />
                                 </div>
@@ -124,24 +143,16 @@ const AdminReviewApproval = () => {
                                 <div className="action-buttons">
                                     <button 
                                         className="btn-approve"
-                                        onClick={() => handleApprove(review._id, responseText.trim() !== '')}
+                                        onClick={() => handleApprove(review._id)}
                                     >
-                                        <i className="fas fa-check"></i> 
-                                        {responseText.trim() ? 'Approve with Response' : 'Approve'}
+                                        <i className="fas fa-check"></i> Approve
                                     </button>
                                     
                                     <button 
                                         className="btn-reject"
                                         onClick={() => handleReject(review._id)}
                                     >
-                                        <i className="fas fa-times"></i> Reject
-                                    </button>
-                                    
-                                    <button 
-                                        className="btn-approve-simple"
-                                        onClick={() => handleApprove(review._id, false)}
-                                    >
-                                        <i className="fas fa-check-circle"></i> Approve (No Response)
+                                        <i className="fas fa-trash-alt"></i> Reject
                                     </button>
                                 </div>
                             </div>

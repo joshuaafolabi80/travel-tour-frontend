@@ -1577,6 +1577,507 @@
     background: #138496;
 }
 
+/* Add these styles to your existing ShareRateStyles.css */
+
+/* Review Confirmation Container */
+.review-confirmation-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+}
+
+/* Confirmation Header */
+.confirmation-header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 40px 30px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border-radius: 20px;
+    color: white;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.confirmation-header h2 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.confirmation-subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Review Card */
+.review-card {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    margin-bottom: 40px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    padding-bottom: 25px;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.user-avatar i {
+    font-size: 3rem;
+    color: #667eea;
+}
+
+.user-info h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.review-meta {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.user-rating {
+    display: flex;
+    gap: 5px;
+}
+
+.review-date {
+    color: #6c757d;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.edit-review-button {
+    background: none;
+    border: 2px solid #667eea;
+    color: #667eea;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.edit-review-button:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.review-content {
+    margin-bottom: 25px;
+}
+
+.review-content p {
+    color: #495057;
+    font-size: 1.2rem;
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.store-badge-wrapper {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 25px;
+}
+
+.store-badge-wrapper p {
+    color: #495057;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.store-badge {
+    padding: 12px 25px !important;
+    border-radius: 30px !important;
+    font-weight: 600;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    border: none !important;
+}
+
+.store-badge i {
+    font-size: 1.2rem;
+}
+
+/* Status Progress */
+.status-progress {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 15px;
+    margin-bottom: 25px;
+    border: 2px solid #e9ecef;
+}
+
+.status-progress p {
+    color: #495057;
+    margin-bottom: 15px;
+    font-weight: 500;
+    font-size: 1.1rem;
+}
+
+.review-progress-bar {
+    height: 10px !important;
+    border-radius: 5px;
+    background: #e9ecef;
+}
+
+.review-progress-bar .progress-bar {
+    border-radius: 5px;
+}
+
+/* Similar Apps Section */
+.similar-apps-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 20px;
+    padding: 40px;
+    margin-bottom: 40px;
+    border: 1px solid #dee2e6;
+}
+
+.similar-apps-section h3 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.section-subtitle {
+    color: #6c757d;
+    margin-bottom: 35px;
+    font-size: 1.1rem;
+}
+
+.similar-apps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.similar-app-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.similar-app-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    border-color: #667eea;
+}
+
+.app-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-icon i {
+    font-size: 1.8rem;
+    color: white;
+}
+
+.app-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-details h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 1.2rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-rating {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.review-stars {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.review-stars .star {
+    font-size: 0.9rem;
+}
+
+.review-stars .star.filled {
+    color: #ffc107;
+}
+
+.review-stars .star.empty {
+    color: #e9ecef;
+}
+
+.rating-number {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.app-downloads {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.view-app-button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.view-app-button:hover {
+    background: #0056b3;
+    transform: translateY(-2px);
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 40px 0;
+    flex-wrap: wrap;
+}
+
+.primary-button, .secondary-button {
+    padding: 18px 35px;
+    border: none;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.primary-button {
+    background: #667eea;
+    color: white;
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.primary-button:hover {
+    background: #5a67d8;
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
+}
+
+.secondary-button {
+    background: white;
+    color: #333;
+    border: 2px solid #667eea;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.secondary-button:hover {
+    background: #f8f9fa;
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+}
+
+/* Stars Styles */
+.stars-inline {
+    display: flex;
+    gap: 5px;
+}
+
+.stars-inline.lg .star {
+    font-size: 1.8rem;
+}
+
+.stars-inline .star {
+    font-size: 1.4rem;
+}
+
+.stars-inline.sm .star {
+    font-size: 1rem;
+}
+
+.stars-inline .star.filled {
+    color: #ffc107;
+}
+
+.stars-inline .star.empty {
+    color: #e9ecef;
+}
+
+/* Hover Effects */
+.hover-shadow {
+    transition: all 0.3s ease;
+}
+
+.hover-shadow:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15) !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .review-confirmation-container {
+        padding: 15px;
+    }
+    
+    .confirmation-header {
+        padding: 30px 20px;
+    }
+    
+    .confirmation-header h2 {
+        font-size: 2rem;
+    }
+    
+    .confirmation-subtitle {
+        font-size: 1.1rem;
+    }
+    
+    .review-card {
+        padding: 25px;
+    }
+    
+    .review-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+    }
+    
+    .user-info {
+        width: 100%;
+    }
+    
+    .edit-review-button {
+        align-self: flex-start;
+    }
+    
+    .review-content p {
+        font-size: 1.1rem;
+        padding: 15px;
+    }
+    
+    .similar-apps-section {
+        padding: 25px;
+    }
+    
+    .similar-apps-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .primary-button, .secondary-button {
+        width: 100%;
+        justify-content: center;
+        max-width: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .confirmation-header {
+        padding: 20px 15px;
+    }
+    
+    .confirmation-header h2 {
+        font-size: 1.8rem;
+    }
+    
+    .review-card {
+        padding: 20px;
+    }
+    
+    .user-info {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .review-meta {
+        justify-content: center;
+    }
+    
+    .similar-app-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .app-details h4 {
+        white-space: normal;
+        text-align: center;
+    }
+    
+    .app-rating {
+        justify-content: center;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .share-rate-header h1 {

@@ -27,7 +27,7 @@ import {
   Eye,
   QuestionCircle
 } from 'react-bootstrap-icons';
-import { useNavigate } from 'react-router-dom';
+// Removed: import { useNavigate } from 'react-router-dom';
 import appReviewsApi from '../../services/appReviewsApi';
 import './ShareRateStyles.css';
 
@@ -50,7 +50,7 @@ const AdminReviewApproval = () => {
     const [toastVariant, setToastVariant] = useState('success');
     const [toastIcon, setToastIcon] = useState(<CheckCircle />);
 
-    const navigate = useNavigate();
+    // Removed: const navigate = useNavigate();
 
     // Show toast notification
     const showNotification = (message, variant = 'success') => {
@@ -69,6 +69,20 @@ const AdminReviewApproval = () => {
         }
         
         setShowToast(true);
+    };
+
+    // Navigate to public reviews page - FIXED VERSION
+    const handleViewPublicReviews = () => {
+        // Option 1: Simple window location change (refreshes page)
+        window.location.href = '/app-reviews';
+        
+        // Option 2: If you want to open in new tab instead:
+        // window.open('/app-reviews', '_blank');
+        
+        // Option 3: If you're using a Single Page App without full refresh:
+        // You'll need to implement your own routing or use window.history
+        // window.history.pushState({}, '', '/app-reviews');
+        // Then trigger a custom event or state change that your parent component listens to
     };
 
     // Memoized fetch function
@@ -235,15 +249,6 @@ const AdminReviewApproval = () => {
         }
         
         return successCount;
-    };
-
-    // Navigate to public reviews page
-    const handleViewPublicReviews = () => {
-        // Navigate to the app reviews page in your frontend
-        navigate('/app-reviews'); // This should match your route in App.jsx
-        
-        // Alternatively, if you want to open in new tab:
-        // window.open('/app-reviews', '_blank');
     };
 
     // Get public reviews stats for display

@@ -10,7 +10,9 @@ import {
   Alert, 
   Spinner, 
   Toast, 
-  ToastContainer 
+  ToastContainer,
+  Tooltip,
+  OverlayTrigger
 } from 'react-bootstrap';
 import { 
   StarFill, 
@@ -21,8 +23,11 @@ import {
   Trash, 
   Reply, 
   ArrowClockwise,
-  ExclamationCircle
+  ExclamationCircle,
+  Eye,
+  QuestionCircle
 } from 'react-bootstrap-icons';
+import { useNavigate } from 'react-router-dom';
 import appReviewsApi from '../../services/appReviewsApi';
 import './ShareRateStyles.css';
 
@@ -42,15 +47,16 @@ const AdminReviewApproval = () => {
     // Toast notification state
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
-    const [toastVariant, setToastVariant] = useState('success'); // 'success', 'danger', 'warning'
+    const [toastVariant, setToastVariant] = useState('success');
     const [toastIcon, setToastIcon] = useState(<CheckCircle />);
+
+    const navigate = useNavigate();
 
     // Show toast notification
     const showNotification = (message, variant = 'success') => {
         setToastMessage(message);
         setToastVariant(variant);
         
-        // Set icon based on variant
         switch(variant) {
             case 'danger':
                 setToastIcon(<ExclamationCircle />);
@@ -83,7 +89,6 @@ const AdminReviewApproval = () => {
                 setPendingReviews(response.data.reviews);
                 setPagination(response.data.pagination);
                 
-                // Show notification if new reviews were found during refresh
                 if (!showFullLoader && response.data.reviews.length > 0) {
                     showNotification(
                         `${response.data.reviews.length} new review(s) loaded`, 
@@ -96,7 +101,6 @@ const AdminReviewApproval = () => {
             const errorMsg = err.response?.data?.message || err.message || 'Failed to load pending reviews';
             setError(errorMsg);
             
-            // Show toast for network errors
             if (!err.response) {
                 showNotification('Network error. Please check your connection.', 'danger');
             }
@@ -131,18 +135,14 @@ const AdminReviewApproval = () => {
             const response = await appReviewsApi.put(`/reviews/${reviewId}/status`, payload);
 
             if (response.data.success) {
-                // Clear response text
                 const newResponses = { ...responseTexts };
                 delete newResponses[reviewId];
                 setResponseTexts(newResponses);
                 
-                // Fetch updated list
                 await fetchPendingReviews(false);
                 
-                // Clear any previous errors
                 setError('');
                 
-                // Show success notification
                 showNotification(
                     adminResponse 
                         ? 'Review approved with response!'
@@ -155,13 +155,11 @@ const AdminReviewApproval = () => {
             const errorMsg = err.response?.data?.message || err.message || 'Failed to approve review';
             setError(errorMsg);
             
-            // Show error notification
             showNotification('Failed to approve review. Please try again.', 'danger');
         }
     };
 
     const handleReject = async (reviewId) => {
-        // Confirm rejection
         const confirmed = window.confirm(
             'Are you sure you want to reject this review?\n\n' +
             'The user will be notified and this review will not be visible to the public.'
@@ -177,7 +175,6 @@ const AdminReviewApproval = () => {
             if (response.data.success) {
                 await fetchPendingReviews(false);
                 
-                // Show notification
                 showNotification('Review rejected successfully', 'warning');
             }
         } catch (err) {
@@ -185,7 +182,6 @@ const AdminReviewApproval = () => {
             const errorMsg = err.response?.data?.message || err.message || 'Failed to reject review';
             setError(errorMsg);
             
-            // Show error notification
             showNotification('Failed to reject review. Please try again.', 'danger');
         }
     };
@@ -204,8 +200,6 @@ const AdminReviewApproval = () => {
         if (!confirmed) return;
 
         try {
-            // In a real implementation, you'd have a bulk approve endpoint
-            // For now, we'll approve them one by one
             const approvedCount = await processReviewsBulk('approved');
             
             showNotification(
@@ -213,7 +207,6 @@ const AdminReviewApproval = () => {
                 'success'
             );
             
-            // Refresh the list
             await fetchPendingReviews(false);
             
         } catch (err) {
@@ -233,7 +226,6 @@ const AdminReviewApproval = () => {
                 });
                 successCount++;
                 
-                // Small delay to avoid rate limiting
                 if (successCount % 3 === 0) {
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
@@ -244,6 +236,39 @@ const AdminReviewApproval = () => {
         
         return successCount;
     };
+
+    // Navigate to public reviews page
+    const handleViewPublicReviews = () => {
+        // Navigate to the app reviews page in your frontend
+        navigate('/app-reviews'); // This should match your route in App.jsx
+        
+        // Alternatively, if you want to open in new tab:
+        // window.open('/app-reviews', '_blank');
+    };
+
+    // Get public reviews stats for display
+    const [publicStats, setPublicStats] = useState({
+        totalReviews: 0,
+        averageRating: 0
+    });
+
+    const fetchPublicStats = useCallback(async () => {
+        try {
+            const response = await appReviewsApi.get('/stats');
+            if (response.data.success) {
+                setPublicStats({
+                    totalReviews: response.data.statistics?.totalReviews || 0,
+                    averageRating: response.data.statistics?.averageRating || 0
+                });
+            }
+        } catch (err) {
+            console.error('Error fetching public stats:', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchPublicStats();
+    }, [fetchPublicStats]);
 
     const renderStars = (rating) => {
         return [...Array(5)].map((_, index) => (
@@ -271,9 +296,7 @@ const AdminReviewApproval = () => {
     if (loading && pendingReviews.length === 0) {
         return (
             <Container fluid className="py-4">
-                <ToastContainer position="top-center" className="p-3" style={{ zIndex: 9999 }}>
-                    {/* Toast container but no toast shown during initial load */}
-                </ToastContainer>
+                <ToastContainer position="top-end" className="p-3" style={{ zIndex: 9999 }} />
                 <Row className="mb-4">
                     <Col>
                         <div className="d-flex justify-content-between align-items-center">
@@ -334,18 +357,51 @@ const AdminReviewApproval = () => {
                             <p className="text-muted mb-0">Filter through user feedback and provide official responses</p>
                         </div>
                         <div className="d-flex align-items-center gap-2 flex-wrap">
-                            {pendingReviews.length > 0 && (
+                            {/* Public Reviews Stats */}
+                            <OverlayTrigger
+                                placement="bottom"
+                                overlay={
+                                    <Tooltip>
+                                        View all approved reviews by users
+                                    </Tooltip>
+                                }
+                            >
                                 <Button 
-                                    variant="outline-success" 
+                                    variant="outline-info" 
                                     size="sm" 
                                     className="d-flex align-items-center gap-2"
-                                    onClick={handleBulkApprove}
-                                    disabled={refreshing}
+                                    onClick={handleViewPublicReviews}
                                 >
-                                    <CheckCircle />
-                                    Bulk Approve ({pendingReviews.length})
+                                    <Eye />
+                                    Public Reviews 
+                                    <Badge bg="info" className="ms-1">
+                                        {publicStats.totalReviews}
+                                    </Badge>
                                 </Button>
+                            </OverlayTrigger>
+                            
+                            {pendingReviews.length > 0 && (
+                                <OverlayTrigger
+                                    placement="bottom"
+                                    overlay={
+                                        <Tooltip>
+                                            Approve all pending reviews at once
+                                        </Tooltip>
+                                    }
+                                >
+                                    <Button 
+                                        variant="outline-success" 
+                                        size="sm" 
+                                        className="d-flex align-items-center gap-2"
+                                        onClick={handleBulkApprove}
+                                        disabled={refreshing}
+                                    >
+                                        <CheckCircle />
+                                        Bulk Approve ({pendingReviews.length})
+                                    </Button>
+                                </OverlayTrigger>
                             )}
+                            
                             <Button 
                                 variant="outline-primary" 
                                 size="sm" 
@@ -356,6 +412,7 @@ const AdminReviewApproval = () => {
                                 <ArrowClockwise className={refreshing ? 'spin-animation' : ''} />
                                 Refresh
                             </Button>
+                            
                             <Badge bg="warning" pill className="fs-6 px-3 py-2">
                                 {pagination.total} Pending
                             </Badge>
@@ -395,22 +452,56 @@ const AdminReviewApproval = () => {
                                 <p className="text-muted mb-4">
                                     No pending reviews at the moment. All user submissions have been moderated.
                                 </p>
-                                <div className="d-flex justify-content-center gap-3">
+                                <div className="d-flex justify-content-center gap-3 flex-wrap">
                                     <Button 
                                         variant="primary" 
                                         onClick={handleManualRefresh}
-                                        className="px-4"
+                                        className="px-4 d-flex align-items-center gap-2"
                                     >
                                         <ArrowClockwise className="me-2" />
                                         Check for New Reviews
                                     </Button>
                                     <Button 
-                                        variant="outline-secondary"
-                                        onClick={() => window.open('/api/reviews/public', '_blank')}
+                                        variant="outline-info"
+                                        onClick={handleViewPublicReviews}
+                                        className="d-flex align-items-center gap-2"
                                     >
+                                        <Eye className="me-2" />
                                         View Public Reviews
+                                        <Badge bg="info" className="ms-2">
+                                            {publicStats.totalReviews} reviews
+                                        </Badge>
                                     </Button>
                                 </div>
+                                
+                                {/* Stats Display */}
+                                {publicStats.totalReviews > 0 && (
+                                    <div className="mt-4 pt-4 border-top">
+                                        <h5 className="text-muted mb-3">Public Reviews Overview</h5>
+                                        <Row className="justify-content-center">
+                                            <Col xs={6} md={3}>
+                                                <Card className="border-0 bg-light shadow-sm">
+                                                    <Card.Body className="text-center">
+                                                        <div className="display-6 fw-bold text-primary">
+                                                            {publicStats.totalReviews}
+                                                        </div>
+                                                        <p className="text-muted mb-0">Total Reviews</p>
+                                                    </Card.Body>
+                                                </Card>
+                                            </Col>
+                                            <Col xs={6} md={3}>
+                                                <Card className="border-0 bg-light shadow-sm">
+                                                    <Card.Body className="text-center">
+                                                        <div className="display-6 fw-bold text-warning">
+                                                            {publicStats.averageRating.toFixed(1)}
+                                                        </div>
+                                                        <p className="text-muted mb-0">Avg Rating</p>
+                                                    </Card.Body>
+                                                </Card>
+                                            </Col>
+                                        </Row>
+                                    </div>
+                                )}
                             </Card.Body>
                         </Card>
                     </Col>
@@ -419,7 +510,7 @@ const AdminReviewApproval = () => {
                 <>
                     {/* Reviews List */}
                     {pendingReviews.map((review) => (
-                        <Card key={review._id} className="mb-4 shadow-sm border-0 hover-lift">
+                        <Card key={review._id} className="mb-4 shadow-sm border-0 hover-lift fade-in-review">
                             <Card.Body>
                                 <Row className="align-items-center mb-3">
                                     <Col md={8}>
@@ -504,31 +595,88 @@ const AdminReviewApproval = () => {
                                     </Form.Text>
                                 </Form.Group>
 
-                                {/* Action Buttons */}
-                                <div className="d-flex gap-2">
-                                    <Button 
-                                        variant="success" 
-                                        onClick={() => handleApprove(review._id)} 
-                                        className="flex-grow-1 d-flex align-items-center justify-content-center gap-2"
-                                        disabled={refreshing}
-                                    >
-                                        <CheckCircle />
-                                        Approve
-                                        {responseTexts[review._id] && (
-                                            <Badge bg="light" text="dark" className="ms-1">
-                                                with response
-                                            </Badge>
+                                {/* Action Buttons - Responsive Layout */}
+                                <div className="d-flex flex-column flex-sm-row gap-2">
+                                    {/* Approve Button Group */}
+                                    <div className="flex-grow-1 d-flex flex-column flex-sm-row gap-2">
+                                        <Button 
+                                            variant="success" 
+                                            onClick={() => handleApprove(review._id)} 
+                                            className="d-flex align-items-center justify-content-center gap-2 flex-grow-1"
+                                            disabled={refreshing}
+                                            size="lg"
+                                        >
+                                            <CheckCircle />
+                                            Approve
+                                            {responseTexts[review._id] && responseTexts[review._id].trim() && (
+                                                <Badge 
+                                                    bg="light" 
+                                                    text="dark" 
+                                                    className="ms-1 d-none d-sm-inline-block"
+                                                >
+                                                    with response
+                                                </Badge>
+                                            )}
+                                        </Button>
+                                        
+                                        {/* Badge shown below on mobile when there's a response */}
+                                        {responseTexts[review._id] && responseTexts[review._id].trim() && (
+                                            <div className="d-block d-sm-none w-100 text-center mt-2">
+                                                <Badge bg="info" className="px-3 py-2">
+                                                    <i className="fas fa-comment me-1"></i>
+                                                    Will include response
+                                                </Badge>
+                                            </div>
                                         )}
-                                    </Button>
+                                    </div>
+                                    
+                                    {/* Reject Button */}
                                     <Button 
                                         variant="outline-danger" 
                                         onClick={() => handleReject(review._id)} 
-                                        className="px-4 d-flex align-items-center gap-2"
+                                        className="d-flex align-items-center justify-content-center gap-2 px-4"
                                         disabled={refreshing}
+                                        size="lg"
                                     >
                                         <Trash />
                                         Reject
                                     </Button>
+                                </div>
+                                
+                                {/* Quick Actions */}
+                                <div className="mt-3 pt-3 border-top">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <small className="text-muted">
+                                            <i className="fas fa-history me-1"></i>
+                                            Submitted {formatDate(review.createdAt)}
+                                        </small>
+                                        <div className="d-flex gap-2">
+                                            <OverlayTrigger
+                                                placement="top"
+                                                overlay={
+                                                    <Tooltip>
+                                                        Approve without response
+                                                    </Tooltip>
+                                                }
+                                            >
+                                                <Button 
+                                                    variant="outline-success" 
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setResponseTexts(prev => {
+                                                            const newResponses = {...prev};
+                                                            delete newResponses[review._id];
+                                                            return newResponses;
+                                                        });
+                                                        setTimeout(() => handleApprove(review._id), 100);
+                                                    }}
+                                                >
+                                                    <i className="fas fa-check me-1"></i>
+                                                    Quick Approve
+                                                </Button>
+                                            </OverlayTrigger>
+                                        </div>
+                                    </div>
                                 </div>
                             </Card.Body>
                         </Card>
@@ -551,7 +699,6 @@ const AdminReviewApproval = () => {
                                                 </button>
                                             </li>
                                             
-                                            {/* Page numbers */}
                                             {[...Array(Math.min(5, pagination.pages))].map((_, idx) => {
                                                 let pageNum;
                                                 if (pagination.pages <= 5) {
@@ -601,35 +748,86 @@ const AdminReviewApproval = () => {
                     {/* Stats Footer */}
                     <Row className="mt-4">
                         <Col>
-                            <Card className="border-0 bg-light">
+                            <Card className="border-0 bg-light shadow-sm">
                                 <Card.Body className="py-3">
-                                    <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                                        <div>
-                                            <small className="text-muted">
-                                                Showing {pendingReviews.length} of {pagination.total} pending reviews
-                                            </small>
-                                        </div>
-                                        <div className="d-flex gap-3">
-                                            <Button 
-                                                variant="link" 
-                                                size="sm" 
-                                                className="text-decoration-none"
-                                                onClick={handleManualRefresh}
-                                            >
-                                                <ArrowClockwise className={`me-1 ${refreshing ? 'spin-animation' : ''}`} />
-                                                {refreshing ? 'Refreshing...' : 'Refresh List'}
-                                            </Button>
-                                            <Button 
-                                                variant="link" 
-                                                size="sm" 
-                                                className="text-decoration-none"
-                                                onClick={() => showNotification('Help documentation will open in a new tab', 'info')}
-                                            >
-                                                <i className="fas fa-question-circle me-1"></i>
-                                                Help
-                                            </Button>
-                                        </div>
-                                    </div>
+                                    <Row className="align-items-center">
+                                        <Col md={6} className="mb-3 mb-md-0">
+                                            <div className="d-flex align-items-center">
+                                                <div className="bg-white rounded-circle p-3 me-3 shadow-sm">
+                                                    <i className="fas fa-chart-bar text-primary fs-4"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 className="mb-1 fw-bold">Review Statistics</h6>
+                                                    <p className="text-muted mb-0 small">
+                                                        Showing {pendingReviews.length} of {pagination.total} pending reviews
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </Col>
+                                        
+                                        <Col md={6}>
+                                            <div className="d-flex justify-content-md-end flex-wrap gap-3">
+                                                <Button 
+                                                    variant="link" 
+                                                    size="sm" 
+                                                    className="text-decoration-none d-flex align-items-center gap-2"
+                                                    onClick={handleManualRefresh}
+                                                >
+                                                    <ArrowClockwise className={`${refreshing ? 'spin-animation' : ''}`} />
+                                                    {refreshing ? 'Refreshing...' : 'Refresh List'}
+                                                </Button>
+                                                
+                                                <Button 
+                                                    variant="link" 
+                                                    size="sm" 
+                                                    className="text-decoration-none d-flex align-items-center gap-2"
+                                                    onClick={handleViewPublicReviews}
+                                                >
+                                                    <Eye />
+                                                    View Public Reviews
+                                                </Button>
+                                                
+                                                <OverlayTrigger
+                                                    placement="top"
+                                                    overlay={
+                                                        <Tooltip>
+                                                            View moderation guidelines and help
+                                                        </Tooltip>
+                                                    }
+                                                >
+                                                    <Button 
+                                                        variant="link" 
+                                                        size="sm" 
+                                                        className="text-decoration-none d-flex align-items-center gap-2"
+                                                        onClick={() => showNotification('Help documentation will open in a new tab', 'info')}
+                                                    >
+                                                        <QuestionCircle />
+                                                        Help
+                                                    </Button>
+                                                </OverlayTrigger>
+                                            </div>
+                                        </Col>
+                                    </Row>
+                                    
+                                    {/* Public Stats */}
+                                    <Row className="mt-3 pt-3 border-top">
+                                        <Col>
+                                            <div className="d-flex justify-content-center gap-4 flex-wrap">
+                                                <div className="text-center">
+                                                    <div className="fw-bold fs-5 text-primary">{pagination.total}</div>
+                                                    <small className="text-muted">Pending Reviews</small>
+                                                </div>
+                                                <div className="text-center">
+                                                    <div className="fw-bold fs-5 text-success">{publicStats.totalReviews}</div>
+                                                    <small className="text-muted">Public Reviews</small>
+                                                </div>
+                                                <div className="text-center">
+                                                    <div className="fw-bold fs-5 text-warning">{publicStats.averageRating.toFixed(1)}</div>
+                                                    <small className="text-muted">Avg Public Rating</small>
+                                                </div>
+                                            </div>
+                                        </Col>
+                                    </Row>
                                 </Card.Body>
                             </Card>
                         </Col>

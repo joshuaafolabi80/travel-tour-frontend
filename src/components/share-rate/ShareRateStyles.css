@@ -2105,6 +2105,221 @@ textarea.form-control:focus {
     border-radius: 2px;
 }
 
+/* Add these styles to your existing ShareRateStyles.css */
+
+/* Responsive button layout for approval actions */
+.approve-button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+@media (min-width: 576px) {
+    .approve-button-group {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+/* Custom fade-in animation for reviews */
+.fade-in-review {
+    animation: fadeInReview 0.5s ease-out;
+}
+
+@keyframes fadeInReview {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive badge positioning */
+.responsive-badge {
+    display: inline-block;
+    margin-left: 8px;
+}
+
+@media (max-width: 576px) {
+    .responsive-badge {
+        display: block;
+        margin: 8px auto 0;
+        width: fit-content;
+    }
+}
+
+/* Button stacking on mobile */
+.btn-stack-mobile {
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+@media (min-width: 576px) {
+    .btn-stack-mobile {
+        width: auto;
+        margin-bottom: 0;
+    }
+}
+
+/* Action buttons container */
+.action-buttons-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+@media (min-width: 576px) {
+    .action-buttons-container {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+/* Quick actions styling */
+.quick-actions {
+    border-top: 1px solid #e9ecef;
+    padding-top: 16px;
+    margin-top: 16px;
+}
+
+.quick-actions .btn-sm {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+}
+
+/* Stats cards hover effect */
+.stats-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.stats-card:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+}
+
+/* Tooltip customization */
+.tooltip-custom .tooltip-inner {
+    background: #333;
+    color: white;
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+
+/* Loading spinner alignment */
+.loading-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+}
+
+/* Toast notification animation */
+.toast-enter {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive text truncation */
+.text-truncate-responsive {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .text-truncate-responsive {
+        max-width: 200px;
+    }
+}
+
+/* Card hover effects enhancement */
+.hover-lift {
+    transition: all 0.3s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Status indicators */
+.status-pending {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    color: white;
+}
+
+.status-approved {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.status-rejected {
+    background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+    color: white;
+}
+
+/* Mobile-first button sizes */
+@media (max-width: 576px) {
+    .btn-lg {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+    }
+    
+    .btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* Form control focus states */
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+/* Pagination active state */
+.page-item.active .page-link {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+}
+
+/* Badge animations */
+.badge {
+    transition: all 0.3s ease;
+}
+
+.badge:hover {
+    transform: scale(1.05);
+}
+
+/* Empty state styling */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    text-align: center;
+    padding: 40px 20px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .review-confirmation-container {

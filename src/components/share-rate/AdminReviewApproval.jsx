@@ -74,7 +74,7 @@ const AdminReviewApproval = () => {
     // Navigate to public reviews page - FIXED VERSION
     const handleViewPublicReviews = () => {
         // Option 1: Simple window location change (refreshes page)
-        window.location.href = '/app-reviews';
+        window.location.href = '/reviews/public';
         
         // Option 2: If you want to open in new tab instead:
         // window.open('/app-reviews', '_blank');

@@ -337,6 +337,7 @@ const AdminReviewApproval = () => {
     return (
         <Container fluid className="py-4">
             {/* NEW: Public Reviews Modal */}
+            // NEW: Public Reviews Modal
             <Modal 
                 show={showPublicReviewsModal} 
                 onHide={() => setShowPublicReviewsModal(false)}
@@ -406,7 +407,16 @@ const AdminReviewApproval = () => {
                                                     <Reply className="me-2 mt-1" size={14} />
                                                     <div>
                                                         <strong>Admin Response:</strong>
-                                                        <p className="mb-0">{review.adminResponse}</p>
+                                                        {/* FIX: Access the text property from adminResponse object */}
+                                                        <p className="mb-0">{review.adminResponse.text || review.adminResponse}</p>
+                                                        {review.adminResponse.respondedBy && (
+                                                            <small className="text-muted">
+                                                                - {review.adminResponse.respondedBy}
+                                                                {review.adminResponse.respondedAt && (
+                                                                    <span> on {new Date(review.adminResponse.respondedAt).toLocaleDateString()}</span>
+                                                                )}
+                                                            </small>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </Alert>

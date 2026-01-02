@@ -45,10 +45,16 @@ const AdminReviewApproval = () => {
         pages: 1
     });
 
-    // NEW: State for public reviews modal
+    // State for public reviews modal
     const [showPublicReviewsModal, setShowPublicReviewsModal] = useState(false);
     const [publicReviews, setPublicReviews] = useState([]);
     const [loadingPublic, setLoadingPublic] = useState(false);
+    const [publicReviewsPagination, setPublicReviewsPagination] = useState({
+        page: 1,
+        limit: 10,
+        total: 0,
+        pages: 1
+    });
 
     // Toast notification state
     const [showToast, setShowToast] = useState(false);
@@ -75,13 +81,24 @@ const AdminReviewApproval = () => {
         setShowToast(true);
     };
 
-    // NEW: Function to fetch public reviews
-    const fetchPublicReviews = async () => {
+    // Function to fetch public reviews with pagination
+    const fetchPublicReviews = async (page = 1) => {
         try {
             setLoadingPublic(true);
-            const response = await appReviewsApi.get('/reviews/public');
+            const response = await appReviewsApi.get('/reviews/public', {
+                params: {
+                    page: page,
+                    limit: 10
+                }
+            });
             if (response.data.success) {
                 setPublicReviews(response.data.reviews);
+                setPublicReviewsPagination(response.data.pagination || {
+                    page: page,
+                    limit: 10,
+                    total: response.data.reviews.length,
+                    pages: Math.ceil(response.data.reviews.length / 10)
+                });
                 setShowPublicReviewsModal(true);
             }
         } catch (error) {
@@ -92,9 +109,15 @@ const AdminReviewApproval = () => {
         }
     };
 
-    // UPDATED: Navigate to public reviews page
+    // Function to handle public reviews page change
+    const handlePublicReviewsPageChange = (newPage) => {
+        setPublicReviewsPagination(prev => ({ ...prev, page: newPage }));
+        fetchPublicReviews(newPage);
+    };
+
+    // Navigate to public reviews page
     const handleViewPublicReviews = () => {
-        fetchPublicReviews();
+        fetchPublicReviews(1);
     };
 
     // Memoized fetch function
@@ -336,8 +359,7 @@ const AdminReviewApproval = () => {
 
     return (
         <Container fluid className="py-4">
-            {/* NEW: Public Reviews Modal */}
-            // NEW: Public Reviews Modal
+            {/* Public Reviews Modal */}
             <Modal 
                 show={showPublicReviewsModal} 
                 onHide={() => setShowPublicReviewsModal(false)}
@@ -348,7 +370,7 @@ const AdminReviewApproval = () => {
                 <Modal.Header closeButton className="bg-light">
                     <Modal.Title className="d-flex align-items-center gap-2">
                         <Eye />
-                        Public Reviews ({publicReviews.length})
+                        Public Reviews ({publicReviewsPagination.total})
                     </Modal.Title>
                 </Modal.Header>
                 <Modal.Body className="p-0">
@@ -364,85 +386,154 @@ const AdminReviewApproval = () => {
                             <p className="text-muted">Approved reviews will appear here.</p>
                         </div>
                     ) : (
-                        <div className="p-3">
-                            {publicReviews.map((review) => (
-                                <Card key={review._id} className="mb-3 shadow-sm border-0">
-                                    <Card.Body>
-                                        <Row className="align-items-center mb-2">
-                                            <Col md={8}>
-                                                <div className="d-flex align-items-center">
-                                                    <div 
-                                                        className="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0"
-                                                        style={{ width: '40px', height: '40px' }}
+                        <>
+                            <div className="p-3">
+                                {publicReviews.map((review) => (
+                                    <Card key={review._id} className="mb-3 shadow-sm border-0">
+                                        <Card.Body>
+                                            <Row className="align-items-center mb-2">
+                                                <Col md={8}>
+                                                    <div className="d-flex align-items-center">
+                                                        <div 
+                                                            className="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0"
+                                                            style={{ width: '40px', height: '40px' }}
+                                                        >
+                                                            <span className="fs-6 fw-bold">
+                                                                {review.userName?.charAt(0).toUpperCase() || 'U'}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <h6 className="mb-0">{review.userName || 'Anonymous User'}</h6>
+                                                            <p className="text-muted mb-0 small">
+                                                                {review.userEmail}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </Col>
+                                                <Col md={4} className="text-md-end">
+                                                    <div className="d-flex align-items-center justify-content-md-end">
+                                                        <div className="me-2">{renderStars(review.rating)}</div>
+                                                        <Badge bg="light" text="dark" className="border">
+                                                            {review.rating}/5
+                                                        </Badge>
+                                                    </div>
+                                                </Col>
+                                            </Row>
+                                            
+                                            <Card.Text className="mb-2 fst-italic">
+                                                "{review.review || 'No written feedback provided.'}"
+                                            </Card.Text>
+                                            
+                                            {review.adminResponse && (
+                                                <Alert variant="info" className="p-2 mb-2">
+                                                    <div className="d-flex">
+                                                        <Reply className="me-2 mt-1" size={14} />
+                                                        <div>
+                                                            <strong>Admin Response:</strong>
+                                                            <p className="mb-0">{review.adminResponse.text || review.adminResponse}</p>
+                                                            {review.adminResponse.respondedBy && (
+                                                                <small className="text-muted">
+                                                                    - {review.adminResponse.respondedBy}
+                                                                    {review.adminResponse.respondedAt && (
+                                                                        <span> on {new Date(review.adminResponse.respondedAt).toLocaleDateString()}</span>
+                                                                    )}
+                                                                </small>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </Alert>
+                                            )}
+                                            
+                                            <div className="d-flex flex-wrap gap-3 small text-muted">
+                                                <span className="d-flex align-items-center">
+                                                    <Calendar className="me-1" size={12} />
+                                                    {formatDate(review.createdAt)}
+                                                </span>
+                                                <span className="d-flex align-items-center">
+                                                    <Phone className="me-1" size={12} />
+                                                    {review.appStore}
+                                                </span>
+                                                <Badge bg={review.status === 'approved' ? 'success' : 'warning'}>
+                                                    {review.status}
+                                                </Badge>
+                                            </div>
+                                        </Card.Body>
+                                    </Card>
+                                ))}
+                            </div>
+                            
+                            {/* Public Reviews Pagination */}
+                            {publicReviewsPagination.pages > 1 && (
+                                <div className="border-top p-3 bg-light">
+                                    <div className="d-flex justify-content-center">
+                                        <nav>
+                                            <ul className="pagination shadow-sm mb-0">
+                                                <li className={`page-item ${publicReviewsPagination.page === 1 ? 'disabled' : ''}`}>
+                                                    <button 
+                                                        className="page-link"
+                                                        onClick={() => handlePublicReviewsPageChange(publicReviewsPagination.page - 1)}
+                                                        disabled={publicReviewsPagination.page === 1}
                                                     >
-                                                        <span className="fs-6 fw-bold">
-                                                            {review.userName?.charAt(0).toUpperCase() || 'U'}
-                                                        </span>
-                                                    </div>
-                                                    <div>
-                                                        <h6 className="mb-0">{review.userName || 'Anonymous User'}</h6>
-                                                        <p className="text-muted mb-0 small">
-                                                            {review.userEmail}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </Col>
-                                            <Col md={4} className="text-md-end">
-                                                <div className="d-flex align-items-center justify-content-md-end">
-                                                    <div className="me-2">{renderStars(review.rating)}</div>
-                                                    <Badge bg="light" text="dark" className="border">
-                                                        {review.rating}/5
-                                                    </Badge>
-                                                </div>
-                                            </Col>
-                                        </Row>
-                                        
-                                        <Card.Text className="mb-2 fst-italic">
-                                            "{review.review || 'No written feedback provided.'}"
-                                        </Card.Text>
-                                        
-                                        {review.adminResponse && (
-                                            <Alert variant="info" className="p-2 mb-2">
-                                                <div className="d-flex">
-                                                    <Reply className="me-2 mt-1" size={14} />
-                                                    <div>
-                                                        <strong>Admin Response:</strong>
-                                                        {/* FIX: Access the text property from adminResponse object */}
-                                                        <p className="mb-0">{review.adminResponse.text || review.adminResponse}</p>
-                                                        {review.adminResponse.respondedBy && (
-                                                            <small className="text-muted">
-                                                                - {review.adminResponse.respondedBy}
-                                                                {review.adminResponse.respondedAt && (
-                                                                    <span> on {new Date(review.adminResponse.respondedAt).toLocaleDateString()}</span>
-                                                                )}
-                                                            </small>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </Alert>
-                                        )}
-                                        
-                                        <div className="d-flex flex-wrap gap-3 small text-muted">
-                                            <span className="d-flex align-items-center">
-                                                <Calendar className="me-1" size={12} />
-                                                {formatDate(review.createdAt)}
-                                            </span>
-                                            <span className="d-flex align-items-center">
-                                                <Phone className="me-1" size={12} />
-                                                {review.appStore}
-                                            </span>
-                                            <Badge bg={review.status === 'approved' ? 'success' : 'warning'}>
-                                                {review.status}
-                                            </Badge>
-                                        </div>
-                                    </Card.Body>
-                                </Card>
-                            ))}
-                        </div>
+                                                        Previous
+                                                    </button>
+                                                </li>
+                                                
+                                                {[...Array(Math.min(5, publicReviewsPagination.pages))].map((_, idx) => {
+                                                    let pageNum;
+                                                    if (publicReviewsPagination.pages <= 5) {
+                                                        pageNum = idx + 1;
+                                                    } else if (publicReviewsPagination.page <= 3) {
+                                                        pageNum = idx + 1;
+                                                    } else if (publicReviewsPagination.page >= publicReviewsPagination.pages - 2) {
+                                                        pageNum = publicReviewsPagination.pages - 4 + idx;
+                                                    } else {
+                                                        pageNum = publicReviewsPagination.page - 2 + idx;
+                                                    }
+
+                                                    if (pageNum > 0 && pageNum <= publicReviewsPagination.pages) {
+                                                        return (
+                                                            <li 
+                                                                key={idx} 
+                                                                className={`page-item ${publicReviewsPagination.page === pageNum ? 'active' : ''}`}
+                                                            >
+                                                                <button 
+                                                                    className="page-link"
+                                                                    onClick={() => handlePublicReviewsPageChange(pageNum)}
+                                                                >
+                                                                    {pageNum}
+                                                                </button>
+                                                            </li>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })}
+                                                
+                                                <li className={`page-item ${publicReviewsPagination.page === publicReviewsPagination.pages ? 'disabled' : ''}`}>
+                                                    <button 
+                                                        className="page-link"
+                                                        onClick={() => handlePublicReviewsPageChange(publicReviewsPagination.page + 1)}
+                                                        disabled={publicReviewsPagination.page === publicReviewsPagination.pages}
+                                                    >
+                                                        Next
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                    <div className="text-center mt-2">
+                                        <small className="text-muted">
+                                            Showing {((publicReviewsPagination.page - 1) * publicReviewsPagination.limit) + 1} to{' '}
+                                            {Math.min(publicReviewsPagination.page * publicReviewsPagination.limit, publicReviewsPagination.total)} of{' '}
+                                            {publicReviewsPagination.total} reviews
+                                        </small>
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </Modal.Body>
                 <Modal.Footer className="bg-light">
-                    <div className="d-flex justify-content-between w-100">
+                    <div className="d-flex justify-content-between w-100 align-items-center">
                         <div className="d-flex align-items-center">
                             <Badge bg="success" className="me-2">
                                 {publicStats.totalReviews} Total
@@ -451,12 +542,24 @@ const AdminReviewApproval = () => {
                                 Avg: {publicStats.averageRating.toFixed(1)}/5
                             </Badge>
                         </div>
-                        <Button 
-                            variant="secondary" 
-                            onClick={() => setShowPublicReviewsModal(false)}
-                        >
-                            Close
-                        </Button>
+                        <div>
+                            <Button 
+                                variant="outline-primary" 
+                                size="sm"
+                                onClick={() => handlePublicReviewsPageChange(publicReviewsPagination.page)}
+                                disabled={loadingPublic}
+                                className="me-2"
+                            >
+                                <ArrowClockwise className={loadingPublic ? 'spin-animation' : ''} />
+                                Refresh
+                            </Button>
+                            <Button 
+                                variant="secondary" 
+                                onClick={() => setShowPublicReviewsModal(false)}
+                            >
+                                Close
+                            </Button>
+                        </div>
                     </div>
                 </Modal.Footer>
             </Modal>

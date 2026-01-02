@@ -12,7 +12,8 @@ import {
   Toast, 
   ToastContainer,
   Tooltip,
-  OverlayTrigger
+  OverlayTrigger,
+  Modal
 } from 'react-bootstrap';
 import { 
   StarFill, 
@@ -25,9 +26,9 @@ import {
   ArrowClockwise,
   ExclamationCircle,
   Eye,
-  QuestionCircle
+  QuestionCircle,
+  XCircle
 } from 'react-bootstrap-icons';
-// Removed: import { useNavigate } from 'react-router-dom';
 import appReviewsApi from '../../services/appReviewsApi';
 import './ShareRateStyles.css';
 
@@ -44,13 +45,16 @@ const AdminReviewApproval = () => {
         pages: 1
     });
 
+    // NEW: State for public reviews modal
+    const [showPublicReviewsModal, setShowPublicReviewsModal] = useState(false);
+    const [publicReviews, setPublicReviews] = useState([]);
+    const [loadingPublic, setLoadingPublic] = useState(false);
+
     // Toast notification state
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
     const [toastVariant, setToastVariant] = useState('success');
     const [toastIcon, setToastIcon] = useState(<CheckCircle />);
-
-    // Removed: const navigate = useNavigate();
 
     // Show toast notification
     const showNotification = (message, variant = 'success') => {
@@ -71,18 +75,26 @@ const AdminReviewApproval = () => {
         setShowToast(true);
     };
 
-    // Navigate to public reviews page - FIXED VERSION
+    // NEW: Function to fetch public reviews
+    const fetchPublicReviews = async () => {
+        try {
+            setLoadingPublic(true);
+            const response = await appReviewsApi.get('/reviews/public');
+            if (response.data.success) {
+                setPublicReviews(response.data.reviews);
+                setShowPublicReviewsModal(true);
+            }
+        } catch (error) {
+            console.error('Error fetching public reviews:', error);
+            showNotification('Failed to load public reviews', 'danger');
+        } finally {
+            setLoadingPublic(false);
+        }
+    };
+
+    // UPDATED: Navigate to public reviews page
     const handleViewPublicReviews = () => {
-        // Option 1: Simple window location change (refreshes page)
-        window.location.href = '/reviews/public';
-        
-        // Option 2: If you want to open in new tab instead:
-        // window.open('/app-reviews', '_blank');
-        
-        // Option 3: If you're using a Single Page App without full refresh:
-        // You'll need to implement your own routing or use window.history
-        // window.history.pushState({}, '', '/app-reviews');
-        // Then trigger a custom event or state change that your parent component listens to
+        fetchPublicReviews();
     };
 
     // Memoized fetch function
@@ -324,6 +336,121 @@ const AdminReviewApproval = () => {
 
     return (
         <Container fluid className="py-4">
+            {/* NEW: Public Reviews Modal */}
+            <Modal 
+                show={showPublicReviewsModal} 
+                onHide={() => setShowPublicReviewsModal(false)}
+                size="xl"
+                centered
+                scrollable
+            >
+                <Modal.Header closeButton className="bg-light">
+                    <Modal.Title className="d-flex align-items-center gap-2">
+                        <Eye />
+                        Public Reviews ({publicReviews.length})
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="p-0">
+                    {loadingPublic ? (
+                        <div className="text-center py-5">
+                            <Spinner animation="border" variant="primary" />
+                            <p className="mt-2">Loading public reviews...</p>
+                        </div>
+                    ) : publicReviews.length === 0 ? (
+                        <div className="text-center py-5">
+                            <ExclamationCircle size={48} className="text-warning mb-3" />
+                            <h5>No Public Reviews Yet</h5>
+                            <p className="text-muted">Approved reviews will appear here.</p>
+                        </div>
+                    ) : (
+                        <div className="p-3">
+                            {publicReviews.map((review) => (
+                                <Card key={review._id} className="mb-3 shadow-sm border-0">
+                                    <Card.Body>
+                                        <Row className="align-items-center mb-2">
+                                            <Col md={8}>
+                                                <div className="d-flex align-items-center">
+                                                    <div 
+                                                        className="bg-info text-white rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0"
+                                                        style={{ width: '40px', height: '40px' }}
+                                                    >
+                                                        <span className="fs-6 fw-bold">
+                                                            {review.userName?.charAt(0).toUpperCase() || 'U'}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <h6 className="mb-0">{review.userName || 'Anonymous User'}</h6>
+                                                        <p className="text-muted mb-0 small">
+                                                            {review.userEmail}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </Col>
+                                            <Col md={4} className="text-md-end">
+                                                <div className="d-flex align-items-center justify-content-md-end">
+                                                    <div className="me-2">{renderStars(review.rating)}</div>
+                                                    <Badge bg="light" text="dark" className="border">
+                                                        {review.rating}/5
+                                                    </Badge>
+                                                </div>
+                                            </Col>
+                                        </Row>
+                                        
+                                        <Card.Text className="mb-2 fst-italic">
+                                            "{review.review || 'No written feedback provided.'}"
+                                        </Card.Text>
+                                        
+                                        {review.adminResponse && (
+                                            <Alert variant="info" className="p-2 mb-2">
+                                                <div className="d-flex">
+                                                    <Reply className="me-2 mt-1" size={14} />
+                                                    <div>
+                                                        <strong>Admin Response:</strong>
+                                                        <p className="mb-0">{review.adminResponse}</p>
+                                                    </div>
+                                                </div>
+                                            </Alert>
+                                        )}
+                                        
+                                        <div className="d-flex flex-wrap gap-3 small text-muted">
+                                            <span className="d-flex align-items-center">
+                                                <Calendar className="me-1" size={12} />
+                                                {formatDate(review.createdAt)}
+                                            </span>
+                                            <span className="d-flex align-items-center">
+                                                <Phone className="me-1" size={12} />
+                                                {review.appStore}
+                                            </span>
+                                            <Badge bg={review.status === 'approved' ? 'success' : 'warning'}>
+                                                {review.status}
+                                            </Badge>
+                                        </div>
+                                    </Card.Body>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </Modal.Body>
+                <Modal.Footer className="bg-light">
+                    <div className="d-flex justify-content-between w-100">
+                        <div className="d-flex align-items-center">
+                            <Badge bg="success" className="me-2">
+                                {publicStats.totalReviews} Total
+                            </Badge>
+                            <Badge bg="warning" className="me-2">
+                                Avg: {publicStats.averageRating.toFixed(1)}/5
+                            </Badge>
+                        </div>
+                        <Button 
+                            variant="secondary" 
+                            onClick={() => setShowPublicReviewsModal(false)}
+                        >
+                            Close
+                        </Button>
+                    </div>
+                </Modal.Footer>
+            </Modal>
+
             {/* Toast Notifications */}
             <ToastContainer position="top-end" className="p-3" style={{ zIndex: 9999 }}>
                 <Toast 
@@ -376,8 +503,13 @@ const AdminReviewApproval = () => {
                                     size="sm" 
                                     className="d-flex align-items-center gap-2"
                                     onClick={handleViewPublicReviews}
+                                    disabled={loadingPublic}
                                 >
-                                    <Eye />
+                                    {loadingPublic ? (
+                                        <Spinner animation="border" size="sm" />
+                                    ) : (
+                                        <Eye />
+                                    )}
                                     Public Reviews 
                                     <Badge bg="info" className="ms-1">
                                         {publicStats.totalReviews}
@@ -470,8 +602,13 @@ const AdminReviewApproval = () => {
                                         variant="outline-info"
                                         onClick={handleViewPublicReviews}
                                         className="d-flex align-items-center gap-2"
+                                        disabled={loadingPublic}
                                     >
-                                        <Eye className="me-2" />
+                                        {loadingPublic ? (
+                                            <Spinner animation="border" size="sm" className="me-2" />
+                                        ) : (
+                                            <Eye className="me-2" />
+                                        )}
                                         View Public Reviews
                                         <Badge bg="info" className="ms-2">
                                             {publicStats.totalReviews} reviews
@@ -787,8 +924,13 @@ const AdminReviewApproval = () => {
                                                     size="sm" 
                                                     className="text-decoration-none d-flex align-items-center gap-2"
                                                     onClick={handleViewPublicReviews}
+                                                    disabled={loadingPublic}
                                                 >
-                                                    <Eye />
+                                                    {loadingPublic ? (
+                                                        <Spinner animation="border" size="sm" />
+                                                    ) : (
+                                                        <Eye />
+                                                    )}
                                                     View Public Reviews
                                                 </Button>
                                                 

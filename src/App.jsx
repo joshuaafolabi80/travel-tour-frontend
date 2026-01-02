@@ -631,6 +631,19 @@ const App = () => {
             setBlogPostId(null);
             setCurrentHotelDetail(null);
         }
+        // Handle App Reviews pages - DO NOT reset hotel/blog data
+        else if (page === 'app-reviews') {
+            // App Reviews is independent - don't reset hotel/blog data
+            // User might want to go back to their hotel/blog page
+            // Only reset shareRateData if needed (optional)
+            // setShareRateData({ storeId: null, reviewData: null });
+        } 
+        else if (page === 'review-moderation') {
+            // Review Moderation is independent - don't reset hotel/blog data
+            // Admin might want to go back to their hotel/blog page
+            // Only reset shareRateData if needed (optional)
+            // setShareRateData({ storeId: null, reviewData: null });
+        }
         else if (page === 'hotel-details' && data?.hotelId) {
             setCurrentHotelDetail(data); 
             setBlogPostId(null);

@@ -1,3 +1,6 @@
+// travel-tour-frontend/src/components/share-rate/ShareAndRatePage.jsx
+
+
 import React, { useState } from 'react';
 import './ShareRateStyles.css';
 import ShareOurApp from './ShareOurApp';

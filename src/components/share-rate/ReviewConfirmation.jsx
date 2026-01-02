@@ -1,3 +1,6 @@
+// travel-tour-frontend/src/components/share-rate/ReviewConfirmation.jsx
+
+
 import React from 'react';
 import './ShareRateStyles.css';
 

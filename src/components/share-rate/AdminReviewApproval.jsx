@@ -1,7 +1,7 @@
 // travel-tour-frontend/src/components/share-rate/AdminReviewApproval.jsx
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Badge, Button, Form, Alert, Spinner } from 'react-bootstrap';
-import { StarFill, Star, Calendar, Smartphone, CheckCircle, Trash, Reply } from 'react-bootstrap-icons';
+import { StarFill, Star, Calendar, DeviceSmartphone, CheckCircle, Trash, Reply } from 'react-bootstrap-icons';
 import appReviewsApi from '../../services/appReviewsApi';
 import './ShareRateStyles.css';
 
@@ -209,7 +209,7 @@ const AdminReviewApproval = () => {
                                                 {formatDate(review.createdAt)}
                                             </span>
                                             <span className="text-muted">
-                                                <Smartphone className="me-1" />
+                                                <DeviceSmartphone className="me-1" />
                                                 Source: {review.appStore}
                                             </span>
                                         </div>

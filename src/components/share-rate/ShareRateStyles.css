@@ -1978,6 +1978,133 @@
     box-shadow: 0 15px 30px rgba(0,0,0,0.15) !important;
 }
 
+/* Add these to your existing ShareRateStyles.css */
+
+/* Spinning animation for refresh button */
+.spin-animation {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Toast notification custom styles */
+.toast-notification {
+    border-radius: 10px !important;
+    border: none !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+.toast-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+    border-left: 4px solid #198754 !important;
+}
+
+.toast-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%) !important;
+    border-left: 4px solid #c82333 !important;
+}
+
+.toast-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+    border-left: 4px solid #e0a800 !important;
+    color: #212529 !important;
+}
+
+.toast-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%) !important;
+    border-left: 4px solid #138496 !important;
+}
+
+/* Hover lift effect for cards */
+.hover-lift {
+    transition: all 0.3s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Review card animations */
+.fade-in-review {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Text truncation for long content */
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Custom scrollbar for textareas */
+textarea.form-control {
+    border: 2px solid #e9ecef;
+    transition: border-color 0.3s ease;
+}
+
+textarea.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+/* Responsive adjustments for admin panel */
+@media (max-width: 768px) {
+    .toast-container {
+        position: fixed !important;
+        top: 70px !important;
+        left: 10px !important;
+        right: 10px !important;
+    }
+    
+    .action-buttons .btn {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+    
+    .page-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* Progress indicator for bulk operations */
+.bulk-progress {
+    width: 100%;
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.bulk-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    transition: width 0.3s ease;
+    border-radius: 2px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .review-confirmation-container {

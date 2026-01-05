@@ -20,10 +20,18 @@ const AdminStudents = () => {
     email: ''
   });
   
-  // Pagination state
+  // Pagination state - CHANGED to 10 per page
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+  
+  // Statistics state - NEW
+  const [statistics, setStatistics] = useState({
+    totalUsers: 0,
+    totalStudents: 0,
+    totalAdmins: 0,
+    totalActive: 0
+  });
   
   // Custom alert states
   const [showAlert, setShowAlert] = useState(false);
@@ -32,6 +40,7 @@ const AdminStudents = () => {
 
   useEffect(() => {
     fetchStudents();
+    fetchStatistics(); // NEW: Fetch statistics separately
   }, [currentPage, itemsPerPage]);
 
   useEffect(() => {
@@ -104,6 +113,57 @@ const AdminStudents = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // NEW: Function to fetch statistics separately - WITH TOKEN DEBUGGING
+  const fetchStatistics = async () => {
+    try {
+      // Check if token exists
+      const token = localStorage.getItem('token');
+      console.log('🔑 Token exists?', !!token);
+      console.log('Token length:', token?.length);
+      
+      // Log the actual API request
+      console.log('🌐 Making request to:', '/admin/statistics');
+      
+      const response = await api.get('/admin/statistics');
+      
+      if (response.data.success) {
+        setStatistics({
+          totalUsers: response.data.totalUsers || 0,
+          totalStudents: response.data.totalStudents || 0,
+          totalAdmins: response.data.totalAdmins || 0,
+          totalActive: response.data.totalActive || 0
+        });
+      }
+    } catch (error) {
+      console.error('❌ Detailed error:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.config?.headers
+      });
+      
+      // Fallback to calculating from fetched students if API fails
+      if (students.length > 0) {
+        calculateStatisticsFromStudents();
+      }
+    }
+  };
+
+  // Fallback function to calculate statistics from students data
+  const calculateStatisticsFromStudents = () => {
+    const totalUsers = students.length;
+    const totalStudents = students.filter(s => s.role === 'student').length;
+    const totalAdmins = students.filter(s => s.role === 'admin').length;
+    const totalActive = students.filter(s => s.active).length;
+    
+    setStatistics({
+      totalUsers,
+      totalStudents,
+      totalAdmins,
+      totalActive
+    });
   };
 
   const filterStudents = () => {
@@ -399,7 +459,7 @@ const AdminStudents = () => {
                   </div>
                   <div className="col-md-4 text-md-end">
                     <div className="bg-white rounded p-3 d-inline-block" style={{color: '#28a745'}}>
-                      <h4 className="mb-0 fw-bold">{totalItems}</h4>
+                      <h4 className="mb-0 fw-bold">{statistics.totalUsers}</h4>
                       <small>Total Users</small>
                     </div>
                   </div>
@@ -534,14 +594,15 @@ const AdminStudents = () => {
           </div>
         </div>
 
-        {/* Statistics Cards */}
+        {/* Statistics Cards - UPDATED to use statistics state */}
         <div className="row mb-4">
           <div className="col-md-3 mb-3">
             <div className="card text-white h-100 shadow" style={{backgroundColor: '#28a745'}}>
               <div className="card-body text-center">
                 <i className="fas fa-users fa-2x mb-2"></i>
-                <h3 className="fw-bold">{students.length}</h3>
+                <h3 className="fw-bold">{statistics.totalUsers}</h3>
                 <p className="mb-0">Total Users</p>
+                <small className="opacity-75">All registered users</small>
               </div>
             </div>
           </div>
@@ -549,10 +610,9 @@ const AdminStudents = () => {
             <div className="card text-white h-100 shadow" style={{backgroundColor: '#17a2b8'}}>
               <div className="card-body text-center">
                 <i className="fas fa-user-graduate fa-2x mb-2"></i>
-                <h3 className="fw-bold">
-                  {students.filter(s => s.role === 'student').length}
-                </h3>
+                <h3 className="fw-bold">{statistics.totalStudents}</h3>
                 <p className="mb-0">Students</p>
+                <small className="opacity-75">Excluding admins</small>
               </div>
             </div>
           </div>
@@ -560,10 +620,9 @@ const AdminStudents = () => {
             <div className="card text-white h-100 shadow" style={{backgroundColor: '#ffc107', color: '#000'}}>
               <div className="card-body text-center">
                 <i className="fas fa-user-shield fa-2x mb-2"></i>
-                <h3 className="fw-bold">
-                  {students.filter(s => s.role === 'admin').length}
-                </h3>
+                <h3 className="fw-bold">{statistics.totalAdmins}</h3>
                 <p className="mb-0">Admins</p>
+                <small className="opacity-75">Administrator accounts</small>
               </div>
             </div>
           </div>
@@ -571,10 +630,9 @@ const AdminStudents = () => {
             <div className="card text-white h-100 shadow" style={{backgroundColor: '#6f42c1'}}>
               <div className="card-body text-center">
                 <i className="fas fa-user-check fa-2x mb-2"></i>
-                <h3 className="fw-bold">
-                  {students.filter(s => s.active).length}
-                </h3>
+                <h3 className="fw-bold">{statistics.totalActive}</h3>
                 <p className="mb-0">Active Users</p>
+                <small className="opacity-75">Excluding admin(s)</small>
               </div>
             </div>
           </div>
@@ -607,12 +665,12 @@ const AdminStudents = () => {
                       <div className="col-md-6">
                         <h4 className="mb-0" style={{color: '#1a237e'}}>
                           <i className="fas fa-list-alt me-2"></i>
-                          Registered Users
+                          Registered Users (Page {currentPage} of {totalPages})
                         </h4>
                       </div>
                       <div className="col-md-6 text-end">
                         <small className="text-muted">
-                          Page {currentPage} of {totalPages} • Showing {students.length} users
+                          Showing {students.length} users • {totalItems} total
                         </small>
                       </div>
                     </div>

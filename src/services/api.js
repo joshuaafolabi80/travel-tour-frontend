@@ -73,44 +73,136 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// Request interceptor to add auth token
+// Create separate meetApi instance for Meet API calls
+const meetApi = axios.create({
+  baseURL: MEET_API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  timeout: 30000,
+});
+
+// Helper function to get token - checks both possible token locations
+const getAuthToken = () => {
+  // Check for token in localStorage (your AdminStudents.jsx uses this)
+  const token = localStorage.getItem('token');
+  if (token) {
+    console.log('🔑 Found token in localStorage');
+    return token;
+  }
+  
+  // Check for authToken (your current api.js uses this)
+  const authToken = localStorage.getItem('authToken');
+  if (authToken) {
+    console.log('🔑 Found authToken in localStorage, migrating to token...');
+    localStorage.setItem('token', authToken);
+    return authToken;
+  }
+  
+  console.log('🔑 No token found in localStorage');
+  return null;
+};
+
+// Request interceptor to add auth token - UPDATED with better logging
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
+    const token = getAuthToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    if (isDevelopment) {
-      console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`);
-    }
+    // Enhanced logging for debugging
+    console.log('📤 API Request:', {
+      url: config.url,
+      method: config.method?.toUpperCase(),
+      hasToken: !!token,
+      tokenLength: token?.length,
+      headers: config.headers
+    });
     
     return config;
   },
   (error) => {
+    console.error('📤 Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor for error handling
+// Request interceptor for meetApi
+meetApi.interceptors.request.use(
+  (config) => {
+    const token = getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    console.log('📤 Meet API Request:', {
+      url: config.url,
+      method: config.method?.toUpperCase(),
+      hasToken: !!token
+    });
+    
+    return config;
+  },
+  (error) => {
+    console.error('📤 Meet API Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling - UPDATED with better logging
 api.interceptors.response.use(
   (response) => {
-    if (isDevelopment) {
-      console.log(`✅ API Response: ${response.config.url}`, {
-        status: response.status
-      });
-    }
+    console.log('📥 API Response:', {
+      url: response.config.url,
+      status: response.status,
+      statusText: response.statusText,
+      data: response.data
+    });
     return response;
   },
   (error) => {
     console.error('❌ API Error:', {
       url: error.config?.url,
-      method: error.config?.method,
+      method: error.config?.method?.toUpperCase(),
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.response?.data?.message || error.message,
+      headers: error.response?.config?.headers
+    });
+    
+    if (error.response?.status === 401) {
+      console.warn('⚠️ Unauthorized (401) - Clearing tokens and redirecting');
+      // Clear both possible token locations
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      window.location.href = '/';
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for meetApi
+meetApi.interceptors.response.use(
+  (response) => {
+    console.log('📥 Meet API Response:', {
+      url: response.config.url,
+      status: response.status
+    });
+    return response;
+  },
+  (error) => {
+    console.error('❌ Meet API Error:', {
+      url: error.config?.url,
       status: error.response?.status,
       message: error.response?.data?.message || error.message
     });
     
     if (error.response?.status === 401) {
+      localStorage.removeItem('token');
       localStorage.removeItem('authToken');
       localStorage.removeItem('userData');
       window.location.href = '/';
@@ -122,8 +214,10 @@ api.interceptors.response.use(
 
 export default api;
 export { 
+  meetApi,
   getApiBaseUrl, 
   getMeetApiBaseUrl,
   getEnvironment,
-  MEET_API_BASE_URL 
+  MEET_API_BASE_URL,
+  getAuthToken  // Export for manual token checking
 };

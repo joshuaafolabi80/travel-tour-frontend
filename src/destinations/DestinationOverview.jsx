@@ -1,3 +1,4 @@
+// travel-tour-frontend/src/destinations/DestinationOverview.jsx
 import React, { useState } from 'react';
 
 const FAQItem = ({ faq }) => {
@@ -18,7 +19,7 @@ const FAQItem = ({ faq }) => {
       </div>
       {isOpen && (
         <div className="card-body">
-          <p className="mb-0">{faq.answer}</p>
+          <p className="mb-0" style={{ textAlign: 'justify' }}>{faq.answer}</p>
         </div>
       )}
     </div>

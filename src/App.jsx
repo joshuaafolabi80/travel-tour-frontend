@@ -598,6 +598,16 @@ const App = () => {
         setCurrentPage('quiz-platform');
     };
 
+    // NEW: Back navigation handlers
+    const handleBackToDestinations = () => {
+        setCurrentPage('destinations');
+        setSelectedCourse(null);
+    };
+
+    const handleBackToOverview = () => {
+        setCurrentPage('destination-overview');
+    };
+
     const toggleMenu = () => {
         setShowMenu(!showMenu);
     };
@@ -1013,13 +1023,21 @@ const App = () => {
                         {currentPage === 'app-reviews' && <AppReviewsList navigateTo={navigateTo} />}
                         {currentPage === 'review-moderation' && <AdminReviewApproval navigateTo={navigateTo} />}
                         
-                        {/* Existing pages continue below... */}
+                        {/* Destination Course Pages with Back Navigation */}
                         {currentPage === 'destinations' && <DestinationsPage onSelectDestination={handleSelectDestination} />}
                         {currentPage === 'destination-overview' && selectedCourse && (
-                            <DestinationOverview course={selectedCourse} onStartCourse={handleStartCourse} />
+                            <DestinationOverview 
+                                course={selectedCourse} 
+                                onStartCourse={handleStartCourse} 
+                                onBack={handleBackToDestinations}
+                            />
                         )}
                         {currentPage === 'full-course-content' && selectedCourse && (
-                            <FullCourseContent course={selectedCourse} onTakeQuiz={handleTakeQuiz} />
+                            <FullCourseContent 
+                                course={selectedCourse} 
+                                onTakeQuiz={handleTakeQuiz} 
+                                onBack={handleBackToOverview}
+                            />
                         )}
                         {currentPage === 'quiz-platform' && selectedCourse && (
                             <QuizPlatform 

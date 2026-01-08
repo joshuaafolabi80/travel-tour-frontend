@@ -9,8 +9,8 @@ const FAQItem = ({ faq }) => {
         className="card-header d-flex justify-content-between align-items-center"
         style={{ 
           cursor: "pointer",
-          backgroundColor: '#fff3e0', // Light orange background
-          border: '1px solid #ff6f00' // Orange border
+          backgroundColor: '#fff3e0',
+          border: '1px solid #ff6f00'
         }}
         onClick={() => setIsOpen(!isOpen)}
       >
@@ -26,11 +26,25 @@ const FAQItem = ({ faq }) => {
   );
 };
 
-const DestinationOverview = ({ course, onStartCourse }) => {
+const DestinationOverview = ({ course, onStartCourse, onBack }) => {
   return (
     <div className="container py-4">
-      {/* Breadcrumb / header */}
+      {/* Back Button */}
       <div className="mb-3">
+        <button 
+          className="btn btn-outline-secondary btn-sm"
+          onClick={onBack}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '15px'
+          }}
+        >
+          <i className="fas fa-arrow-left"></i>
+          Back to Destinations
+        </button>
+        
         <small className="text-muted">Home / Destinations / {course.name}</small>
         <div className="d-flex align-items-center mt-2">
           <i className="fas fa-user-check text-success me-2"></i>
@@ -66,9 +80,9 @@ const DestinationOverview = ({ course, onStartCourse }) => {
         className="btn btn-lg d-flex align-items-center gap-2"
         onClick={onStartCourse}
         style={{
-          backgroundColor: '#e3f2fd', // Light blue background
-          color: '#1976d2', // Blue text color
-          border: '1px solid #90caf9' // Light blue border
+          backgroundColor: '#e3f2fd',
+          color: '#1976d2',
+          border: '1px solid #90caf9'
         }}
       >
         Start This Course <i className="fas fa-arrow-right"></i>

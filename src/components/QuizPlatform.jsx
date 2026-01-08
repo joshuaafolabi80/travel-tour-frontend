@@ -1,4 +1,4 @@
-// src/components/QuizPlatform.jsx - COMPLETE FIXED VERSION
+// src/components/QuizPlatform.jsx - COMPLETE FIXED VERSION WITH BACK BUTTON
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
@@ -39,6 +39,7 @@ const QuizPlatform = ({ course, onQuizComplete }) => {
   const [quizEndTime, setQuizEndTime] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [currentQuestionSet, setCurrentQuestionSet] = useState(null);
+  const [showBackButton, setShowBackButton] = useState(true);
 
   // Load question set from localStorage on component mount
   useEffect(() => {
@@ -181,6 +182,19 @@ const QuizPlatform = ({ course, onQuizComplete }) => {
     }
   };
 
+  const handleBackToCourse = () => {
+    // First check if we have a course to go back to
+    if (course) {
+      console.log('Going back to course:', course.name);
+      // Navigate back by going back in history
+      window.history.back();
+    } else {
+      // If no course context, just go back in history
+      console.log('No course context, going back in history');
+      window.history.back();
+    }
+  };
+
   const calculateTimeTaken = () => {
     if (!quizStartTime) return 0;
     const endTime = quizEndTime || new Date();
@@ -314,6 +328,24 @@ const QuizPlatform = ({ course, onQuizComplete }) => {
         justifyContent: 'center'
       }}>
         <div className="container">
+          {/* Back Button */}
+          {showBackButton && (
+            <div className="mb-4">
+              <button 
+                className="btn btn-outline-light"
+                onClick={handleBackToCourse}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <i className="fas fa-arrow-left"></i>
+                Back to Course
+              </button>
+            </div>
+          )}
+          
           <div className="row justify-content-center">
             <div className="col-12 col-lg-8 text-center text-white">
               <div className="spinner-border mb-3" style={{width: '3rem', height: '3rem'}}>
@@ -340,6 +372,22 @@ const QuizPlatform = ({ course, onQuizComplete }) => {
         justifyContent: 'center'
       }}>
         <div className="container">
+          {/* Back Button */}
+          <div className="mb-4">
+            <button 
+              className="btn btn-outline-light"
+              onClick={handleBackToCourse}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <i className="fas fa-arrow-left"></i>
+              Back to Course
+            </button>
+          </div>
+          
           <div className="row justify-content-center">
             <div className="col-12 col-lg-8">
               <div className="card shadow-lg border-0">
@@ -375,6 +423,22 @@ const QuizPlatform = ({ course, onQuizComplete }) => {
         justifyContent: 'center'
       }}>
         <div className="container">
+          {/* Back Button */}
+          <div className="mb-4">
+            <button 
+              className="btn btn-outline-light"
+              onClick={handleBackToCourse}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <i className="fas fa-arrow-left"></i>
+              Back to Course
+            </button>
+          </div>
+          
           <div className="row justify-content-center">
             <div className="col-12 col-lg-8">
               <div className="card shadow-lg border-0">
@@ -416,6 +480,22 @@ const QuizPlatform = ({ course, onQuizComplete }) => {
         justifyContent: 'center'
       }}>
         <div className="container">
+          {/* Back Button */}
+          <div className="mb-4">
+            <button 
+              className="btn btn-outline-light"
+              onClick={() => setShowResultsScreen(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <i className="fas fa-arrow-left"></i>
+              Back to Quiz
+            </button>
+          </div>
+          
           <div className="row justify-content-center">
             <div className="col-md-8 col-lg-6">
               
@@ -549,6 +629,22 @@ const QuizPlatform = ({ course, onQuizComplete }) => {
       padding: '2rem 0'
     }}>
       <div className="container">
+        {/* Back Button - Top of Quiz */}
+        <div className="mb-4">
+          <button 
+            className="btn btn-outline-light"
+            onClick={handleBackToCourse}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <i className="fas fa-arrow-left"></i>
+            Back to Course
+          </button>
+        </div>
+        
         <div className="row justify-content-center">
           <div className="col-12 col-lg-10">
             <div className="card shadow-lg border-0">
@@ -770,7 +866,7 @@ const QuizPlatform = ({ course, onQuizComplete }) => {
           height: 30px;
           background: #3B71CA;
           color: white;
-          border-radius: 50%;
+          border-radius: 50%';
           font-weight: bold;
         }
 

@@ -1,4 +1,4 @@
-// src/destinations/FullCourseContent.jsx - COMPLETE FIXED VERSION
+// src/destinations/FullCourseContent.jsx - COMPLETE FIXED VERSION WITH BACK BUTTON
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import QuizPlatform from '../components/QuizPlatform.jsx';
@@ -88,12 +88,12 @@ const fetchQuizQuestions = async (courseId) => {
   }
 };
 
-const FullCourseContent = ({ course, onTakeQuiz }) => {
+const FullCourseContent = ({ course, onTakeQuiz, onBack }) => {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [headerImageIndex, setHeaderImageIndex] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [quizQuestions, setQuizQuestions] = useState([]); // FIXED: Added this state
+  const [quizQuestions, setQuizQuestions] = useState([]);
   const [quizScore, setQuizScore] = useState(0);
   const [quizAnswers, setQuizAnswers] = useState([]);
   const [loadingQuiz, setLoadingQuiz] = useState(false);
@@ -155,34 +155,75 @@ const FullCourseContent = ({ course, onTakeQuiz }) => {
     }
   };
 
+  const handleBackToOverview = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      window.history.back();
+    }
+  };
+
   const handleReturnToCourses = () => {
     setShowResults(false);
     setCurrentSectionIndex(0);
-    window.history.back();
+    handleBackToOverview();
   };
 
   // If quiz is active, show the QuizPlatform
   if (showQuiz) {
     return (
-      <QuizPlatform 
-        course={course} 
-        onQuizComplete={handleQuizComplete}
-      />
+      <div className="quiz-platform-wrapper">
+        {/* Back Button for Quiz */}
+        <div className="container pt-4">
+          <button 
+            className="btn btn-outline-secondary mb-4"
+            onClick={() => setShowQuiz(false)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <i className="fas fa-arrow-left"></i>
+            Back to Course Content
+          </button>
+        </div>
+        <QuizPlatform 
+          course={course} 
+          onQuizComplete={handleQuizComplete}
+        />
+      </div>
     );
   }
 
   // If results are being shown
   if (showResults) {
     return (
-      <QuizResults
-        score={quizScore}
-        totalQuestions={quizQuestions.length}
-        subject={course.name}
-        topic={course.topic || "Course Completion"}
-        answers={quizAnswers}
-        questions={quizQuestions}
-        onReturnToCourses={handleReturnToCourses}
-      />
+      <div className="quiz-results-wrapper">
+        <div className="container pt-4">
+          <button 
+            className="btn btn-outline-secondary mb-4"
+            onClick={handleBackToOverview}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <i className="fas fa-arrow-left"></i>
+            Back to Destinations
+          </button>
+        </div>
+        <QuizResults
+          score={quizScore}
+          totalQuestions={quizQuestions.length}
+          subject={course.name}
+          topic={course.topic || "Course Completion"}
+          answers={quizAnswers}
+          questions={quizQuestions}
+          onReturnToCourses={handleReturnToCourses}
+        />
+      </div>
     );
   }
 
@@ -196,6 +237,23 @@ const FullCourseContent = ({ course, onTakeQuiz }) => {
       padding: '2rem 0'
     }}>
       <div className="container py-4">
+        {/* Back Button */}
+        <div className="mb-4">
+          <button 
+            className="btn btn-outline-secondary"
+            onClick={handleBackToOverview}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '20px'
+            }}
+          >
+            <i className="fas fa-arrow-left"></i>
+            Back to Overview
+          </button>
+        </div>
+
         {/* Course header with stylish font - ONLY SHOWS ON FIRST SECTION */}
         {currentSectionIndex === 0 && (
           <div className="text-center mb-5 animate__animated animate__fadeInDown">

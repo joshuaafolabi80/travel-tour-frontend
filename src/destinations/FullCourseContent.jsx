@@ -341,7 +341,7 @@ const FullCourseContent = ({ course, onTakeQuiz }) => {
                             <span className="badge bg-light text-primary fs-6 me-2">Day {day.day}</span>
                             <h6 className="card-title fw-bold mb-0">{day.title}</h6>
                           </div>
-                          <p className="card-text mb-0 small">{day.description}</p>
+                          <p className="card-text mb-0 small" style={{ textAlign: 'justify' }}>{day.description}</p>
                         </div>
                       </div>
                     </div>

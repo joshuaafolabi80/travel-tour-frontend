@@ -1,3 +1,5 @@
+// travel-tour-frontend/src/components/AdminQuizCompleted.jsx
+
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import * as XLSX from 'xlsx';
@@ -96,7 +98,10 @@ const AdminQuizCompleted = () => {
       setLoading(true);
       setError('');
       
-      const response = await api.get('/quiz/results/admin', {
+      console.log(`📊 Fetching admin quiz results - Page: ${currentPage}, Limit: ${itemsPerPage}`);
+      
+      // 🚨 FIXED: Changed endpoint from '/quiz/results/admin' to '/quiz/admin-results'
+      const response = await api.get('/quiz/admin-results', {
         params: {
           page: currentPage,
           limit: itemsPerPage
@@ -106,18 +111,62 @@ const AdminQuizCompleted = () => {
       console.log('Admin quiz results response:', response.data);
       
       if (response.data.success) {
-        setQuizResults(response.data.results);
-        // 🚨 FIX: Use totalCount if available, otherwise use total or results length
-        setTotalItems(response.data.totalCount || response.data.total || response.data.results.length);
+        // Handle different response structures
+        if (response.data.results) {
+          setQuizResults(response.data.results);
+        } else if (response.data.quizResults) {
+          setQuizResults(response.data.quizResults);
+        } else {
+          // If no results key, use the data itself if it's an array
+          if (Array.isArray(response.data)) {
+            setQuizResults(response.data);
+          } else {
+            setQuizResults([]);
+          }
+        }
+        
+        // 🚨 FIX: Use the correct total count property
+        setTotalItems(
+          response.data.totalCount || 
+          response.data.total || 
+          response.data.results?.length || 
+          0
+        );
         
         // Mark notifications as read when admin views them
         await markNotificationsAsRead();
       } else {
-        setError('Failed to load quiz results');
+        setError('Failed to load quiz results: ' + (response.data.message || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error fetching admin quiz results:', error);
-      setError('Failed to load quiz results. Please try again later.');
+      console.error('❌ Error fetching admin quiz results:', error);
+      
+      // Provide more detailed error message
+      if (error.response) {
+        console.error('Response error details:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+        
+        if (error.response.status === 404) {
+          setError('Quiz admin endpoint not found. Please check server configuration.');
+        } else if (error.response.status === 403) {
+          setError('Access denied. You need admin privileges to view this page.');
+        } else if (error.response.status === 401) {
+          setError('Authentication required. Please log in again.');
+        } else {
+          setError(`Server error (${error.response.status}): ${error.response.data?.message || 'Failed to load quiz results'}`);
+        }
+      } else if (error.request) {
+        setError('No response from server. Please check your network connection.');
+      } else {
+        setError('Failed to load quiz results: ' + error.message);
+      }
+      
+      // Set empty results to prevent UI breaking
+      setQuizResults([]);
+      setTotalItems(0);
     } finally {
       setLoading(false);
     }
@@ -125,12 +174,16 @@ const AdminQuizCompleted = () => {
 
   const markNotificationsAsRead = async () => {
     try {
-      // 🚨 FIX: Send empty object instead of nothing to avoid 400 error
+      // Mark general notifications as read
       await api.put('/notifications/mark-read', { type: 'quiz_completed_admin' });
-      // 🚨 FIX: Send empty array to mark all results as read
+      
+      // Mark all quiz results as read
       await api.put('/quiz/results/mark-read', { resultIds: [] });
+      
+      console.log('✅ Notifications marked as read');
     } catch (error) {
-      console.error('Error marking notifications as read:', error);
+      console.warn('⚠️ Error marking notifications as read:', error.message);
+      // Don't show error to user - this is a background task
     }
   };
 
@@ -139,9 +192,9 @@ const AdminQuizCompleted = () => {
     setNavigation({
       target: 'profile',
       studentData: {
-        studentId: result.userId || result.userName, // Use whatever unique identifier you have
+        studentId: result.userId || result.userName,
         studentName: result.userName,
-        studentEmail: result.userEmail, // Add this if available in your data
+        studentEmail: result.userEmail || result.userId?.email || '',
         course: result.destination
       }
     });
@@ -156,7 +209,7 @@ const AdminQuizCompleted = () => {
       studentData: {
         studentId: result.userId || result.userName,
         studentName: result.userName,
-        studentEmail: result.userEmail, // Add this if available
+        studentEmail: result.userEmail || result.userId?.email || '',
         course: result.destination,
         quizScore: result.percentage,
         quizPerformance: result.remark
@@ -666,12 +719,12 @@ const AdminQuizCompleted = () => {
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(result =>
-        result.userName?.toLowerCase().includes(term) ||
-        result.destination?.toLowerCase().includes(term) ||
-        result.remark?.toLowerCase().includes(term) ||
+        (result.userName?.toLowerCase() || '').includes(term) ||
+        (result.destination?.toLowerCase() || '').includes(term) ||
+        (result.remark?.toLowerCase() || '').includes(term) ||
         result.score?.toString().includes(term) ||
         result.percentage?.toString().includes(term) ||
-        new Date(result.date).toLocaleDateString().toLowerCase().includes(term)
+        (result.date && new Date(result.date).toLocaleDateString().toLowerCase().includes(term))
       );
     }
 
@@ -724,15 +777,15 @@ const AdminQuizCompleted = () => {
       }
 
       const dataForExport = dataToExport.map(result => ({
-        'Student Name': result.userName,
-        'Course': result.destination,
-        'Date': new Date(result.date).toLocaleDateString(),
-        'Score': `${result.score}/${result.totalQuestions}`,
-        'Percentage': `${result.percentage}%`,
-        'Performance': result.remark,
+        'Student Name': result.userName || 'Unknown',
+        'Course': result.destination || result.courseName || 'Unknown',
+        'Date': result.date ? new Date(result.date).toLocaleDateString() : 'Unknown',
+        'Score': `${result.score || 0}/${result.totalQuestions || 0}`,
+        'Percentage': `${result.percentage || 0}%`,
+        'Performance': result.remark || 'Not rated',
         'Time Taken': result.timeTaken || 'N/A',
         'Read by Admin': result.readByAdmin ? 'Yes' : 'No',
-        'Submission ID': result._id
+        'Submission ID': result._id || 'N/A'
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(dataForExport);
@@ -758,7 +811,7 @@ const AdminQuizCompleted = () => {
     const printContent = `
       <html>
         <head>
-          <title>Quiz Results - ${selectedResult.destination}</title>
+          <title>Quiz Results - ${selectedResult.destination || selectedResult.courseName || 'Quiz'}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             .header { text-align: center; margin-bottom: 30px; }
@@ -778,25 +831,25 @@ const AdminQuizCompleted = () => {
         <body>
           <div class="header">
             <h1>Admin - Quiz Results Report</h1>
-            <h2>${selectedResult.destination}</h2>
+            <h2>${selectedResult.destination || selectedResult.courseName || 'Quiz'}</h2>
           </div>
           
           <div class="section">
             <h3>Student Information</h3>
             <div class="info-grid">
-              <div><strong>Student Name:</strong> ${selectedResult.userName}</div>
-              <div><strong>Course/Destination:</strong> ${selectedResult.destination}</div>
-              <div><strong>Date Taken:</strong> ${new Date(selectedResult.date).toLocaleString()}</div>
-              <div><strong>Submission ID:</strong> ${selectedResult._id}</div>
+              <div><strong>Student Name:</strong> ${selectedResult.userName || 'Unknown'}</div>
+              <div><strong>Course/Destination:</strong> ${selectedResult.destination || selectedResult.courseName || 'Unknown'}</div>
+              <div><strong>Date Taken:</strong> ${selectedResult.date ? new Date(selectedResult.date).toLocaleString() : 'Unknown'}</div>
+              <div><strong>Submission ID:</strong> ${selectedResult._id || 'Unknown'}</div>
             </div>
           </div>
           
           <div class="section">
             <h3>Performance Summary</h3>
             <div class="score-display">
-              <div style="font-size: 48px; font-weight: bold; color: #ff6f00;">${selectedResult.percentage}%</div>
-              <div style="font-size: 24px; color: ${getPerformanceColor(selectedResult.percentage)};">${selectedResult.remark}</div>
-              <div>Score: ${selectedResult.score} out of ${selectedResult.totalQuestions}</div>
+              <div style="font-size: 48px; font-weight: bold; color: #ff6f00;">${selectedResult.percentage || 0}%</div>
+              <div style="font-size: 24px; color: ${getPerformanceColor(selectedResult.percentage || 0)};">${selectedResult.remark || 'Not rated'}</div>
+              <div>Score: ${selectedResult.score || 0} out of ${selectedResult.totalQuestions || 0}</div>
             </div>
           </div>
           
@@ -804,11 +857,11 @@ const AdminQuizCompleted = () => {
             <h3>Question Breakdown</h3>
             ${selectedResult.answers ? selectedResult.answers.map((answer, index) => `
               <div class="question-item ${answer.isCorrect ? 'correct' : 'incorrect'}">
-                <strong>Q${index + 1}:</strong> ${answer.question}<br>
+                <strong>Q${index + 1}:</strong> ${answer.question || answer.questionText || 'No question text'}<br>
                 <span style="color: ${answer.isCorrect ? '#28a745' : '#dc3545'};">
-                  Your Answer: ${answer.selectedOption} ${answer.isCorrect ? '✓' : '✗'}
+                  Your Answer: ${answer.selectedOption !== undefined ? answer.selectedOption : answer.selectedAnswer} ${answer.isCorrect ? '✓' : '✗'}
                 </span><br>
-                <span style="color: #28a745;">Correct Answer: ${answer.correctAnswer}</span>
+                <span style="color: #28a745;">Correct Answer: ${answer.correctAnswer !== undefined ? answer.correctAnswer : answer.correctAnswerText}</span>
               </div>
             `).join('') : '<p>No answer details available.</p>'}
           </div>
@@ -851,7 +904,7 @@ const AdminQuizCompleted = () => {
   const groupResultsByCourse = () => {
     const groups = {};
     filteredResults.forEach(result => {
-      const course = result.destination || 'Unknown Course';
+      const course = result.destination || result.courseName || 'Unknown Course';
       if (!groups[course]) {
         groups[course] = {
           courseName: course,
@@ -864,10 +917,10 @@ const AdminQuizCompleted = () => {
       groups[course].results.push(result);
       groups[course].totalAttempts++;
       groups[course].averageScore = (
-        groups[course].results.reduce((sum, r) => sum + r.percentage, 0) / 
+        groups[course].results.reduce((sum, r) => sum + (r.percentage || 0), 0) / 
         groups[course].results.length
       ).toFixed(1);
-      groups[course].bestScore = Math.max(...groups[course].results.map(r => r.percentage));
+      groups[course].bestScore = Math.max(...groups[course].results.map(r => r.percentage || 0));
     });
     return groups;
   };
@@ -1020,9 +1073,17 @@ const AdminQuizCompleted = () => {
               <div>
                 <h4 className="alert-heading">Oops! Something went wrong</h4>
                 <p className="mb-0">{error}</p>
-                <button className="btn btn-outline-danger mt-2" onClick={fetchQuizResults}>
-                  <i className="fas fa-redo me-2"></i>Try Again
-                </button>
+                <div className="mt-3">
+                  <button className="btn btn-outline-danger me-2" onClick={fetchQuizResults}>
+                    <i className="fas fa-redo me-2"></i>Try Again
+                  </button>
+                  <button className="btn btn-danger" onClick={() => {
+                    // Try alternative endpoint as fallback
+                    window.location.hash = '#admin-course-results';
+                  }}>
+                    <i className="fas fa-book me-2"></i>View Course Results
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1248,7 +1309,7 @@ const AdminQuizCompleted = () => {
                 <i className="fas fa-trophy fa-2x mb-2"></i>
                 <h3 className="fw-bold">
                   {quizResults.length > 0 ? 
-                    Math.round(quizResults.reduce((acc, curr) => acc + curr.percentage, 0) / quizResults.length) + '%' 
+                    Math.round(quizResults.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / quizResults.length) + '%' 
                     : '0%'
                   }
                 </h3>
@@ -1261,7 +1322,7 @@ const AdminQuizCompleted = () => {
               <div className="card-body text-center">
                 <i className="fas fa-check-circle fa-2x mb-2"></i>
                 <h3 className="fw-bold">
-                  {quizResults.filter(r => r.percentage >= 60).length}
+                  {quizResults.filter(r => (r.percentage || 0) >= 60).length}
                 </h3>
                 <p className="mb-0">Passed Quizzes</p>
               </div>
@@ -1272,7 +1333,7 @@ const AdminQuizCompleted = () => {
               <div className="card-body text-center">
                 <i className="fas fa-star fa-2x mb-2"></i>
                 <h3 className="fw-bold">
-                  {quizResults.length > 0 ? Math.max(...quizResults.map(r => r.percentage)) + '%' : '0%'}
+                  {quizResults.length > 0 ? Math.max(...quizResults.map(r => r.percentage || 0)) + '%' : '0%'}
                 </h3>
                 <p className="mb-0">Best Score</p>
               </div>
@@ -1283,7 +1344,7 @@ const AdminQuizCompleted = () => {
               <div className="card-body text-center">
                 <i className="fas fa-users fa-2x mb-2"></i>
                 <h3 className="fw-bold">
-                  {new Set(quizResults.map(r => r.userName)).size}
+                  {new Set(quizResults.map(r => r.userName).filter(name => name)).size}
                 </h3>
                 <p className="mb-0">Unique Students</p>
               </div>
@@ -1303,6 +1364,9 @@ const AdminQuizCompleted = () => {
                   <p className="text-muted mb-4">
                     Students haven't completed any quizzes yet. Quiz submissions will appear here once students start taking quizzes.
                   </p>
+                  <button className="btn btn-primary" onClick={fetchQuizResults}>
+                    <i className="fas fa-redo me-2"></i>Refresh
+                  </button>
                 </div>
               </div>
             </div>
@@ -1323,7 +1387,7 @@ const AdminQuizCompleted = () => {
                       </div>
                       <div className="col-md-6 text-end">
                         <small className="text-muted">
-                          Page {currentPage} of {totalPages} • Showing {quizResults.length} results
+                          Page {currentPage} of {totalPages} • Showing {quizResults.length} results • {totalItems} total submissions
                         </small>
                       </div>
                     </div>
@@ -1389,41 +1453,41 @@ const AdminQuizCompleted = () => {
                               
                               {/* Expanded Rows */}
                               {expandedGroups[group.courseName] && group.results.map((result, index) => (
-                                <tr key={result._id} className={`group-detail ${!result.readByAdmin ? 'table-warning' : ''}`}>
+                                <tr key={result._id || index} className={`group-detail ${!result.readByAdmin ? 'table-warning' : ''}`}>
                                   <td className="ps-5">
                                     <i className="fas fa-user text-muted"></i>
                                   </td>
                                   <td>
                                     <div className="ps-3">
                                       <h6 className="mb-1 fw-bold text-dark">
-                                        {result.userName}
+                                        {result.userName || 'Unknown User'}
                                         {!result.readByAdmin && (
                                           <span className="badge bg-danger ms-2">New</span>
                                         )}
                                       </h6>
                                       <small className="text-muted">
-                                        {result.destination}
+                                        {result.destination || result.courseName || 'Unknown Course'}
                                       </small>
                                     </div>
                                   </td>
                                   <td className="text-center">
                                     <small>
-                                      {new Date(result.date).toLocaleDateString()}<br/>
-                                      <span className="text-muted">{new Date(result.date).toLocaleTimeString()}</span>
+                                      {result.date ? new Date(result.date).toLocaleDateString() : 'Unknown'}<br/>
+                                      {result.date && <span className="text-muted">{new Date(result.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>}
                                     </small>
                                   </td>
                                   <td className="text-center">
                                     <span className="badge bg-info fs-6">
-                                      {result.score}/{result.totalQuestions}
+                                      {result.score || 0}/{result.totalQuestions || 0}
                                     </span>
                                     <br/>
-                                    <small className={`badge bg-${getPerformanceBadge(result.percentage)}`}>
-                                      {result.percentage}%
+                                    <small className={`badge bg-${getPerformanceBadge(result.percentage || 0)}`}>
+                                      {result.percentage || 0}%
                                     </small>
                                   </td>
                                   <td className="text-center">
                                     <span className={`badge fs-6 bg-${getRemarkColor(result.remark)}`}>
-                                      {result.remark}
+                                      {result.remark || 'Not rated'}
                                     </span>
                                   </td>
                                   <td className="text-center">
@@ -1503,7 +1567,7 @@ const AdminQuizCompleted = () => {
                 <div className="modal-header text-white" style={{backgroundColor: '#dc3545'}}>
                   <h5 className="modal-title">
                     <i className="fas fa-analytics me-2"></i>
-                    Detailed Quiz Results - {selectedResult.destination}
+                    Detailed Quiz Results - {selectedResult.destination || selectedResult.courseName || 'Quiz'}
                   </h5>
                   <button type="button" className="btn-close btn-close-white" onClick={() => setShowModal(false)}></button>
                 </div>
@@ -1514,32 +1578,32 @@ const AdminQuizCompleted = () => {
                       <ul className="list-group list-group-flush">
                         <li className="list-group-item d-flex justify-content-between">
                           <span>Student Name:</span>
-                          <strong>{selectedResult.userName}</strong>
+                          <strong>{selectedResult.userName || 'Unknown'}</strong>
                         </li>
                         <li className="list-group-item d-flex justify-content-between">
                           <span>Course/Destination:</span>
-                          <strong>{selectedResult.destination}</strong>
+                          <strong>{selectedResult.destination || selectedResult.courseName || 'Unknown'}</strong>
                         </li>
                         <li className="list-group-item d-flex justify-content-between">
                           <span>Date Taken:</span>
-                          <strong>{new Date(selectedResult.date).toLocaleString()}</strong>
+                          <strong>{selectedResult.date ? new Date(selectedResult.date).toLocaleString() : 'Unknown'}</strong>
                         </li>
                         <li className="list-group-item d-flex justify-content-between">
                           <span>Submission ID:</span>
-                          <strong>{selectedResult._id}</strong>
+                          <strong>{selectedResult._id || 'Unknown'}</strong>
                         </li>
                       </ul>
                     </div>
                     <div className="col-md-6">
                       <h6>Performance Summary</h6>
                       <div className="text-center p-3 bg-light rounded">
-                        <div className="display-4 fw-bold" style={{color: '#dc3545'}}>{selectedResult.percentage}%</div>
+                        <div className="display-4 fw-bold" style={{color: '#dc3545'}}>{selectedResult.percentage || 0}%</div>
                         <div className={`badge bg-${getRemarkColor(selectedResult.remark)} fs-6`}>
-                          {selectedResult.remark}
+                          {selectedResult.remark || 'Not rated'}
                         </div>
                         <div className="mt-2">
                           <small className="text-muted">
-                            Score: {selectedResult.score} out of {selectedResult.totalQuestions}
+                            Score: {selectedResult.score || 0} out of {selectedResult.totalQuestions || 0}
                           </small>
                         </div>
                       </div>
@@ -1550,25 +1614,36 @@ const AdminQuizCompleted = () => {
                   
                   <h6>Question Breakdown</h6>
                   <div className="question-breakdown">
-                    {selectedResult.answers && selectedResult.answers.map((answer, index) => (
-                      <div key={index} className="card mb-2">
-                        <div className="card-body">
-                          <div className="d-flex justify-content-between align-items-start">
-                            <div>
-                              <h6 className="mb-1">Q{index + 1}: {answer.question}</h6>
-                              <small className={`badge bg-${answer.isCorrect ? 'success' : 'danger'}`}>
-                                {answer.isCorrect ? 'Correct' : 'Incorrect'}
-                              </small>
-                            </div>
-                            <div className="text-end">
-                              <small className="text-muted">Your answer: {answer.selectedOption}</small>
-                              <br />
-                              <small className="text-success">Correct: {answer.correctAnswer}</small>
+                    {selectedResult.answers && selectedResult.answers.length > 0 ? (
+                      selectedResult.answers.map((answer, index) => (
+                        <div key={index} className="card mb-2">
+                          <div className="card-body">
+                            <div className="d-flex justify-content-between align-items-start">
+                              <div>
+                                <h6 className="mb-1">Q{index + 1}: {answer.question || answer.questionText || 'No question text'}</h6>
+                                <small className={`badge bg-${answer.isCorrect ? 'success' : 'danger'}`}>
+                                  {answer.isCorrect ? 'Correct' : 'Incorrect'}
+                                </small>
+                              </div>
+                              <div className="text-end">
+                                <small className="text-muted">
+                                  Your answer: {answer.selectedOption !== undefined ? answer.selectedOption : answer.selectedAnswer}
+                                </small>
+                                <br />
+                                <small className="text-success">
+                                  Correct: {answer.correctAnswer !== undefined ? answer.correctAnswer : answer.correctAnswerText}
+                                </small>
+                              </div>
                             </div>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="alert alert-info">
+                        <i className="fas fa-info-circle me-2"></i>
+                        No answer details available for this quiz result.
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
                 <div className="modal-footer">

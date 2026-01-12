@@ -1,4 +1,4 @@
-// src/components/QuizQuestion.jsx
+// travel-tour-frontend/src/components/QuizQuestion.jsx
 import React, { useState } from 'react';
 import ExplanationPanel from './ExplanationPanel';
 

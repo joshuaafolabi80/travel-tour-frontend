@@ -1,4 +1,4 @@
-// src/components/QuizScores.jsx - COMPLETE UPDATED VERSION WITH ENHANCED WATERMARK
+// travel-tour-frontend/src/components/QuizScores.jsx - COMPLETE UPDATED VERSION WITH ENHANCED WATERMARK
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import * as XLSX from 'xlsx';

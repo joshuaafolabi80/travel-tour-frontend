@@ -1,4 +1,4 @@
-// src/components/QuizResults.jsx
+// travel-tour-frontend/src/components/QuizResults.jsx
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 

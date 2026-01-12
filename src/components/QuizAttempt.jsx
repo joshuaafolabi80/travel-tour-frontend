@@ -1,3 +1,5 @@
+// travel-tour-frontend/src/components/QuizAttempt.jsx - COMPLETE FIXED VERSION WITH DETAILED DEBUGGING
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 import './QuizAttempt.css';

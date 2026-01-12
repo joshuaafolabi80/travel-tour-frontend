@@ -1,4 +1,4 @@
-// src/components/QuizPlatform.jsx - COMPLETE FIXED VERSION WITH BACK BUTTON
+// travel-tour-frontend/src/components/QuizPlatform.jsx - COMPLETE FIXED VERSION WITH BACK BUTTON
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 

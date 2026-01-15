@@ -22,7 +22,7 @@ class SocketService {
         this.isAdmin = userData.role === 'admin';
 
         // Connect to important info socket server
-        this.socket = io(import.meta.env.VITE_IMPORTANT_INFO_SOCKET_URL, {
+        this.socket = io('https://travel-tour-important-info-backend.onrender.com', {
             auth: { token },
             transports: ['websocket', 'polling']
         });

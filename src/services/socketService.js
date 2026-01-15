@@ -10,11 +10,12 @@ class SocketService {
     }
 
     connect() {
-        const token = localStorage.getItem('authToken');
+        // Updated to check both potential token locations
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
         
         if (!token || !userData) {
-            console.warn('No user data found for socket connection');
+            console.warn('SocketService: No user data or token found for socket connection');
             return;
         }
 
@@ -24,7 +25,9 @@ class SocketService {
         // Connect to important info socket server
         this.socket = io('https://travel-tour-important-info-backend.onrender.com', {
             auth: { token },
-            transports: ['websocket', 'polling']
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5
         });
 
         this.socket.on('connect', () => {
@@ -41,12 +44,12 @@ class SocketService {
             }
         });
 
-        this.socket.on('disconnect', () => {
-            console.log('Disconnected from socket server');
+        this.socket.on('disconnect', (reason) => {
+            console.log('Disconnected from socket server:', reason);
         });
 
         this.socket.on('connect_error', (error) => {
-            console.error('Socket connection error:', error);
+            console.error('Socket connection error:', error.message);
         });
     }
 

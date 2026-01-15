@@ -3,7 +3,7 @@
 import axios from 'axios';
 
 const importantInfoApi = axios.create({
-    baseURL: import.meta.env.VITE_IMPORTANT_INFO_API_URL || 'http://localhost:5006/api',
+    baseURL: 'https://travel-tour-important-info-backend.onrender.com/api',
     headers: {
         'Content-Type': 'application/json'
     }

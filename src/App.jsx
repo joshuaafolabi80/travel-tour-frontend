@@ -1,4 +1,4 @@
-// travel-tour-frontend/src/App.jsx - UPDATED WITH BUSINESS COURSE, GOOGLE OAUTH & APP REVIEWS
+// travel-tour-frontend/src/App.jsx - UPDATED WITH IMPORTANT INFORMATION
 import React, { useState, useEffect } from 'react';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { jwtDecode } from 'jwt-decode';
@@ -6,6 +6,8 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { GoogleAuthProvider } from './context/GoogleAuthContext';
 import api from './services/api';
 import blogApi from './services/blogApi';
+import socketService from './services/socketService';
+import { importantInfoService } from './services/importantInfoApi';
 
 // --- Core Components ---
 import LoginRegister from './LoginRegister';
@@ -76,6 +78,10 @@ import ReviewConfirmation from './components/share-rate/ReviewConfirmation';
 import AppReviewsList from './components/share-rate/AppReviewsList';
 import AdminReviewApproval from './components/share-rate/AdminReviewApproval';
 
+// --- NEW: Important Information Components ---
+import ImportantInfoAdmin from './components/ImportantInfoAdmin';
+import ImportantInfoUser from './components/ImportantInfoUser';
+
 import './App.css';
 
 // Reusable Slider Component
@@ -136,14 +142,14 @@ export const HeroSlider = ({ images, texts, staticTitle, onLastSlide, onNextClic
                         onClick={handleNextClickInternal}
                         className="splash-button primary-button"
                         style={{
-                            display: 'flex',          // Enables Flexbox
-                            alignItems: 'center',     // Vertical centering
-                            justifyContent: 'center',    // Horizontal centering
-                            padding: '8px 20px',      // Reduced size (adjust these numbers to go smaller)
-                            minWidth: '100px',        // Ensures a consistent rectangle shape
-                            borderRadius: '25px',     // Keeps the curved edges
-                            fontSize: '14px',         // Slightly smaller font to match the smaller box
-                            border: 'none',           // Removes default borders
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '8px 20px',
+                            minWidth: '100px',
+                            borderRadius: '25px',
+                            fontSize: '14px',
+                            border: 'none',
                             cursor: 'pointer'
                         }}
                     >
@@ -236,6 +242,46 @@ const App = () => {
         };
     }, []);
 
+    // Setup socket connection and listeners
+    useEffect(() => {
+        if (isLoggedIn && userData) {
+            socketService.connect();
+            
+            // Listen for new important info
+            socketService.onNewImportantInfo((data) => {
+                // Update notification count
+                setNotificationCounts(prev => ({
+                    ...prev,
+                    importantInfo: prev.importantInfo + 1
+                }));
+            });
+            
+            // Listen for notification updates
+            socketService.onNotificationUpdate((data) => {
+                if (data.type === 'important-info' && data.countDecreased) {
+                    setNotificationCounts(prev => ({
+                        ...prev,
+                        importantInfo: Math.max(0, prev.importantInfo - 1)
+                    }));
+                }
+            });
+            
+            // Listen for all notifications read
+            socketService.onAllNotificationsRead((data) => {
+                if (data.type === 'important-info') {
+                    setNotificationCounts(prev => ({
+                        ...prev,
+                        importantInfo: 0
+                    }));
+                }
+            });
+            
+            return () => {
+                socketService.disconnect();
+            };
+        }
+    }, [isLoggedIn, userData]);
+
     const validateToken = (token) => {
         try {
             const decoded = jwtDecode(token);
@@ -245,6 +291,22 @@ const App = () => {
             return decoded;
         } catch (error) {
             return null;
+        }
+    };
+
+    const fetchImportantInfoCount = async () => {
+        if (!isLoggedIn || !userData) return;
+        
+        try {
+            const response = await importantInfoService.getUnreadCount();
+            if (response.data.success) {
+                setNotificationCounts(prev => ({
+                    ...prev,
+                    importantInfo: response.data.count || 0
+                }));
+            }
+        } catch (error) {
+            console.error('Error fetching important info count:', error);
         }
     };
 
@@ -339,6 +401,8 @@ const App = () => {
                     ...updatedCounts
                 }));
                 
+                // Fetch important info count
+                await fetchImportantInfoCount();
                 fetchSubmissionCounts();
             }
         } catch (error) {
@@ -377,6 +441,9 @@ const App = () => {
                 await api.put('/notifications/mark-admin-messages-read');
             } else if (notificationType === 'messagesFromStudents' && userRole === 'admin') {
                 await api.put('/notifications/mark-admin-messages-read');
+            } else if (notificationType === 'importantInfo' && userRole === 'student') {
+                await importantInfoService.markAllNotificationsAsRead();
+                await fetchImportantInfoCount();
             } else if (notificationType === 'adminSubmissions' && userRole === 'admin') {
                 console.log('Marking admin submissions as read');
             } else if (notificationType === 'userSubmissions' && userRole === 'student') {
@@ -531,7 +598,8 @@ const App = () => {
         setUserRole('');
         setCurrentPage('home');
         setShowMenu(false);
-        setShowSplash(true); 
+        setShowSplash(true);
+        socketService.disconnect();
     };
 
     const handleSelectDestination = async (destinationId) => {
@@ -697,7 +765,7 @@ const App = () => {
         return null;
     };
 
-    // UPDATED: Added "App Reviews" to user menu and "Review Moderation" to admin menu
+    // UPDATED: Added "Important Information" and "Send Information" to menus
     const userMenuItems = [
         { name: "Home", icon: "fa-solid fa-home", action: () => navigateTo('home') },
         { name: "Business Course", icon: "fas fa-briefcase", action: () => navigateTo('business-course') },
@@ -1145,18 +1213,12 @@ const App = () => {
                             />
                         )}
                         
-                        {/* Placeholder Pages */}
-                        {currentPage === 'important-information' && (
-                            <div className="container py-4">
-                                <h2>Important Information</h2>
-                                <p>Content coming soon...</p>
-                            </div>
+                        {/* NEW: Important Information Pages */}
+                        {currentPage === 'important-information' && userRole !== 'admin' && (
+                            <ImportantInfoUser />
                         )}
-                        {currentPage === 'admin-send-information' && (
-                            <div className="container py-4">
-                                <h2>Send Information</h2>
-                                <p>Admin information sending features coming soon...</p>
-                            </div>
+                        {currentPage === 'admin-send-information' && userRole === 'admin' && (
+                            <ImportantInfoAdmin />
                         )}
                         
                         {currentPage === 'loading' && <LoadingPage />}

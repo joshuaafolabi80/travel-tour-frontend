@@ -23,6 +23,7 @@ const ImportantInfoAdmin = () => {
     const [activeTab, setActiveTab] = useState('view'); // 'view', 'edit', 'resend'
     const [selectedMessage, setSelectedMessage] = useState(null);
     const [unreadCountError, setUnreadCountError] = useState(false);
+    const [showMobileForm, setShowMobileForm] = useState(false);
 
     useEffect(() => {
         fetchMessages();
@@ -75,8 +76,13 @@ const ImportantInfoAdmin = () => {
             isUrgent: message.isUrgent || false
         });
         setActiveTab('edit');
-        // Scroll to form
-        document.getElementById('message-form')?.scrollIntoView({ behavior: 'smooth' });
+        setShowMobileForm(true);
+        // Scroll to form on mobile
+        if (window.innerWidth < 992) {
+            setTimeout(() => {
+                document.getElementById('message-form-section')?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
     };
 
     // Function to handle resend mode
@@ -88,8 +94,13 @@ const ImportantInfoAdmin = () => {
             isUrgent: message.isUrgent || false
         });
         setActiveTab('resend');
-        // Scroll to form
-        document.getElementById('message-form')?.scrollIntoView({ behavior: 'smooth' });
+        setShowMobileForm(true);
+        // Scroll to form on mobile
+        if (window.innerWidth < 992) {
+            setTimeout(() => {
+                document.getElementById('message-form-section')?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
     };
 
     const handleInputChange = (e) => {
@@ -165,6 +176,7 @@ const ImportantInfoAdmin = () => {
                 }
                 setSelectedMessage(null);
                 setActiveTab('view');
+                setShowMobileForm(false);
                 fetchMessages(); // Refresh the list
                 
                 // Auto-clear success message after 5 seconds
@@ -229,10 +241,28 @@ const ImportantInfoAdmin = () => {
             isUrgent: false
         });
         setAttachments([]);
+        setShowMobileForm(false);
     };
 
-    // Inline styles for mobile menu fix
-    const mobileMenuStyles = `
+    // Toggle mobile form visibility
+    const toggleMobileForm = () => {
+        setShowMobileForm(!showMobileForm);
+        if (!showMobileForm) {
+            // Reset form when opening
+            if (activeTab === 'view') {
+                setFormData({
+                    title: '',
+                    message: '',
+                    isUrgent: false
+                });
+                setAttachments([]);
+            }
+        }
+    };
+
+    // Inline styles for responsive design
+    const responsiveStyles = `
+        /* Mobile hamburger menu fix */
         @media (max-width: 991.98px) {
             .navbar-collapse {
                 z-index: 1050 !important;
@@ -243,20 +273,430 @@ const ImportantInfoAdmin = () => {
                 box-shadow: 0 4px 6px rgba(0,0,0,0.1);
                 border-radius: 4px;
             }
+            
+            /* Mobile form styles */
+            .mobile-form-fixed {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 1040;
+                background: white;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+                border-top-left-radius: 12px;
+                border-top-right-radius: 12px;
+                max-height: 85vh;
+                overflow-y: auto;
+                transform: translateY(100%);
+                transition: transform 0.3s ease-in-out;
+            }
+            
+            .mobile-form-fixed.show {
+                transform: translateY(0);
+            }
+            
+            .mobile-form-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 1039;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.3s ease-in-out;
+            }
+            
+            .mobile-form-overlay.show {
+                opacity: 1;
+                visibility: visible;
+            }
+            
+            /* Desktop-only elements */
+            .desktop-form {
+                display: none;
+            }
+            
+            .mobile-form-toggle {
+                display: block !important;
+            }
+        }
+        
+        /* Desktop styles */
+        @media (min-width: 992px) {
+            .mobile-form-fixed,
+            .mobile-form-overlay,
+            .mobile-form-toggle {
+                display: none !important;
+            }
+            
+            .desktop-form {
+                display: block;
+            }
+        }
+        
+        /* Responsive button and tab fixes */
+        @media (max-width: 767.98px) {
+            /* Tab navigation spacing */
+            .nav-tabs {
+                margin-bottom: 1.5rem !important;
+            }
+            
+            .nav-tabs .nav-link {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.875rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            /* Message viewer card spacing */
+            .message-viewer-actions {
+                margin-top: 1rem !important;
+                padding-top: 1rem !important;
+                border-top: 1px solid rgba(0,0,0,0.125);
+            }
+            
+            .message-viewer-actions .btn-group {
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+            }
+            
+            .message-viewer-actions .btn {
+                flex: 1;
+                margin: 0 0.125rem;
+                padding: 0.375rem 0.5rem;
+                font-size: 0.8125rem;
+            }
+            
+            .message-viewer-actions .btn i {
+                margin-right: 0.25rem;
+            }
+            
+            /* Table actions on small screens */
+            .table-actions-sm .btn-group {
+                flex-wrap: wrap;
+                gap: 0.25rem;
+            }
+            
+            .table-actions-sm .btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+                min-width: 40px;
+            }
+            
+            .table-actions-sm .btn i {
+                margin-right: 0;
+            }
+            
+            /* Card footer actions */
+            .card-footer .d-flex {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .card-footer .btn-group-sm {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .card-footer .btn-group-sm .btn {
+                flex: 1;
+                margin: 0 0.125rem;
+                font-size: 0.8125rem;
+            }
+        }
+        
+        @media (max-width: 575.98px) {
+            /* Extra small screens */
+            .nav-tabs .nav-link {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.8rem;
+            }
+            
+            .nav-tabs .nav-link i {
+                margin-right: 0.25rem;
+            }
+            
+            /* Message viewer buttons */
+            .message-viewer-actions .btn {
+                font-size: 0.75rem;
+                padding: 0.3rem 0.4rem;
+            }
+            
+            .message-viewer-actions .btn i {
+                font-size: 0.7rem;
+            }
+            
+            /* Table adjustments */
+            .table-responsive {
+                margin-bottom: 1rem;
+                border: 1px solid #dee2e6;
+                border-radius: 0.375rem;
+            }
+            
+            .table th, .table td {
+                padding: 0.5rem;
+            }
+            
+            .table th {
+                font-size: 0.8rem;
+            }
+            
+            .table td {
+                font-size: 0.875rem;
+            }
+            
+            /* Header adjustments */
+            .container h2 {
+                font-size: 1.5rem;
+            }
+            
+            .badge {
+                font-size: 0.7rem;
+                padding: 0.35em 0.65em;
+            }
+            
+            /* Mobile form toggle button */
+            .mobile-form-toggle {
+                padding: 0.75rem;
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Medium screens (tablet) */
+        @media (min-width: 576px) and (max-width: 767.98px) {
+            .message-viewer-actions .btn {
+                font-size: 0.85rem;
+                padding: 0.4rem 0.6rem;
+            }
+            
+            .nav-tabs .nav-link {
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Button group spacing */
+        .btn-group-spaced {
+            gap: 0.5rem;
+        }
+        
+        .btn-group-spaced .btn {
+            border-radius: 0.375rem !important;
+        }
+        
+        /* Tab spacing */
+        .nav-tabs-spaced .nav-item {
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Card footer actions with better spacing */
+        .card-footer-actions {
+            padding-top: 1rem;
+            margin-top: 1rem;
         }
     `;
 
+    // Render the message form
+    const renderMessageForm = () => (
+        <div className="card" id="message-form">
+            <div className="card-header bg-primary text-white">
+                <div className="d-flex justify-content-between align-items-center">
+                    <h4 className="mb-0">
+                        <i className="fas fa-bullhorn me-2"></i>
+                        {activeTab === 'edit' ? 'Edit Message' : activeTab === 'resend' ? 'Resend Message' : 'Send Important Information'}
+                    </h4>
+                    {window.innerWidth < 992 && (
+                        <button 
+                            type="button" 
+                            className="btn btn-sm btn-light"
+                            onClick={() => setShowMobileForm(false)}
+                        >
+                            <i className="fas fa-times"></i>
+                        </button>
+                    )}
+                </div>
+            </div>
+            <div className="card-body">
+                {activeTab === 'edit' && selectedMessage && (
+                    <div className="alert alert-info mb-3">
+                        <i className="fas fa-info-circle me-2"></i>
+                        You are editing message sent on {formatDate(selectedMessage.createdAt)}
+                    </div>
+                )}
+                
+                {activeTab === 'resend' && selectedMessage && (
+                    <div className="alert alert-warning mb-3">
+                        <i className="fas fa-exclamation-triangle me-2"></i>
+                        You are resending message originally sent on {formatDate(selectedMessage.createdAt)}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-3">
+                        <label className="form-label">
+                            Title <span className="text-danger">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            className="form-control"
+                            name="title"
+                            value={formData.title}
+                            onChange={handleInputChange}
+                            placeholder="Enter message title"
+                            required
+                            maxLength={200}
+                        />
+                    </div>
+
+                    <div className="mb-3">
+                        <label className="form-label">
+                            Message <span className="text-danger">*</span>
+                        </label>
+                        <textarea
+                            className="form-control"
+                            name="message"
+                            rows="6"
+                            value={formData.message}
+                            onChange={handleInputChange}
+                            placeholder="Enter your important message here..."
+                            required
+                        ></textarea>
+                        <small className="text-muted">
+                            This message will be sent to all users of the app.
+                        </small>
+                    </div>
+
+                    <div className="mb-3">
+                        <label className="form-label">Attachments (Optional)</label>
+                        <input
+                            type="file"
+                            className="form-control"
+                            multiple
+                            onChange={handleFileChange}
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                        />
+                        <div className="form-text">
+                            <i className="fas fa-info-circle me-1"></i>
+                            Max 5 files, 10MB each. Allowed: PDF, DOC, DOCX, JPG, PNG, GIF
+                        </div>
+                        
+                        {attachments.length > 0 && (
+                            <div className="mt-2 p-2 bg-light rounded">
+                                <strong>Selected files ({attachments.length}):</strong>
+                                <ul className="list-unstyled mt-2">
+                                    {attachments.map((file, index) => (
+                                        <li key={index} className="d-flex justify-content-between align-items-center mb-1">
+                                            <div className="text-truncate" style={{ maxWidth: '200px' }}>
+                                                <i className={`fas fa-file-${file.type.includes('pdf') ? 'pdf' : file.type.includes('image') ? 'image' : 'word'} me-1`}></i>
+                                                <small>{file.name}</small>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-outline-danger"
+                                                onClick={() => removeAttachment(index)}
+                                            >
+                                                <i className="fas fa-times"></i>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="mb-3">
+                        <div className="form-check">
+                            <input
+                                type="checkbox"
+                                className="form-check-input"
+                                id="isUrgent"
+                                name="isUrgent"
+                                checked={formData.isUrgent}
+                                onChange={handleInputChange}
+                            />
+                            <label className="form-check-label" htmlFor="isUrgent">
+                                <i className="fas fa-exclamation-triangle me-1"></i>
+                                Mark as Urgent
+                            </label>
+                        </div>
+                        <small className="text-muted">
+                            Urgent messages will show with a red badge for users.
+                        </small>
+                    </div>
+
+                    <div className="alert alert-info">
+                        <i className="fas fa-info-circle me-2"></i>
+                        This message will be sent to <strong>all users</strong> of the application.
+                    </div>
+
+                    <div className="d-grid gap-2">
+                        <button
+                            type="submit"
+                            className="btn btn-primary py-2"
+                            disabled={sending || !formData.title || !formData.message}
+                        >
+                            {sending ? (
+                                <>
+                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    {activeTab === 'edit' ? 'Updating...' : activeTab === 'resend' ? 'Resending...' : 'Sending to all users...'}
+                                </>
+                            ) : (
+                                <>
+                                    <i className={`fas fa-${activeTab === 'edit' ? 'save' : 'paper-plane'} me-2`}></i>
+                                    {activeTab === 'edit' ? 'Update Message' : activeTab === 'resend' ? 'Resend to All Users' : 'Send to All Users'}
+                                </>
+                            )}
+                        </button>
+                        
+                        {(activeTab === 'edit' || activeTab === 'resend') && (
+                            <button
+                                type="button"
+                                className="btn btn-secondary py-2"
+                                onClick={cancelEdit}
+                            >
+                                <i className="fas fa-times me-2"></i>
+                                Cancel {activeTab === 'edit' ? 'Edit' : 'Resend'}
+                            </button>
+                        )}
+                    </div>
+                </form>
+            </div>
+            <div className="card-footer text-muted">
+                <small>
+                    <i className="fas fa-history me-1"></i>
+                    Messages are archived for future reference
+                </small>
+            </div>
+        </div>
+    );
+
     return (
         <>
-            <style>{mobileMenuStyles}</style>
+            <style>{responsiveStyles}</style>
+            
+            {/* Mobile form overlay */}
+            <div 
+                className={`mobile-form-overlay ${showMobileForm ? 'show' : ''}`}
+                onClick={() => setShowMobileForm(false)}
+            ></div>
+            
+            {/* Mobile form fixed at bottom */}
+            <div 
+                className={`mobile-form-fixed ${showMobileForm ? 'show' : ''}`}
+                id="message-form-section"
+            >
+                {renderMessageForm()}
+            </div>
             
             <div className="container py-4">
                 <div className="row">
                     <div className="col-lg-8">
                         <div className="d-flex justify-content-between align-items-center mb-4">
-                            <h2>Important Information Archive</h2>
-                            <div>
-                                <span className="badge bg-secondary me-2">
+                            <h2 className="fs-4 fs-md-3">Important Information Archive</h2>
+                            <div className="d-flex flex-wrap gap-2">
+                                <span className="badge bg-secondary">
                                     {pagination.totalItems} total messages
                                 </span>
                                 {unreadCountError && (
@@ -268,9 +708,18 @@ const ImportantInfoAdmin = () => {
                             </div>
                         </div>
                         
+                        {/* Mobile form toggle button */}
+                        <button 
+                            className="btn btn-primary w-100 mb-4 d-lg-none mobile-form-toggle"
+                            onClick={toggleMobileForm}
+                        >
+                            <i className="fas fa-bullhorn me-2"></i>
+                            {showMobileForm ? 'Hide Form' : 'Send Important Information'}
+                        </button>
+                        
                         {/* Alerts */}
                         {success && (
-                            <div className="alert alert-success alert-dismissible fade show" role="alert">
+                            <div className="alert alert-success alert-dismissible fade show mb-4" role="alert">
                                 <i className="fas fa-check-circle me-2"></i>
                                 {success}
                                 <button type="button" className="btn-close" onClick={() => setSuccess('')}></button>
@@ -278,7 +727,7 @@ const ImportantInfoAdmin = () => {
                         )}
                         
                         {error && (
-                            <div className="alert alert-danger alert-dismissible fade show" role="alert">
+                            <div className="alert alert-danger alert-dismissible fade show mb-4" role="alert">
                                 <i className="fas fa-exclamation-circle me-2"></i>
                                 {error}
                                 <button type="button" className="btn-close" onClick={() => setError('')}></button>
@@ -287,7 +736,7 @@ const ImportantInfoAdmin = () => {
                         
                         {/* Tab Navigation */}
                         <div className="mb-4">
-                            <ul className="nav nav-tabs">
+                            <ul className="nav nav-tabs nav-tabs-spaced">
                                 <li className="nav-item">
                                     <button
                                         className={`nav-link ${activeTab === 'view' ? 'active' : ''}`}
@@ -296,8 +745,9 @@ const ImportantInfoAdmin = () => {
                                             setSelectedMessage(null);
                                         }}
                                     >
-                                        <i className="fas fa-list me-1"></i>
-                                        View Messages
+                                        <i className="fas fa-list me-1 me-sm-2"></i>
+                                        <span className="d-none d-sm-inline">View Messages</span>
+                                        <span className="d-inline d-sm-none">View</span>
                                     </button>
                                 </li>
                                 <li className="nav-item">
@@ -312,8 +762,9 @@ const ImportantInfoAdmin = () => {
                                         }}
                                         disabled={!selectedMessage}
                                     >
-                                        <i className="fas fa-edit me-1"></i>
-                                        Edit Message
+                                        <i className="fas fa-edit me-1 me-sm-2"></i>
+                                        <span className="d-none d-sm-inline">Edit Message</span>
+                                        <span className="d-inline d-sm-none">Edit</span>
                                     </button>
                                 </li>
                                 <li className="nav-item">
@@ -328,8 +779,9 @@ const ImportantInfoAdmin = () => {
                                         }}
                                         disabled={!selectedMessage}
                                     >
-                                        <i className="fas fa-redo me-1"></i>
-                                        Resend Message
+                                        <i className="fas fa-redo me-1 me-sm-2"></i>
+                                        <span className="d-none d-sm-inline">Resend Message</span>
+                                        <span className="d-inline d-sm-none">Resend</span>
                                     </button>
                                 </li>
                             </ul>
@@ -339,7 +791,7 @@ const ImportantInfoAdmin = () => {
                         {activeTab === 'view' && selectedMessage && (
                             <div className="card mb-4">
                                 <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                    <h5 className="mb-0">
+                                    <h5 className="mb-0 fs-5 fs-md-4">
                                         <i className="fas fa-eye me-2"></i>
                                         Viewing Message
                                     </h5>
@@ -351,30 +803,36 @@ const ImportantInfoAdmin = () => {
                                     </button>
                                 </div>
                                 <div className="card-body">
-                                    <h4>{selectedMessage.title}</h4>
+                                    <h4 className="fs-5 fs-md-4">{selectedMessage.title}</h4>
                                     {selectedMessage.isUrgent && (
                                         <span className="badge bg-danger mb-3">URGENT</span>
                                     )}
                                     <div className="mb-3">
-                                        <small className="text-muted">
+                                        <small className="text-muted d-block mb-1">
                                             <i className="fas fa-user me-1"></i>
                                             Sent by: {selectedMessage.sender?.name || 'Admin'}
                                         </small>
-                                        <br />
-                                        <small className="text-muted">
+                                        <small className="text-muted d-block mb-2">
                                             <i className="fas fa-clock me-1"></i>
                                             Date: {formatDate(selectedMessage.createdAt)}
                                         </small>
+                                        <small className="text-muted d-block">
+                                            <i className="fas fa-users me-1"></i>
+                                            Read by: {selectedMessage.readBy?.length || 0} users
+                                        </small>
                                     </div>
-                                    <div className="border rounded p-3 bg-light">
-                                        <p style={{ whiteSpace: 'pre-wrap' }}>
+                                    <div className="border rounded p-3 bg-light mb-3">
+                                        <p style={{ whiteSpace: 'pre-wrap' }} className="mb-0">
                                             {selectedMessage.content || selectedMessage.message}
                                         </p>
                                     </div>
                                     
                                     {selectedMessage.attachments?.length > 0 && (
                                         <div className="mt-4">
-                                            <h6><i className="fas fa-paperclip me-2"></i>Attachments</h6>
+                                            <h6 className="fs-6">
+                                                <i className="fas fa-paperclip me-2"></i>
+                                                Attachments
+                                            </h6>
                                             <div className="list-group">
                                                 {selectedMessage.attachments.map((attachment, index) => (
                                                     <a
@@ -384,9 +842,9 @@ const ImportantInfoAdmin = () => {
                                                         rel="noopener noreferrer"
                                                         className="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
                                                     >
-                                                        <div>
+                                                        <div className="text-truncate">
                                                             <i className={`fas fa-file-${attachment.type?.includes('pdf') ? 'pdf' : attachment.type?.includes('image') ? 'image' : 'word'} me-2`}></i>
-                                                            {attachment.filename || attachment.name}
+                                                            <small>{attachment.filename || attachment.name}</small>
                                                         </div>
                                                         <i className="fas fa-download"></i>
                                                     </a>
@@ -395,36 +853,32 @@ const ImportantInfoAdmin = () => {
                                         </div>
                                     )}
                                 </div>
-                                <div className="card-footer">
-                                    <div className="d-flex justify-content-between">
-                                        <div>
-                                            <small className="text-muted">
-                                                <i className="fas fa-users me-1"></i>
-                                                Read by: {selectedMessage.readBy?.length || 0} users
-                                            </small>
-                                        </div>
-                                        <div>
-                                            <button
-                                                className="btn btn-sm btn-outline-primary me-2"
-                                                onClick={() => handleEditMessage(selectedMessage)}
-                                            >
-                                                <i className="fas fa-edit me-1"></i>
-                                                Edit
-                                            </button>
-                                            <button
-                                                className="btn btn-sm btn-outline-warning me-2"
-                                                onClick={() => handleResendMessage(selectedMessage)}
-                                            >
-                                                <i className="fas fa-redo me-1"></i>
-                                                Resend
-                                            </button>
-                                            <button
-                                                className="btn btn-sm btn-outline-danger"
-                                                onClick={() => handleDelete(selectedMessage._id)}
-                                            >
-                                                <i className="fas fa-trash me-1"></i>
-                                                Delete
-                                            </button>
+                                <div className="card-footer card-footer-actions">
+                                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                                        <div className="message-viewer-actions w-100">
+                                            <div className="btn-group btn-group-sm w-100">
+                                                <button
+                                                    className="btn btn-outline-primary"
+                                                    onClick={() => handleEditMessage(selectedMessage)}
+                                                >
+                                                    <i className="fas fa-edit me-1"></i>
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    className="btn btn-outline-warning"
+                                                    onClick={() => handleResendMessage(selectedMessage)}
+                                                >
+                                                    <i className="fas fa-redo me-1"></i>
+                                                    Resend
+                                                </button>
+                                                <button
+                                                    className="btn btn-outline-danger"
+                                                    onClick={() => handleDelete(selectedMessage._id)}
+                                                >
+                                                    <i className="fas fa-trash me-1"></i>
+                                                    Delete
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -496,7 +950,7 @@ const ImportantInfoAdmin = () => {
                                                         </small>
                                                     </td>
                                                     <td>
-                                                        <div className="btn-group btn-group-sm">
+                                                        <div className="btn-group btn-group-sm table-actions-sm">
                                                             <button
                                                                 className="btn btn-outline-primary"
                                                                 onClick={(e) => {
@@ -506,6 +960,7 @@ const ImportantInfoAdmin = () => {
                                                                 title="View"
                                                             >
                                                                 <i className="fas fa-eye"></i>
+                                                                <span className="d-none d-md-inline ms-1">View</span>
                                                             </button>
                                                             <button
                                                                 className="btn btn-outline-warning"
@@ -516,6 +971,7 @@ const ImportantInfoAdmin = () => {
                                                                 title="Edit"
                                                             >
                                                                 <i className="fas fa-edit"></i>
+                                                                <span className="d-none d-md-inline ms-1">Edit</span>
                                                             </button>
                                                             <button
                                                                 className="btn btn-outline-success"
@@ -526,6 +982,7 @@ const ImportantInfoAdmin = () => {
                                                                 title="Resend"
                                                             >
                                                                 <i className="fas fa-redo"></i>
+                                                                <span className="d-none d-md-inline ms-1">Resend</span>
                                                             </button>
                                                             <button
                                                                 className="btn btn-outline-danger"
@@ -536,6 +993,7 @@ const ImportantInfoAdmin = () => {
                                                                 title="Delete"
                                                             >
                                                                 <i className="fas fa-trash"></i>
+                                                                <span className="d-none d-md-inline ms-1">Delete</span>
                                                             </button>
                                                         </div>
                                                     </td>
@@ -555,7 +1013,9 @@ const ImportantInfoAdmin = () => {
                                                     onClick={() => handlePageChange(pagination.currentPage - 1)}
                                                     disabled={pagination.currentPage === 1}
                                                 >
-                                                    <i className="fas fa-chevron-left me-1"></i> Previous
+                                                    <i className="fas fa-chevron-left me-1 d-none d-md-inline"></i>
+                                                    <span className="d-inline d-md-none">‹</span>
+                                                    <span className="d-none d-md-inline">Previous</span>
                                                 </button>
                                             </li>
                                             
@@ -599,7 +1059,9 @@ const ImportantInfoAdmin = () => {
                                                     onClick={() => handlePageChange(pagination.currentPage + 1)}
                                                     disabled={pagination.currentPage === pagination.totalPages}
                                                 >
-                                                    Next <i className="fas fa-chevron-right ms-1"></i>
+                                                    <span className="d-none d-md-inline">Next</span>
+                                                    <span className="d-inline d-md-none">›</span>
+                                                    <i className="fas fa-chevron-right ms-1 d-none d-md-inline"></i>
                                                 </button>
                                             </li>
                                         </ul>
@@ -609,165 +1071,10 @@ const ImportantInfoAdmin = () => {
                         )}
                     </div>
 
-                    <div className="col-lg-4">
-                        <div className="card sticky-top" style={{ top: '20px' }} id="message-form">
-                            <div className="card-header bg-primary text-white">
-                                <h4 className="mb-0">
-                                    <i className="fas fa-bullhorn me-2"></i>
-                                    {activeTab === 'edit' ? 'Edit Message' : activeTab === 'resend' ? 'Resend Message' : 'Send Important Information'}
-                                </h4>
-                            </div>
-                            <div className="card-body">
-                                {activeTab === 'edit' && selectedMessage && (
-                                    <div className="alert alert-info mb-3">
-                                        <i className="fas fa-info-circle me-2"></i>
-                                        You are editing message sent on {formatDate(selectedMessage.createdAt)}
-                                    </div>
-                                )}
-                                
-                                {activeTab === 'resend' && selectedMessage && (
-                                    <div className="alert alert-warning mb-3">
-                                        <i className="fas fa-exclamation-triangle me-2"></i>
-                                        You are resending message originally sent on {formatDate(selectedMessage.createdAt)}
-                                    </div>
-                                )}
-
-                                <form onSubmit={handleSubmit}>
-                                    <div className="mb-3">
-                                        <label className="form-label">
-                                            Title <span className="text-danger">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            name="title"
-                                            value={formData.title}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter message title"
-                                            required
-                                            maxLength={200}
-                                        />
-                                    </div>
-
-                                    <div className="mb-3">
-                                        <label className="form-label">
-                                            Message <span className="text-danger">*</span>
-                                        </label>
-                                        <textarea
-                                            className="form-control"
-                                            name="message"
-                                            rows="6"
-                                            value={formData.message}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter your important message here..."
-                                            required
-                                        ></textarea>
-                                        <small className="text-muted">
-                                            This message will be sent to all users of the app.
-                                        </small>
-                                    </div>
-
-                                    <div className="mb-3">
-                                        <label className="form-label">Attachments (Optional)</label>
-                                        <input
-                                            type="file"
-                                            className="form-control"
-                                            multiple
-                                            onChange={handleFileChange}
-                                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
-                                        />
-                                        <div className="form-text">
-                                            <i className="fas fa-info-circle me-1"></i>
-                                            Max 5 files, 10MB each. Allowed: PDF, DOC, DOCX, JPG, PNG, GIF
-                                        </div>
-                                        
-                                        {attachments.length > 0 && (
-                                            <div className="mt-2 p-2 bg-light rounded">
-                                                <strong>Selected files ({attachments.length}):</strong>
-                                                <ul className="list-unstyled mt-2">
-                                                    {attachments.map((file, index) => (
-                                                        <li key={index} className="d-flex justify-content-between align-items-center mb-1">
-                                                            <div className="text-truncate" style={{ maxWidth: '200px' }}>
-                                                                <i className={`fas fa-file-${file.type.includes('pdf') ? 'pdf' : file.type.includes('image') ? 'image' : 'word'} me-1`}></i>
-                                                                <small>{file.name}</small>
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                className="btn btn-sm btn-outline-danger"
-                                                                onClick={() => removeAttachment(index)}
-                                                            >
-                                                                <i className="fas fa-times"></i>
-                                                            </button>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="mb-3">
-                                        <div className="form-check">
-                                            <input
-                                                type="checkbox"
-                                                className="form-check-input"
-                                                id="isUrgent"
-                                                name="isUrgent"
-                                                checked={formData.isUrgent}
-                                                onChange={handleInputChange}
-                                            />
-                                            <label className="form-check-label" htmlFor="isUrgent">
-                                                <i className="fas fa-exclamation-triangle me-1"></i>
-                                                Mark as Urgent
-                                            </label>
-                                        </div>
-                                        <small className="text-muted">
-                                            Urgent messages will show with a red badge for users.
-                                        </small>
-                                    </div>
-
-                                    <div className="alert alert-info">
-                                        <i className="fas fa-info-circle me-2"></i>
-                                        This message will be sent to <strong>all users</strong> of the application.
-                                    </div>
-
-                                    <div className="d-grid gap-2">
-                                        <button
-                                            type="submit"
-                                            className="btn btn-primary py-2"
-                                            disabled={sending || !formData.title || !formData.message}
-                                        >
-                                            {sending ? (
-                                                <>
-                                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                                    {activeTab === 'edit' ? 'Updating...' : activeTab === 'resend' ? 'Resending...' : 'Sending to all users...'}
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <i className={`fas fa-${activeTab === 'edit' ? 'save' : 'paper-plane'} me-2`}></i>
-                                                    {activeTab === 'edit' ? 'Update Message' : activeTab === 'resend' ? 'Resend to All Users' : 'Send to All Users'}
-                                                </>
-                                            )}
-                                        </button>
-                                        
-                                        {(activeTab === 'edit' || activeTab === 'resend') && (
-                                            <button
-                                                type="button"
-                                                className="btn btn-secondary py-2"
-                                                onClick={cancelEdit}
-                                            >
-                                                <i className="fas fa-times me-2"></i>
-                                                Cancel {activeTab === 'edit' ? 'Edit' : 'Resend'}
-                                            </button>
-                                        )}
-                                    </div>
-                                </form>
-                            </div>
-                            <div className="card-footer text-muted">
-                                <small>
-                                    <i className="fas fa-history me-1"></i>
-                                    Messages are archived for future reference
-                                </small>
-                            </div>
+                    {/* Desktop form sidebar */}
+                    <div className="col-lg-4 desktop-form">
+                        <div className="sticky-top" style={{ top: '20px' }}>
+                            {renderMessageForm()}
                         </div>
                     </div>
                 </div>

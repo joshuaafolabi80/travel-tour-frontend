@@ -143,7 +143,7 @@ const ImportantInfoAdmin = () => {
             formDataToSend.append('title', formData.title);
             formDataToSend.append('message', formData.message);
             formDataToSend.append('isUrgent', formData.isUrgent);
-            formDataToSend.append('recipients', JSON.stringify(['all'])); // Always send to all users
+            formDataToSend.append('recipients', 'all'); // Always send to all users
             
             attachments.forEach(file => {
                 formDataToSend.append('attachments', file);

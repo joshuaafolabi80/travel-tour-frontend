@@ -1,6 +1,6 @@
 // travel-tour-frontend/src/components/ImportantInfoUser.jsx - COMPLETE UPDATED VERSION WITH DEBUG
 import React, { useState, useEffect } from 'react';
-import { importantInfoService, importantInfoApi } from '../services/importantInfoApi';
+import importantInfoApi, { importantInfoService } from '../services/importantInfoApi';
 import socketService from '../services/socketService';
 
 const ImportantInfoUser = () => {

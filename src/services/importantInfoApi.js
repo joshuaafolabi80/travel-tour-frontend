@@ -1,10 +1,16 @@
+
+
+
+// travel-tour-frontend/src/services/importantInfoApi.js - COMPLETE UPDATED VERSION
 import axios from 'axios';
 
 const importantInfoApi = axios.create({
     baseURL: 'https://travel-tour-important-info-backend.onrender.com/api',
     headers: {
         'Content-Type': 'application/json'
-    }
+    },
+    timeout: 15000, // 15 second timeout
+    withCredentials: true // Important for CORS with credentials
 });
 
 // Add token to requests
@@ -21,16 +27,28 @@ importantInfoApi.interceptors.request.use(
     }
 );
 
-// Response interceptor
+// Enhanced response interceptor
 importantInfoApi.interceptors.response.use(
     (response) => response,
     (error) => {
+        console.error('API Error:', {
+            status: error.response?.status,
+            message: error.message,
+            config: error.config?.url
+        });
+        
         if (error.response?.status === 401) {
             // Token expired or invalid
             localStorage.removeItem('authToken');
             localStorage.removeItem('userData');
             window.location.href = '/';
         }
+        
+        // Handle CORS errors
+        if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+            console.error('Network/CORS error. Check backend CORS configuration.');
+        }
+        
         return Promise.reject(error);
     }
 );
@@ -49,6 +67,15 @@ export const importantInfoService = {
     // Admin: Get all messages
     getAllMessages: (page = 1, limit = 10) => {
         return importantInfoApi.get(`/important-info/admin/all?page=${page}&limit=${limit}`);
+    },
+
+    // Admin: Update important info
+    updateImportantInfo: (messageId, formData) => {
+        return importantInfoApi.put(`/important-info/admin/${messageId}`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     },
 
     // User: Get user messages

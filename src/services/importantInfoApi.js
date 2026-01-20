@@ -9,7 +9,7 @@ const importantInfoApi = axios.create({
     headers: {
         'Content-Type': 'application/json'
     },
-    timeout: 15000, // 15 second timeout
+    timeout: 30000, // 30 second timeout
     withCredentials: true // Important for CORS with credentials
 });
 

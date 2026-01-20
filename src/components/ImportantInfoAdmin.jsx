@@ -1,5 +1,5 @@
 // travel-tour-frontend/src/components/ImportantInfoAdmin.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { importantInfoService } from '../services/importantInfoApi';
 
 const ImportantInfoAdmin = () => {
@@ -24,10 +24,45 @@ const ImportantInfoAdmin = () => {
     const [selectedMessage, setSelectedMessage] = useState(null);
     const [unreadCountError, setUnreadCountError] = useState(false);
     const [showMobileForm, setShowMobileForm] = useState(false);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 992);
+    const mobileFormRef = useRef(null);
 
     useEffect(() => {
         fetchMessages();
+        
+        // Check if mobile on mount and resize
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 992);
+            // Close mobile form when resizing to desktop
+            if (window.innerWidth >= 992) {
+                setShowMobileForm(false);
+            }
+        };
+        
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, [pagination.currentPage]);
+
+    useEffect(() => {
+        // Close mobile form when clicking outside on mobile
+        const handleClickOutside = (event) => {
+            if (isMobile && 
+                showMobileForm && 
+                mobileFormRef.current && 
+                !mobileFormRef.current.contains(event.target) &&
+                !event.target.closest('.mobile-form-toggle')) {
+                setShowMobileForm(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, [isMobile, showMobileForm]);
 
     const fetchMessages = async () => {
         try {
@@ -80,7 +115,10 @@ const ImportantInfoAdmin = () => {
         // Scroll to form on mobile
         if (window.innerWidth < 992) {
             setTimeout(() => {
-                document.getElementById('message-form-section')?.scrollIntoView({ behavior: 'smooth' });
+                document.getElementById('message-form-section')?.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                });
             }, 100);
         }
     };
@@ -98,7 +136,10 @@ const ImportantInfoAdmin = () => {
         // Scroll to form on mobile
         if (window.innerWidth < 992) {
             setTimeout(() => {
-                document.getElementById('message-form-section')?.scrollIntoView({ behavior: 'smooth' });
+                document.getElementById('message-form-section')?.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                });
             }, 100);
         }
     };
@@ -246,19 +287,225 @@ const ImportantInfoAdmin = () => {
 
     // Toggle mobile form visibility
     const toggleMobileForm = () => {
-        setShowMobileForm(!showMobileForm);
-        if (!showMobileForm) {
-            // Reset form when opening
-            if (activeTab === 'view') {
+        const newShowState = !showMobileForm;
+        setShowMobileForm(newShowState);
+        
+        if (newShowState) {
+            // Reset form when opening for new message
+            if (activeTab === 'view' && !selectedMessage) {
                 setFormData({
                     title: '',
                     message: '',
                     isUrgent: false
                 });
                 setAttachments([]);
+                setActiveTab('view');
             }
+            
+            // Scroll to form
+            setTimeout(() => {
+                document.getElementById('message-form-section')?.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }, 300); // Wait for animation to start
         }
     };
+
+    // Function to open mobile form for new message
+    const openMobileFormForNewMessage = () => {
+        setFormData({
+            title: '',
+            message: '',
+            isUrgent: false
+        });
+        setAttachments([]);
+        setSelectedMessage(null);
+        setActiveTab('view');
+        setShowMobileForm(true);
+        
+        setTimeout(() => {
+            document.getElementById('message-form-section')?.scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }, 300);
+    };
+
+    // Render the message form
+    const renderMessageForm = () => (
+        <div className="card" id="message-form">
+            <div className="card-header bg-primary text-white">
+                <div className="d-flex justify-content-between align-items-center">
+                    <h4 className="mb-0">
+                        <i className="fas fa-bullhorn me-2"></i>
+                        {activeTab === 'edit' ? 'Edit Message' : activeTab === 'resend' ? 'Resend Message' : 'Send Important Information'}
+                    </h4>
+                    {isMobile && (
+                        <button 
+                            type="button" 
+                            className="btn btn-sm btn-light"
+                            onClick={() => setShowMobileForm(false)}
+                            aria-label="Close form"
+                        >
+                            <i className="fas fa-times"></i>
+                        </button>
+                    )}
+                </div>
+            </div>
+            <div className="card-body">
+                {activeTab === 'edit' && selectedMessage && (
+                    <div className="alert alert-info mb-3">
+                        <i className="fas fa-info-circle me-2"></i>
+                        You are editing message sent on {formatDate(selectedMessage.createdAt)}
+                    </div>
+                )}
+                
+                {activeTab === 'resend' && selectedMessage && (
+                    <div className="alert alert-warning mb-3">
+                        <i className="fas fa-exclamation-triangle me-2"></i>
+                        You are resending message originally sent on {formatDate(selectedMessage.createdAt)}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit}>
+                    <div className="form-section">
+                        <label className="form-label">
+                            Title <span className="text-danger">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            className="form-control"
+                            name="title"
+                            value={formData.title}
+                            onChange={handleInputChange}
+                            placeholder="Enter message title"
+                            required
+                            maxLength={200}
+                        />
+                    </div>
+
+                    <div className="form-section">
+                        <label className="form-label">
+                            Message <span className="text-danger">*</span>
+                        </label>
+                        <textarea
+                            className="form-control justified-text"
+                            name="message"
+                            rows="6"
+                            value={formData.message}
+                            onChange={handleInputChange}
+                            placeholder="Enter your important message here..."
+                            required
+                        ></textarea>
+                        <small className="text-muted">
+                            This message will be sent to all users of the app.
+                        </small>
+                    </div>
+
+                    <div className="form-section">
+                        <label className="form-label">Attachments (Optional)</label>
+                        <input
+                            type="file"
+                            className="form-control"
+                            multiple
+                            onChange={handleFileChange}
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                        />
+                        <div className="form-text">
+                            <i className="fas fa-info-circle me-1"></i>
+                            Max 5 files, 10MB each. Allowed: PDF, DOC, DOCX, JPG, PNG, GIF
+                        </div>
+                        
+                        {attachments.length > 0 && (
+                            <div className="mt-2 p-2 bg-light rounded">
+                                <strong>Selected files ({attachments.length}):</strong>
+                                <ul className="list-unstyled mt-2">
+                                    {attachments.map((file, index) => (
+                                        <li key={index} className="attachment-list-item d-flex justify-content-between align-items-center mb-1">
+                                            <div className="text-truncate" style={{ maxWidth: '200px' }}>
+                                                <i className={`fas fa-file-${file.type.includes('pdf') ? 'pdf' : file.type.includes('image') ? 'image' : 'word'} me-1`}></i>
+                                                <small>{file.name}</small>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-outline-danger"
+                                                onClick={() => removeAttachment(index)}
+                                            >
+                                                <i className="fas fa-times"></i>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="form-section">
+                        <div className="form-check">
+                            <input
+                                type="checkbox"
+                                className="form-check-input"
+                                id="isUrgent"
+                                name="isUrgent"
+                                checked={formData.isUrgent}
+                                onChange={handleInputChange}
+                            />
+                            <label className="form-check-label" htmlFor="isUrgent">
+                                <i className="fas fa-exclamation-triangle me-1"></i>
+                                Mark as Urgent
+                            </label>
+                        </div>
+                        <small className="text-muted">
+                            Urgent messages will show with a red badge for users.
+                        </small>
+                    </div>
+
+                    <div className="alert alert-info">
+                        <i className="fas fa-info-circle me-2"></i>
+                        This message will be sent to <strong>all users</strong> of the application.
+                    </div>
+
+                    <div className="d-grid gap-2">
+                        <button
+                            type="submit"
+                            className="btn btn-primary py-2"
+                            disabled={sending || !formData.title || !formData.message}
+                        >
+                            {sending ? (
+                                <>
+                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    {activeTab === 'edit' ? 'Updating...' : activeTab === 'resend' ? 'Resending...' : 'Sending to all users...'}
+                                </>
+                            ) : (
+                                <>
+                                    <i className={`fas fa-${activeTab === 'edit' ? 'save' : 'paper-plane'} me-2`}></i>
+                                    {activeTab === 'edit' ? 'Update Message' : activeTab === 'resend' ? 'Resend to All Users' : 'Send to All Users'}
+                                </>
+                            )}
+                        </button>
+                        
+                        {(activeTab === 'edit' || activeTab === 'resend') && (
+                            <button
+                                type="button"
+                                className="btn btn-secondary py-2"
+                                onClick={cancelEdit}
+                            >
+                                <i className="fas fa-times me-2"></i>
+                                Cancel {activeTab === 'edit' ? 'Edit' : 'Resend'}
+                            </button>
+                        )}
+                    </div>
+                </form>
+            </div>
+            <div className="card-footer text-muted">
+                <small>
+                    <i className="fas fa-history me-1"></i>
+                    Messages are archived for future reference
+                </small>
+            </div>
+        </div>
+    );
 
     // Inline styles for responsive design with justified text
     const responsiveStyles = `
@@ -274,7 +521,7 @@ const ImportantInfoAdmin = () => {
                 border-radius: 4px;
             }
             
-            /* Mobile form styles */
+            /* Mobile form styles - FIXED: Ensure it's visible when active */
             .mobile-form-fixed {
                 position: fixed;
                 bottom: 0;
@@ -282,13 +529,16 @@ const ImportantInfoAdmin = () => {
                 right: 0;
                 z-index: 1040;
                 background: white;
-                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-                border-top-left-radius: 12px;
-                border-top-right-radius: 12px;
-                max-height: 85vh;
+                box-shadow: 0 -2px 20px rgba(0,0,0,0.2);
+                border-top-left-radius: 16px;
+                border-top-right-radius: 16px;
+                max-height: 90vh;
                 overflow-y: auto;
                 transform: translateY(100%);
                 transition: transform 0.3s ease-in-out;
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
             }
             
             .mobile-form-fixed.show {
@@ -305,7 +555,8 @@ const ImportantInfoAdmin = () => {
                 z-index: 1039;
                 opacity: 0;
                 visibility: hidden;
-                transition: opacity 0.3s ease-in-out;
+                transition: opacity 0.3s ease-in-out, visibility 0.3s;
+                backdrop-filter: blur(2px);
             }
             
             .mobile-form-overlay.show {
@@ -320,6 +571,11 @@ const ImportantInfoAdmin = () => {
             
             .mobile-form-toggle {
                 display: block !important;
+            }
+            
+            /* Prevent body scroll when mobile form is open */
+            body.mobile-form-open {
+                overflow: hidden;
             }
         }
         
@@ -462,6 +718,16 @@ const ImportantInfoAdmin = () => {
                 padding: 0.75rem;
                 font-size: 0.9rem;
             }
+            
+            /* Mobile form adjustments */
+            .mobile-form-fixed {
+                max-height: 85vh;
+            }
+            
+            .mobile-form-fixed .card {
+                border-radius: 16px 16px 0 0;
+                border: none;
+            }
         }
         
         /* Medium screens (tablet) */
@@ -473,6 +739,10 @@ const ImportantInfoAdmin = () => {
             
             .nav-tabs .nav-link {
                 font-size: 0.9rem;
+            }
+            
+            .mobile-form-fixed {
+                max-height: 80vh;
             }
         }
         
@@ -668,192 +938,33 @@ const ImportantInfoAdmin = () => {
         }
     `;
 
-    // Render the message form
-    const renderMessageForm = () => (
-        <div className="card" id="message-form">
-            <div className="card-header bg-primary text-white">
-                <div className="d-flex justify-content-between align-items-center">
-                    <h4 className="mb-0">
-                        <i className="fas fa-bullhorn me-2"></i>
-                        {activeTab === 'edit' ? 'Edit Message' : activeTab === 'resend' ? 'Resend Message' : 'Send Important Information'}
-                    </h4>
-                    {window.innerWidth < 992 && (
-                        <button 
-                            type="button" 
-                            className="btn btn-sm btn-light"
-                            onClick={() => setShowMobileForm(false)}
-                        >
-                            <i className="fas fa-times"></i>
-                        </button>
-                    )}
-                </div>
-            </div>
-            <div className="card-body">
-                {activeTab === 'edit' && selectedMessage && (
-                    <div className="alert alert-info mb-3">
-                        <i className="fas fa-info-circle me-2"></i>
-                        You are editing message sent on {formatDate(selectedMessage.createdAt)}
-                    </div>
-                )}
-                
-                {activeTab === 'resend' && selectedMessage && (
-                    <div className="alert alert-warning mb-3">
-                        <i className="fas fa-exclamation-triangle me-2"></i>
-                        You are resending message originally sent on {formatDate(selectedMessage.createdAt)}
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit}>
-                    <div className="form-section">
-                        <label className="form-label">
-                            Title <span className="text-danger">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            className="form-control"
-                            name="title"
-                            value={formData.title}
-                            onChange={handleInputChange}
-                            placeholder="Enter message title"
-                            required
-                            maxLength={200}
-                        />
-                    </div>
-
-                    <div className="form-section">
-                        <label className="form-label">
-                            Message <span className="text-danger">*</span>
-                        </label>
-                        <textarea
-                            className="form-control justified-text"
-                            name="message"
-                            rows="6"
-                            value={formData.message}
-                            onChange={handleInputChange}
-                            placeholder="Enter your important message here..."
-                            required
-                        ></textarea>
-                        <small className="text-muted">
-                            This message will be sent to all users of the app.
-                        </small>
-                    </div>
-
-                    <div className="form-section">
-                        <label className="form-label">Attachments (Optional)</label>
-                        <input
-                            type="file"
-                            className="form-control"
-                            multiple
-                            onChange={handleFileChange}
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
-                        />
-                        <div className="form-text">
-                            <i className="fas fa-info-circle me-1"></i>
-                            Max 5 files, 10MB each. Allowed: PDF, DOC, DOCX, JPG, PNG, GIF
-                        </div>
-                        
-                        {attachments.length > 0 && (
-                            <div className="mt-2 p-2 bg-light rounded">
-                                <strong>Selected files ({attachments.length}):</strong>
-                                <ul className="list-unstyled mt-2">
-                                    {attachments.map((file, index) => (
-                                        <li key={index} className="attachment-list-item d-flex justify-content-between align-items-center mb-1">
-                                            <div className="text-truncate" style={{ maxWidth: '200px' }}>
-                                                <i className={`fas fa-file-${file.type.includes('pdf') ? 'pdf' : file.type.includes('image') ? 'image' : 'word'} me-1`}></i>
-                                                <small>{file.name}</small>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                className="btn btn-sm btn-outline-danger"
-                                                onClick={() => removeAttachment(index)}
-                                            >
-                                                <i className="fas fa-times"></i>
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="form-section">
-                        <div className="form-check">
-                            <input
-                                type="checkbox"
-                                className="form-check-input"
-                                id="isUrgent"
-                                name="isUrgent"
-                                checked={formData.isUrgent}
-                                onChange={handleInputChange}
-                            />
-                            <label className="form-check-label" htmlFor="isUrgent">
-                                <i className="fas fa-exclamation-triangle me-1"></i>
-                                Mark as Urgent
-                            </label>
-                        </div>
-                        <small className="text-muted">
-                            Urgent messages will show with a red badge for users.
-                        </small>
-                    </div>
-
-                    <div className="alert alert-info">
-                        <i className="fas fa-info-circle me-2"></i>
-                        This message will be sent to <strong>all users</strong> of the application.
-                    </div>
-
-                    <div className="d-grid gap-2">
-                        <button
-                            type="submit"
-                            className="btn btn-primary py-2"
-                            disabled={sending || !formData.title || !formData.message}
-                        >
-                            {sending ? (
-                                <>
-                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                    {activeTab === 'edit' ? 'Updating...' : activeTab === 'resend' ? 'Resending...' : 'Sending to all users...'}
-                                </>
-                            ) : (
-                                <>
-                                    <i className={`fas fa-${activeTab === 'edit' ? 'save' : 'paper-plane'} me-2`}></i>
-                                    {activeTab === 'edit' ? 'Update Message' : activeTab === 'resend' ? 'Resend to All Users' : 'Send to All Users'}
-                                </>
-                            )}
-                        </button>
-                        
-                        {(activeTab === 'edit' || activeTab === 'resend') && (
-                            <button
-                                type="button"
-                                className="btn btn-secondary py-2"
-                                onClick={cancelEdit}
-                            >
-                                <i className="fas fa-times me-2"></i>
-                                Cancel {activeTab === 'edit' ? 'Edit' : 'Resend'}
-                            </button>
-                        )}
-                    </div>
-                </form>
-            </div>
-            <div className="card-footer text-muted">
-                <small>
-                    <i className="fas fa-history me-1"></i>
-                    Messages are archived for future reference
-                </small>
-            </div>
-        </div>
-    );
+    // Update body class when mobile form is open
+    useEffect(() => {
+        if (showMobileForm && isMobile) {
+            document.body.classList.add('mobile-form-open');
+        } else {
+            document.body.classList.remove('mobile-form-open');
+        }
+        
+        return () => {
+            document.body.classList.remove('mobile-form-open');
+        };
+    }, [showMobileForm, isMobile]);
 
     return (
         <>
             <style>{responsiveStyles}</style>
             
-            {/* Mobile form overlay */}
+            {/* Mobile form overlay - FIXED: Properly shows when active */}
             <div 
                 className={`mobile-form-overlay ${showMobileForm ? 'show' : ''}`}
                 onClick={() => setShowMobileForm(false)}
+                aria-hidden="true"
             ></div>
             
-            {/* Mobile form fixed at bottom */}
+            {/* Mobile form fixed at bottom - FIXED: Always in DOM, visibility controlled by class */}
             <div 
+                ref={mobileFormRef}
                 className={`mobile-form-fixed ${showMobileForm ? 'show' : ''}`}
                 id="message-form-section"
             >
@@ -878,10 +989,10 @@ const ImportantInfoAdmin = () => {
                             </div>
                         </div>
                         
-                        {/* Mobile form toggle button */}
+                        {/* Mobile form toggle button - FIXED: Clear call-to-action */}
                         <button 
                             className="btn btn-primary w-100 mb-4 d-lg-none mobile-form-toggle"
-                            onClick={toggleMobileForm}
+                            onClick={openMobileFormForNewMessage}
                         >
                             <i className="fas fa-bullhorn me-2"></i>
                             {showMobileForm ? 'Hide Form' : 'Send Important Information'}
@@ -928,6 +1039,9 @@ const ImportantInfoAdmin = () => {
                                                 handleEditMessage(selectedMessage);
                                             } else {
                                                 setActiveTab('edit');
+                                                if (isMobile) {
+                                                    setShowMobileForm(true);
+                                                }
                                             }
                                         }}
                                         disabled={!selectedMessage}
@@ -945,6 +1059,9 @@ const ImportantInfoAdmin = () => {
                                                 handleResendMessage(selectedMessage);
                                             } else {
                                                 setActiveTab('resend');
+                                                if (isMobile) {
+                                                    setShowMobileForm(true);
+                                                }
                                             }
                                         }}
                                         disabled={!selectedMessage}

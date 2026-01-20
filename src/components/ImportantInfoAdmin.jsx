@@ -260,7 +260,7 @@ const ImportantInfoAdmin = () => {
         }
     };
 
-    // Inline styles for responsive design
+    // Inline styles for responsive design with justified text
     const responsiveStyles = `
         /* Mobile hamburger menu fix */
         @media (max-width: 991.98px) {
@@ -496,6 +496,176 @@ const ImportantInfoAdmin = () => {
             padding-top: 1rem;
             margin-top: 1rem;
         }
+        
+        /* ====== JUSTIFIED TEXT STYLES ====== */
+        /* Professional justified text */
+        .justified-text {
+            text-align: justify;
+            text-justify: inter-word;
+            line-height: 1.6;
+            word-spacing: 0.05em;
+        }
+        
+        /* Textarea styling */
+        textarea.form-control {
+            text-align: justify;
+            line-height: 1.5;
+            font-size: 1rem;
+            padding: 12px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        textarea.form-control:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+            transform: translateY(-1px);
+        }
+        
+        /* Message content display */
+        .message-content-display {
+            text-align: justify;
+            text-justify: inter-word;
+            line-height: 1.7;
+            font-size: 1.05rem;
+            color: #333;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            hyphens: auto;
+        }
+        
+        /* Mobile adjustments for justified text */
+        @media (max-width: 768px) {
+            .justified-text {
+                text-align: left;
+                text-justify: auto;
+                line-height: 1.5;
+            }
+            
+            .message-content-display {
+                text-align: left;
+                font-size: 1rem;
+                line-height: 1.6;
+            }
+            
+            textarea.form-control {
+                text-align: left;
+                font-size: 0.95rem;
+            }
+        }
+        
+        /* Improved form elements */
+        .form-control:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
+        .form-check-input:checked {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        
+        .form-check-input:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
+        /* Attachment styling */
+        .attachment-list-item {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            transition: all 0.2s ease;
+            border: 1px solid #dee2e6;
+        }
+        
+        .attachment-list-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(5px);
+            border-color: #86b7fe;
+        }
+        
+        /* Better spacing for form sections */
+        .form-section {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .form-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        /* Enhanced card styling */
+        .message-card {
+            transition: all 0.2s ease;
+            border-left: 4px solid transparent;
+            border-radius: 8px;
+        }
+        
+        .message-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+        
+        .message-card.selected {
+            border-left-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.05);
+        }
+        
+        /* Improved table styling */
+        .table-hover tbody tr:hover {
+            background-color: rgba(13, 110, 253, 0.05);
+        }
+        
+        .table th {
+            font-weight: 600;
+            color: #495057;
+            border-bottom-width: 2px;
+        }
+        
+        /* Better button styling */
+        .btn {
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0a58ca 0%, #084298 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+        }
+        
+        /* Alert improvements */
+        .alert {
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        /* Pagination styling */
+        .page-link {
+            border-radius: 4px;
+            margin: 0 2px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .page-item.active .page-link {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            border-color: #0a58ca;
+        }
     `;
 
     // Render the message form
@@ -534,7 +704,7 @@ const ImportantInfoAdmin = () => {
                 )}
 
                 <form onSubmit={handleSubmit}>
-                    <div className="mb-3">
+                    <div className="form-section">
                         <label className="form-label">
                             Title <span className="text-danger">*</span>
                         </label>
@@ -550,12 +720,12 @@ const ImportantInfoAdmin = () => {
                         />
                     </div>
 
-                    <div className="mb-3">
+                    <div className="form-section">
                         <label className="form-label">
                             Message <span className="text-danger">*</span>
                         </label>
                         <textarea
-                            className="form-control"
+                            className="form-control justified-text"
                             name="message"
                             rows="6"
                             value={formData.message}
@@ -568,7 +738,7 @@ const ImportantInfoAdmin = () => {
                         </small>
                     </div>
 
-                    <div className="mb-3">
+                    <div className="form-section">
                         <label className="form-label">Attachments (Optional)</label>
                         <input
                             type="file"
@@ -587,7 +757,7 @@ const ImportantInfoAdmin = () => {
                                 <strong>Selected files ({attachments.length}):</strong>
                                 <ul className="list-unstyled mt-2">
                                     {attachments.map((file, index) => (
-                                        <li key={index} className="d-flex justify-content-between align-items-center mb-1">
+                                        <li key={index} className="attachment-list-item d-flex justify-content-between align-items-center mb-1">
                                             <div className="text-truncate" style={{ maxWidth: '200px' }}>
                                                 <i className={`fas fa-file-${file.type.includes('pdf') ? 'pdf' : file.type.includes('image') ? 'image' : 'word'} me-1`}></i>
                                                 <small>{file.name}</small>
@@ -606,7 +776,7 @@ const ImportantInfoAdmin = () => {
                         )}
                     </div>
 
-                    <div className="mb-3">
+                    <div className="form-section">
                         <div className="form-check">
                             <input
                                 type="checkbox"
@@ -822,7 +992,7 @@ const ImportantInfoAdmin = () => {
                                         </small>
                                     </div>
                                     <div className="border rounded p-3 bg-light mb-3">
-                                        <p style={{ whiteSpace: 'pre-wrap' }} className="mb-0">
+                                        <p className="mb-0 message-content-display justified-text">
                                             {selectedMessage.content || selectedMessage.message}
                                         </p>
                                     </div>
@@ -913,7 +1083,7 @@ const ImportantInfoAdmin = () => {
                                             {messages.map((message) => (
                                                 <tr 
                                                     key={message._id}
-                                                    className={selectedMessage?._id === message._id ? 'table-primary' : ''}
+                                                    className={`message-card ${selectedMessage?._id === message._id ? 'selected' : ''}`}
                                                     onClick={() => handleViewMessage(message)}
                                                     style={{ cursor: 'pointer' }}
                                                 >

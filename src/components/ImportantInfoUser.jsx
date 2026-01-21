@@ -20,6 +20,7 @@ const ImportantInfoUser = () => {
 
     useEffect(() => {
         fetchMessages();
+        fetchUnreadCount();
         setupSocketConnection();
         
         return () => {
@@ -123,6 +124,7 @@ const ImportantInfoUser = () => {
                 await importantInfoService.deleteMessage(messageId);
                 setSelectedMessage(null);
                 fetchMessages(); // Refresh the list
+                fetchUnreadCount();
             } catch (err) {
                 console.error('Error deleting message:', err);
                 setError('Error deleting message');
@@ -150,11 +152,65 @@ const ImportantInfoUser = () => {
 
     // Inline styles for improvements
     const customStyles = `
-        /* Justified text for professional look */
+        /* ====== JUSTIFIED TEXT STYLES ====== */
+        /* Professional justified text for all content */
         .justified-text {
             text-align: justify;
             text-justify: inter-word;
             line-height: 1.6;
+            word-spacing: 0.05em;
+            hyphens: auto;
+        }
+        
+        /* Message content display with better spacing */
+        .message-content-display {
+            text-align: justify;
+            text-justify: inter-word;
+            line-height: 1.7;
+            font-size: 1.05rem;
+            color: #333;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            hyphens: auto;
+            word-spacing: 0.1em;
+        }
+        
+        /* Card text justification */
+        .card-text-justified {
+            text-align: justify;
+            text-justify: inter-word;
+            line-height: 1.6;
+            word-spacing: 0.05em;
+        }
+        
+        /* Alert text justification */
+        .alert-text-justified {
+            text-align: justify;
+            text-justify: inter-word;
+            line-height: 1.5;
+        }
+        
+        /* Mobile adjustments for justified text */
+        @media (max-width: 768px) {
+            .justified-text {
+                text-align: left;
+                text-justify: auto;
+                line-height: 1.5;
+                word-spacing: normal;
+            }
+            
+            .message-content-display {
+                text-align: left;
+                font-size: 1rem;
+                line-height: 1.6;
+                word-spacing: normal;
+            }
+            
+            .card-text-justified {
+                text-align: left;
+                text-justify: auto;
+                line-height: 1.5;
+            }
         }
         
         /* Better spacing for badges and buttons */
@@ -195,11 +251,6 @@ const ImportantInfoUser = () => {
                 justify-content: flex-start;
                 margin-top: 5px;
             }
-            
-            .justified-text {
-                text-align: left;
-                text-justify: auto;
-            }
         }
         
         /* Message viewer styling */
@@ -207,6 +258,9 @@ const ImportantInfoUser = () => {
             max-height: 60vh;
             overflow-y: auto;
             padding-right: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
         }
         
         .message-viewer-content::-webkit-scrollbar {
@@ -231,11 +285,13 @@ const ImportantInfoUser = () => {
         .message-card {
             transition: all 0.2s ease;
             border-left: 4px solid transparent;
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         .message-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
             border-left-color: #0d6efd;
         }
         
@@ -244,9 +300,158 @@ const ImportantInfoUser = () => {
             background-color: rgba(220, 53, 69, 0.03);
         }
         
+        .message-card.selected {
+            border-left-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.05);
+        }
+        
         /* Button improvements */
         .refresh-btn:active {
             transform: scale(0.95);
+        }
+        
+        /* Form control improvements */
+        textarea.form-control {
+            text-align: justify;
+            line-height: 1.5;
+            font-size: 1rem;
+            padding: 12px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        textarea.form-control:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+            transform: translateY(-1px);
+        }
+        
+        /* Improved typography */
+        h1, h2, h3, h4, h5, h6 {
+            line-height: 1.3;
+        }
+        
+        .card-title {
+            line-height: 1.4;
+        }
+        
+        /* Enhanced badge styling */
+        .badge {
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+        
+        /* Better pagination */
+        .page-link {
+            border-radius: 4px;
+            margin: 0 2px;
+            border: 1px solid #dee2e6;
+            transition: all 0.2s ease;
+        }
+        
+        .page-item.active .page-link {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            border-color: #0a58ca;
+        }
+        
+        /* Attachment styling */
+        .attachment-list-item {
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+        
+        .attachment-list-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(5px);
+            border-left-color: #0d6efd;
+        }
+        
+        /* Improved spacing */
+        .section-spacing {
+            margin-bottom: 2rem;
+        }
+        
+        /* Enhanced alert styling */
+        .alert {
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        /* Read/Unread indicator */
+        .unread-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #dc3545;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 6px rgba(220, 53, 69, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            }
+        }
+        
+        /* Improved empty state */
+        .empty-state {
+            padding: 3rem 1rem;
+            text-align: center;
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            opacity: 0.7;
+            margin-bottom: 1rem;
+        }
+        
+        /* Better table/text spacing */
+        p, li, td {
+            line-height: 1.6;
+        }
+        
+        /* Professional color scheme */
+        .text-primary {
+            color: #0d6efd !important;
+        }
+        
+        .bg-primary {
+            background-color: #0d6efd !important;
+        }
+        
+        /* Loading spinner improvements */
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        
+        /* Card body padding improvements */
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .card-body {
+                padding: 1.25rem;
+            }
+        }
+        
+        /* Improved message preview truncation */
+        .message-preview {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
     `;
 
@@ -257,7 +462,7 @@ const ImportantInfoUser = () => {
             <div className="container py-4">
                 <div className="row">
                     <div className="col-12">
-                        <div className="d-flex justify-content-between align-items-center mb-4">
+                        <div className="d-flex justify-content-between align-items-center mb-4 section-spacing">
                             <h2 className="fs-4 fs-md-3">
                                 <i className="fas fa-info-circle me-2"></i>
                                 Important Information
@@ -293,7 +498,7 @@ const ImportantInfoUser = () => {
                         {error && (
                             <div className="alert alert-danger alert-dismissible fade show mb-4" role="alert">
                                 <i className="fas fa-exclamation-circle me-2"></i>
-                                {error}
+                                <span className="alert-text-justified">{error}</span>
                                 <button type="button" className="btn-close" onClick={() => setError('')}></button>
                             </div>
                         )}
@@ -301,7 +506,9 @@ const ImportantInfoUser = () => {
                         {socketConnected && (
                             <div className="alert alert-info mb-4">
                                 <i className="fas fa-wifi me-2"></i>
-                                Connected to live updates. New messages will appear automatically.
+                                <span className="alert-text-justified">
+                                    Connected to live updates. New messages will appear automatically.
+                                </span>
                             </div>
                         )}
                         
@@ -314,10 +521,10 @@ const ImportantInfoUser = () => {
                             </div>
                         ) : messages.length === 0 ? (
                             <div className="card">
-                                <div className="card-body text-center py-5">
-                                    <i className="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <div className="card-body empty-state">
+                                    <i className="fas fa-inbox empty-state-icon text-muted"></i>
                                     <h5 className="card-title">No important information available</h5>
-                                    <p className="card-text text-muted">
+                                    <p className="card-text text-muted mb-4">
                                         Check back later for updates from the administration.
                                     </p>
                                     <button 
@@ -343,6 +550,7 @@ const ImportantInfoUser = () => {
                                             <button
                                                 className="btn btn-sm btn-light"
                                                 onClick={closeMessageViewer}
+                                                aria-label="Close message viewer"
                                             >
                                                 <i className="fas fa-times"></i>
                                             </button>
@@ -352,13 +560,17 @@ const ImportantInfoUser = () => {
                                                 <div className="message-title-section">
                                                     <h4 className="mb-1">{selectedMessage.title}</h4>
                                                     {selectedMessage.isUrgent && (
-                                                        <span className="badge bg-danger">URGENT</span>
+                                                        <span className="badge bg-danger me-2">URGENT</span>
+                                                    )}
+                                                    {!selectedMessage.isRead && (
+                                                        <span className="badge bg-success">NEW</span>
                                                     )}
                                                 </div>
                                                 <div className="message-actions-section">
                                                     <button
                                                         className="btn btn-sm btn-outline-danger"
                                                         onClick={() => handleDelete(selectedMessage._id)}
+                                                        aria-label="Delete message"
                                                     >
                                                         <i className="fas fa-trash me-1"></i>
                                                         Delete
@@ -377,36 +589,38 @@ const ImportantInfoUser = () => {
                                                 </small>
                                             </div>
                                             
-                                            <div className="border rounded p-3 bg-light mb-3 message-viewer-content">
-                                                <p className="mb-0 justified-text">
+                                            <div className="message-viewer-content">
+                                                <p className="mb-0 message-content-display justified-text">
                                                     {selectedMessage.message}
                                                 </p>
                                             </div>
                                             
                                             {selectedMessage.attachments?.length > 0 && (
                                                 <div className="mt-4">
-                                                    <h6 className="border-bottom pb-2">
+                                                    <h6 className="border-bottom pb-2 mb-3">
                                                         <i className="fas fa-paperclip me-2"></i>
                                                         Attachments ({selectedMessage.attachments.length})
                                                     </h6>
-                                                    <div className="list-group mt-2">
+                                                    <div className="list-group">
                                                         {selectedMessage.attachments.map((attachment, index) => (
                                                             <a
                                                                 key={index}
                                                                 href={attachment.url}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                                                                className="list-group-item list-group-item-action attachment-list-item d-flex justify-content-between align-items-center"
                                                             >
                                                                 <div className="text-truncate">
                                                                     <i className={`fas fa-file-${attachment.type?.includes('pdf') ? 'pdf' : attachment.type?.includes('image') ? 'image' : 'word'} me-2`}></i>
-                                                                    {attachment.filename || attachment.originalname}
+                                                                    <span className="fw-medium">
+                                                                        {attachment.filename || attachment.originalname}
+                                                                    </span>
                                                                 </div>
-                                                                <div>
-                                                                    <small className="text-muted me-2">
+                                                                <div className="d-flex align-items-center">
+                                                                    <small className="text-muted me-3">
                                                                         {(attachment.size / 1024).toFixed(1)} KB
                                                                     </small>
-                                                                    <i className="fas fa-download"></i>
+                                                                    <i className="fas fa-download text-primary"></i>
                                                                 </div>
                                                             </a>
                                                         ))}
@@ -414,12 +628,19 @@ const ImportantInfoUser = () => {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="card-footer text-muted">
-                                            <small>
+                                        <div className="card-footer text-muted d-flex justify-content-between align-items-center">
+                                            <small className="alert-text-justified">
                                                 <i className="fas fa-info-circle me-1"></i>
                                                 {selectedMessage.isRead ? 'Read' : 'Unread'} • 
                                                 Deleted messages cannot be recovered
                                             </small>
+                                            <button
+                                                className="btn btn-sm btn-outline-secondary"
+                                                onClick={closeMessageViewer}
+                                            >
+                                                <i className="fas fa-times me-1"></i>
+                                                Close
+                                            </button>
                                         </div>
                                     </div>
                                 )}
@@ -429,11 +650,15 @@ const ImportantInfoUser = () => {
                                     {messages.map((message) => (
                                         <div key={message._id} className="col-12">
                                             <div 
-                                                className={`card message-card ${!message.isRead ? 'unread' : ''}`}
+                                                className={`card message-card ${!message.isRead ? 'unread' : ''} ${selectedMessage?._id === message._id ? 'selected' : ''}`}
                                                 onClick={() => handleViewMessage(message)}
                                                 style={{ cursor: 'pointer' }}
                                             >
-                                                <div className="card-body">
+                                                <div className="card-body position-relative">
+                                                    {!message.isRead && (
+                                                        <div className="unread-indicator"></div>
+                                                    )}
+                                                    
                                                     <div className="message-header-row">
                                                         <div className="message-title-section">
                                                             <h5 className="card-title mb-1">
@@ -453,6 +678,7 @@ const ImportantInfoUser = () => {
                                                                 </small>
                                                                 {!message.isRead && (
                                                                     <span className="badge bg-success new-badge-spacing">
+                                                                        <i className="fas fa-envelope me-1"></i>
                                                                         NEW
                                                                     </span>
                                                                 )}
@@ -466,6 +692,7 @@ const ImportantInfoUser = () => {
                                                                     handleDelete(message._id);
                                                                 }}
                                                                 title="Delete message"
+                                                                aria-label="Delete message"
                                                             >
                                                                 <i className="fas fa-trash"></i>
                                                             </button>
@@ -473,24 +700,22 @@ const ImportantInfoUser = () => {
                                                     </div>
                                                     
                                                     <div className="mt-3">
-                                                        <p className="card-text text-muted justified-text mb-0">
-                                                            {message.message.length > 150 
-                                                                ? `${message.message.substring(0, 150)}...` 
-                                                                : message.message
-                                                            }
+                                                        <p className="card-text text-muted card-text-justified message-preview mb-0">
+                                                            {message.message}
                                                         </p>
                                                         {message.message.length > 150 && (
-                                                            <small className="text-primary">
-                                                                Click to read more...
+                                                            <small className="text-primary mt-2 d-block">
+                                                                <i className="fas fa-arrow-right me-1"></i>
+                                                                Click to read full message...
                                                             </small>
                                                         )}
                                                     </div>
                                                     
                                                     {message.attachments?.length > 0 && (
-                                                        <div className="mt-2">
+                                                        <div className="mt-3 pt-3 border-top">
                                                             <small className="text-muted">
                                                                 <i className="fas fa-paperclip me-1"></i>
-                                                                {message.attachments.length} attachment(s)
+                                                                {message.attachments.length} attachment{message.attachments.length !== 1 ? 's' : ''}
                                                             </small>
                                                         </div>
                                                     )}
@@ -509,37 +734,68 @@ const ImportantInfoUser = () => {
                                                     className="page-link"
                                                     onClick={() => handlePageChange(pagination.currentPage - 1)}
                                                     disabled={pagination.currentPage === 1}
+                                                    aria-label="Previous page"
                                                 >
                                                     <i className="fas fa-chevron-left me-1"></i>
-                                                    Previous
+                                                    <span className="d-none d-md-inline">Previous</span>
+                                                    <span className="d-inline d-md-none">Prev</span>
                                                 </button>
                                             </li>
                                             
-                                            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(pageNum => (
-                                                <li 
-                                                    key={pageNum}
-                                                    className={`page-item ${pagination.currentPage === pageNum ? 'active' : ''}`}
-                                                >
-                                                    <button
-                                                        className="page-link"
-                                                        onClick={() => handlePageChange(pageNum)}
-                                                    >
-                                                        {pageNum}
-                                                    </button>
-                                                </li>
-                                            ))}
+                                            {[...Array(pagination.totalPages)].map((_, index) => {
+                                                const pageNum = index + 1;
+                                                // Show only nearby pages for better UX
+                                                if (
+                                                    pageNum === 1 || 
+                                                    pageNum === pagination.totalPages ||
+                                                    (pageNum >= pagination.currentPage - 2 && pageNum <= pagination.currentPage + 2)
+                                                ) {
+                                                    return (
+                                                        <li 
+                                                            key={pageNum}
+                                                            className={`page-item ${pagination.currentPage === pageNum ? 'active' : ''}`}
+                                                        >
+                                                            <button
+                                                                className="page-link"
+                                                                onClick={() => handlePageChange(pageNum)}
+                                                                aria-label={`Page ${pageNum}`}
+                                                            >
+                                                                {pageNum}
+                                                            </button>
+                                                        </li>
+                                                    );
+                                                } else if (
+                                                    pageNum === pagination.currentPage - 3 ||
+                                                    pageNum === pagination.currentPage + 3
+                                                ) {
+                                                    return (
+                                                        <li key={pageNum} className="page-item disabled">
+                                                            <span className="page-link">...</span>
+                                                        </li>
+                                                    );
+                                                }
+                                                return null;
+                                            })}
                                             
                                             <li className={`page-item ${pagination.currentPage === pagination.totalPages ? 'disabled' : ''}`}>
                                                 <button
                                                     className="page-link"
                                                     onClick={() => handlePageChange(pagination.currentPage + 1)}
                                                     disabled={pagination.currentPage === pagination.totalPages}
+                                                    aria-label="Next page"
                                                 >
-                                                    Next
+                                                    <span className="d-none d-md-inline">Next</span>
+                                                    <span className="d-inline d-md-none">Next</span>
                                                     <i className="fas fa-chevron-right ms-1"></i>
                                                 </button>
                                             </li>
                                         </ul>
+                                        <div className="text-center mt-2">
+                                            <small className="text-muted">
+                                                Page {pagination.currentPage} of {pagination.totalPages} • 
+                                                Showing {messages.length} of {pagination.totalItems} messages
+                                            </small>
+                                        </div>
                                     </nav>
                                 )}
                             </>

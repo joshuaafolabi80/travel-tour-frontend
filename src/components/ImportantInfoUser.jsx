@@ -153,13 +153,16 @@ const ImportantInfoUser = () => {
     // Inline styles for improvements
     const customStyles = `
         /* ====== JUSTIFIED TEXT STYLES ====== */
-        /* Professional justified text for all content */
+        /* Professional justified text for all content - FIXED FOR MOBILE */
         .justified-text {
             text-align: justify;
             text-justify: inter-word;
             line-height: 1.6;
             word-spacing: 0.05em;
             hyphens: auto;
+            -webkit-hyphens: auto;
+            -moz-hyphens: auto;
+            -ms-hyphens: auto;
         }
         
         /* Message content display with better spacing */
@@ -172,6 +175,7 @@ const ImportantInfoUser = () => {
             white-space: pre-wrap;
             word-wrap: break-word;
             hyphens: auto;
+            -webkit-hyphens: auto;
             word-spacing: 0.1em;
         }
         
@@ -181,6 +185,7 @@ const ImportantInfoUser = () => {
             text-justify: inter-word;
             line-height: 1.6;
             word-spacing: 0.05em;
+            hyphens: auto;
         }
         
         /* Alert text justification */
@@ -188,28 +193,56 @@ const ImportantInfoUser = () => {
             text-align: justify;
             text-justify: inter-word;
             line-height: 1.5;
+            word-spacing: 0.02em;
         }
         
-        /* Mobile adjustments for justified text */
+        /* Mobile adjustments for justified text - REMOVED left alignment */
         @media (max-width: 768px) {
+            /* Keep justification on mobile */
             .justified-text {
-                text-align: left;
-                text-justify: auto;
-                line-height: 1.5;
-                word-spacing: normal;
+                text-align: justify;
+                text-justify: inter-word;
+                line-height: 1.6;
+                word-spacing: 0.03em; /* Slightly less spacing on mobile */
+                hyphens: auto;
+                -webkit-hyphens: auto;
             }
             
             .message-content-display {
-                text-align: left;
+                text-align: justify;
                 font-size: 1rem;
                 line-height: 1.6;
-                word-spacing: normal;
+                word-spacing: 0.05em;
             }
             
             .card-text-justified {
-                text-align: left;
-                text-justify: auto;
+                text-align: justify;
+                text-justify: inter-word;
                 line-height: 1.5;
+                word-spacing: 0.03em;
+            }
+            
+            .alert-text-justified {
+                text-align: justify;
+                line-height: 1.4;
+            }
+            
+            /* Improve mobile readability with better font sizing */
+            .message-viewer-content {
+                font-size: 0.95rem;
+                padding: 15px;
+            }
+        }
+        
+        /* Very small screens adjustments */
+        @media (max-width: 480px) {
+            .message-content-display {
+                font-size: 0.95rem;
+                line-height: 1.55;
+            }
+            
+            .justified-text {
+                line-height: 1.55;
             }
         }
         
@@ -261,6 +294,7 @@ const ImportantInfoUser = () => {
             background-color: #f8f9fa;
             border-radius: 8px;
             padding: 20px;
+            text-align: justify; /* Ensure content is justified */
         }
         
         .message-viewer-content::-webkit-scrollbar {
@@ -452,6 +486,31 @@ const ImportantInfoUser = () => {
             -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
+            text-align: justify; /* Ensure preview is justified */
+        }
+        
+        /* Ensure all paragraphs in message content are justified */
+        .message-viewer-content p,
+        .message-viewer-content div,
+        .message-viewer-content span {
+            text-align: justify;
+        }
+        
+        /* Fix for Safari mobile justification */
+        @supports (-webkit-touch-callout: none) {
+            .justified-text {
+                text-align: justify;
+                -webkit-text-justify: inter-word;
+                text-justify: inter-word;
+            }
+        }
+        
+        /* Improve word breaking for long words */
+        .message-content-display,
+        .justified-text,
+        .card-text-justified {
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
     `;
 
@@ -524,8 +583,8 @@ const ImportantInfoUser = () => {
                                 <div className="card-body empty-state">
                                     <i className="fas fa-inbox empty-state-icon text-muted"></i>
                                     <h5 className="card-title">No important information available</h5>
-                                    <p className="card-text text-muted mb-4">
-                                        Check back later for updates from the administration.
+                                    <p className="card-text text-muted mb-4 justified-text">
+                                        Check back later for updates from the administration. Important announcements and notifications will appear here when available.
                                     </p>
                                     <button 
                                         className="btn btn-primary mt-2"
@@ -559,12 +618,14 @@ const ImportantInfoUser = () => {
                                             <div className="message-header-row mb-3">
                                                 <div className="message-title-section">
                                                     <h4 className="mb-1">{selectedMessage.title}</h4>
-                                                    {selectedMessage.isUrgent && (
-                                                        <span className="badge bg-danger me-2">URGENT</span>
-                                                    )}
-                                                    {!selectedMessage.isRead && (
-                                                        <span className="badge bg-success">NEW</span>
-                                                    )}
+                                                    <div className="d-flex flex-wrap gap-2 mt-1">
+                                                        {selectedMessage.isUrgent && (
+                                                            <span className="badge bg-danger">URGENT</span>
+                                                        )}
+                                                        {!selectedMessage.isRead && (
+                                                            <span className="badge bg-success">NEW</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <div className="message-actions-section">
                                                     <button
@@ -573,7 +634,8 @@ const ImportantInfoUser = () => {
                                                         aria-label="Delete message"
                                                     >
                                                         <i className="fas fa-trash me-1"></i>
-                                                        Delete
+                                                        <span className="d-none d-sm-inline">Delete</span>
+                                                        <span className="d-inline d-sm-none">Del</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -590,9 +652,9 @@ const ImportantInfoUser = () => {
                                             </div>
                                             
                                             <div className="message-viewer-content">
-                                                <p className="mb-0 message-content-display justified-text">
+                                                <div className="message-content-display justified-text">
                                                     {selectedMessage.message}
-                                                </p>
+                                                </div>
                                             </div>
                                             
                                             {selectedMessage.attachments?.length > 0 && (
@@ -617,7 +679,7 @@ const ImportantInfoUser = () => {
                                                                     </span>
                                                                 </div>
                                                                 <div className="d-flex align-items-center">
-                                                                    <small className="text-muted me-3">
+                                                                    <small className="text-muted me-3 d-none d-sm-block">
                                                                         {(attachment.size / 1024).toFixed(1)} KB
                                                                     </small>
                                                                     <i className="fas fa-download text-primary"></i>
@@ -695,14 +757,15 @@ const ImportantInfoUser = () => {
                                                                 aria-label="Delete message"
                                                             >
                                                                 <i className="fas fa-trash"></i>
+                                                                <span className="d-none d-sm-inline ms-1">Delete</span>
                                                             </button>
                                                         </div>
                                                     </div>
                                                     
                                                     <div className="mt-3">
-                                                        <p className="card-text text-muted card-text-justified message-preview mb-0">
+                                                        <div className="card-text text-muted card-text-justified message-preview">
                                                             {message.message}
-                                                        </p>
+                                                        </div>
                                                         {message.message.length > 150 && (
                                                             <small className="text-primary mt-2 d-block">
                                                                 <i className="fas fa-arrow-right me-1"></i>
@@ -736,9 +799,9 @@ const ImportantInfoUser = () => {
                                                     disabled={pagination.currentPage === 1}
                                                     aria-label="Previous page"
                                                 >
-                                                    <i className="fas fa-chevron-left me-1"></i>
+                                                    <i className="fas fa-chevron-left me-1 d-none d-md-inline"></i>
+                                                    <span className="d-inline d-md-none">‹</span>
                                                     <span className="d-none d-md-inline">Previous</span>
-                                                    <span className="d-inline d-md-none">Prev</span>
                                                 </button>
                                             </li>
                                             
@@ -785,8 +848,8 @@ const ImportantInfoUser = () => {
                                                     aria-label="Next page"
                                                 >
                                                     <span className="d-none d-md-inline">Next</span>
-                                                    <span className="d-inline d-md-none">Next</span>
-                                                    <i className="fas fa-chevron-right ms-1"></i>
+                                                    <span className="d-inline d-md-none">›</span>
+                                                    <i className="fas fa-chevron-right ms-1 d-none d-md-inline"></i>
                                                 </button>
                                             </li>
                                         </ul>

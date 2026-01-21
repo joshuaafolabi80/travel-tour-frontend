@@ -1215,7 +1215,7 @@ const App = () => {
                         
                         {/* NEW: Important Information Pages */}
                         {currentPage === 'important-information' && userRole !== 'admin' && (
-                            <ImportantInfoUser />
+                            <ImportantInfoUser navigateTo={navigateTo} />
                         )}
                         {currentPage === 'admin-send-information' && userRole === 'admin' && (
                             <ImportantInfoAdmin />

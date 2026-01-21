@@ -1,9 +1,8 @@
 // travel-tour-frontend/src/components/ImportantInfoUser.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { importantInfoService } from '../services/importantInfoApi';
-import { useNavigate } from 'react-router-dom';
 
-const ImportantInfoUser = () => {
+const ImportantInfoUser = ({ navigateTo }) => {
     const [messages, setMessages] = useState([]);
     const [pagination, setPagination] = useState({
         currentPage: 1,
@@ -19,7 +18,6 @@ const ImportantInfoUser = () => {
     const [socketConnected, setSocketConnected] = useState(false);
     const [activeTab, setActiveTab] = useState('messages'); // 'messages' or 'contact'
     const socketRef = useRef(null);
-    const navigate = useNavigate();
 
     useEffect(() => {
         fetchMessages();
@@ -154,7 +152,12 @@ const ImportantInfoUser = () => {
     };
 
     const handleNavigateToContact = () => {
-        navigate('/contact-us');
+        if (navigateTo) {
+            navigateTo('contact-us');
+        } else {
+            // Fallback in case navigateTo is not provided
+            window.location.href = '/contact-us';
+        }
     };
 
     // Inline styles for improvements
@@ -692,16 +695,18 @@ const ImportantInfoUser = () => {
                         {/* Contact Admin Button in Message Viewer */}
                         <div className="mt-4 pt-3 border-top">
                             <div className="alert alert-info">
-                                <div className="d-flex align-items-center">
-                                    <i className="fas fa-question-circle fa-2x me-3 text-info"></i>
-                                    <div className="flex-grow-1">
-                                        <p className="mb-1 fw-medium">Need more information about this message?</p>
-                                        <p className="mb-0 text-muted small">
-                                            Contact the administrator for clarification or additional details.
-                                        </p>
+                                <div className="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                                    <div className="d-flex align-items-center mb-3 mb-md-0">
+                                        <i className="fas fa-question-circle fa-2x me-3 text-info"></i>
+                                        <div>
+                                            <p className="mb-1 fw-medium">Need more information about this message?</p>
+                                            <p className="mb-0 text-muted small">
+                                                Contact the administrator for clarification or additional details.
+                                            </p>
+                                        </div>
                                     </div>
                                     <button
-                                        className="btn btn-info ms-3"
+                                        className="btn btn-info"
                                         onClick={handleNavigateToContact}
                                     >
                                         <i className="fas fa-phone me-2"></i>
@@ -752,6 +757,20 @@ const ImportantInfoUser = () => {
                             <i className="fas fa-sync-alt me-2"></i>
                             Check for new messages
                         </button>
+                        
+                        {/* Contact Admin button in empty state */}
+                        <div className="mt-4 pt-3 border-top">
+                            <p className="text-muted small mb-3">
+                                Have questions about important information? Contact the administrator for assistance.
+                            </p>
+                            <button
+                                className="btn btn-outline-primary"
+                                onClick={handleNavigateToContact}
+                            >
+                                <i className="fas fa-phone me-2"></i>
+                                Contact Administrator
+                            </button>
+                        </div>
                     </div>
                 </div>
             ) : (
@@ -934,9 +953,9 @@ const ImportantInfoUser = () => {
                             <div className="card-body text-center">
                                 <i className="fas fa-question-circle fa-2x text-info mb-3"></i>
                                 <h5 className="card-title mb-3">Need Clarification?</h5>
-                                <p className="card-text text-muted">
+                                <p className="card-text text-muted justified-text">
                                     If you need more details about any important message you've received, 
-                                    don't hesitate to reach out.
+                                    don't hesitate to reach out for clarification.
                                 </p>
                             </div>
                         </div>
@@ -946,9 +965,9 @@ const ImportantInfoUser = () => {
                             <div className="card-body text-center">
                                 <i className="fas fa-comments fa-2x text-success mb-3"></i>
                                 <h5 className="card-title mb-3">Get Assistance</h5>
-                                <p className="card-text text-muted">
+                                <p className="card-text text-muted justified-text">
                                     Have questions or concerns about the information provided? 
-                                    We're here to assist you.
+                                    We're here to assist you with prompt responses.
                                 </p>
                             </div>
                         </div>
@@ -966,10 +985,20 @@ const ImportantInfoUser = () => {
                     <p className="text-muted mt-3 small">
                         You'll be redirected to the contact form where you can send your message directly to the administrator.
                     </p>
+                    
+                    <div className="mt-4">
+                        <button
+                            className="btn btn-outline-secondary"
+                            onClick={() => setActiveTab('messages')}
+                        >
+                            <i className="fas fa-arrow-left me-2"></i>
+                            Back to Messages
+                        </button>
+                    </div>
                 </div>
             </div>
             <div className="card-footer text-muted text-center">
-                <small>
+                <small className="alert-text-justified">
                     <i className="fas fa-info-circle me-1"></i>
                     Typically respond within 24 hours during business days
                 </small>

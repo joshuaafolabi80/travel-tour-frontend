@@ -1,6 +1,7 @@
 // travel-tour-frontend/src/components/ImportantInfoUser.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { importantInfoService } from '../services/importantInfoApi';
+import { useNavigate } from 'react-router-dom';
 
 const ImportantInfoUser = () => {
     const [messages, setMessages] = useState([]);
@@ -16,7 +17,9 @@ const ImportantInfoUser = () => {
     const [selectedMessage, setSelectedMessage] = useState(null);
     const [unreadCount, setUnreadCount] = useState(0);
     const [socketConnected, setSocketConnected] = useState(false);
+    const [activeTab, setActiveTab] = useState('messages'); // 'messages' or 'contact'
     const socketRef = useRef(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchMessages();
@@ -150,6 +153,10 @@ const ImportantInfoUser = () => {
         setSelectedMessage(null);
     };
 
+    const handleNavigateToContact = () => {
+        navigate('/contact-us');
+    };
+
     // Inline styles for improvements
     const customStyles = `
         /* ====== JUSTIFIED TEXT STYLES ====== */
@@ -196,6 +203,65 @@ const ImportantInfoUser = () => {
             word-spacing: 0.02em;
         }
         
+        /* Tab navigation styling */
+        .important-info-tabs {
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 1.5rem;
+        }
+        
+        .important-info-tabs .nav-link {
+            color: #6c757d;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .important-info-tabs .nav-link:hover {
+            color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.05);
+        }
+        
+        .important-info-tabs .nav-link.active {
+            color: #0d6efd;
+            background-color: transparent;
+            border-bottom: 3px solid #0d6efd;
+        }
+        
+        .important-info-tabs .badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+        }
+        
+        /* Contact Admin Card */
+        .contact-admin-card {
+            border-left: 4px solid #0d6efd;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+        
+        .contact-admin-card .card-title {
+            color: #0d6efd;
+        }
+        
+        .contact-btn {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .contact-btn:hover {
+            background: linear-gradient(135deg, #0a58ca 0%, #084298 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+        }
+        
         /* Mobile adjustments for justified text - REMOVED left alignment */
         @media (max-width: 768px) {
             /* Keep justification on mobile */
@@ -232,6 +298,17 @@ const ImportantInfoUser = () => {
                 font-size: 0.95rem;
                 padding: 15px;
             }
+            
+            /* Tab adjustments for mobile */
+            .important-info-tabs .nav-link {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .contact-btn {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+            }
         }
         
         /* Very small screens adjustments */
@@ -243,6 +320,11 @@ const ImportantInfoUser = () => {
             
             .justified-text {
                 line-height: 1.55;
+            }
+            
+            .important-info-tabs .nav-link {
+                padding: 0.4rem 0.75rem;
+                font-size: 0.85rem;
             }
         }
         
@@ -514,6 +596,387 @@ const ImportantInfoUser = () => {
         }
     `;
 
+    const renderMessagesTab = () => (
+        <>
+            {selectedMessage && (
+                <div className="card mb-4">
+                    <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 className="mb-0">
+                            <i className="fas fa-eye me-2"></i>
+                            Viewing Message
+                        </h5>
+                        <button
+                            className="btn btn-sm btn-light"
+                            onClick={closeMessageViewer}
+                            aria-label="Close message viewer"
+                        >
+                            <i className="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div className="card-body">
+                        <div className="message-header-row mb-3">
+                            <div className="message-title-section">
+                                <h4 className="mb-1">{selectedMessage.title}</h4>
+                                <div className="d-flex flex-wrap gap-2 mt-1">
+                                    {selectedMessage.isUrgent && (
+                                        <span className="badge bg-danger">URGENT</span>
+                                    )}
+                                    {!selectedMessage.isRead && (
+                                        <span className="badge bg-success">NEW</span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="message-actions-section">
+                                <button
+                                    className="btn btn-sm btn-outline-danger"
+                                    onClick={() => handleDelete(selectedMessage._id)}
+                                    aria-label="Delete message"
+                                >
+                                    <i className="fas fa-trash me-1"></i>
+                                    <span className="d-none d-sm-inline">Delete</span>
+                                    <span className="d-inline d-sm-none">Del</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="mb-3">
+                            <small className="text-muted d-block mb-1">
+                                <i className="fas fa-user me-1"></i>
+                                From: {selectedMessage.sender?.name || 'Admin'}
+                            </small>
+                            <small className="text-muted d-block">
+                                <i className="fas fa-clock me-1"></i>
+                                Sent: {formatDate(selectedMessage.createdAt)}
+                            </small>
+                        </div>
+                        
+                        <div className="message-viewer-content">
+                            <div className="message-content-display justified-text">
+                                {selectedMessage.message}
+                            </div>
+                        </div>
+                        
+                        {selectedMessage.attachments?.length > 0 && (
+                            <div className="mt-4">
+                                <h6 className="border-bottom pb-2 mb-3">
+                                    <i className="fas fa-paperclip me-2"></i>
+                                    Attachments ({selectedMessage.attachments.length})
+                                </h6>
+                                <div className="list-group">
+                                    {selectedMessage.attachments.map((attachment, index) => (
+                                        <a
+                                            key={index}
+                                            href={attachment.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="list-group-item list-group-item-action attachment-list-item d-flex justify-content-between align-items-center"
+                                        >
+                                            <div className="text-truncate">
+                                                <i className={`fas fa-file-${attachment.type?.includes('pdf') ? 'pdf' : attachment.type?.includes('image') ? 'image' : 'word'} me-2`}></i>
+                                                <span className="fw-medium">
+                                                    {attachment.filename || attachment.originalname}
+                                                </span>
+                                            </div>
+                                            <div className="d-flex align-items-center">
+                                                <small className="text-muted me-3 d-none d-sm-block">
+                                                    {(attachment.size / 1024).toFixed(1)} KB
+                                                </small>
+                                                <i className="fas fa-download text-primary"></i>
+                                            </div>
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* Contact Admin Button in Message Viewer */}
+                        <div className="mt-4 pt-3 border-top">
+                            <div className="alert alert-info">
+                                <div className="d-flex align-items-center">
+                                    <i className="fas fa-question-circle fa-2x me-3 text-info"></i>
+                                    <div className="flex-grow-1">
+                                        <p className="mb-1 fw-medium">Need more information about this message?</p>
+                                        <p className="mb-0 text-muted small">
+                                            Contact the administrator for clarification or additional details.
+                                        </p>
+                                    </div>
+                                    <button
+                                        className="btn btn-info ms-3"
+                                        onClick={handleNavigateToContact}
+                                    >
+                                        <i className="fas fa-phone me-2"></i>
+                                        Contact Admin
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="card-footer text-muted d-flex justify-content-between align-items-center">
+                        <small className="alert-text-justified">
+                            <i className="fas fa-info-circle me-1"></i>
+                            {selectedMessage.isRead ? 'Read' : 'Unread'} • 
+                            Deleted messages cannot be recovered
+                        </small>
+                        <button
+                            className="btn btn-sm btn-outline-secondary"
+                            onClick={closeMessageViewer}
+                        >
+                            <i className="fas fa-times me-1"></i>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+            {/* Messages List */}
+            {loading && !messages.length ? (
+                <div className="text-center py-5">
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-2">Loading important information...</p>
+                </div>
+            ) : messages.length === 0 ? (
+                <div className="card">
+                    <div className="card-body empty-state">
+                        <i className="fas fa-inbox empty-state-icon text-muted"></i>
+                        <h5 className="card-title">No important information available</h5>
+                        <p className="card-text text-muted mb-4 justified-text">
+                            Check back later for updates from the administration. Important announcements and notifications will appear here when available.
+                        </p>
+                        <button 
+                            className="btn btn-primary mt-2"
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                        >
+                            <i className="fas fa-sync-alt me-2"></i>
+                            Check for new messages
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <div className="row g-3">
+                        {messages.map((message) => (
+                            <div key={message._id} className="col-12">
+                                <div 
+                                    className={`card message-card ${!message.isRead ? 'unread' : ''} ${selectedMessage?._id === message._id ? 'selected' : ''}`}
+                                    onClick={() => handleViewMessage(message)}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className="card-body position-relative">
+                                        {!message.isRead && (
+                                            <div className="unread-indicator"></div>
+                                        )}
+                                        
+                                        <div className="message-header-row">
+                                            <div className="message-title-section">
+                                                <h5 className="card-title mb-1">
+                                                    {message.title}
+                                                    {message.isUrgent && (
+                                                        <span className="badge bg-danger ms-2">URGENT</span>
+                                                    )}
+                                                </h5>
+                                                <div className="d-flex flex-wrap gap-2 align-items-center mt-1">
+                                                    <small className="text-muted">
+                                                        <i className="fas fa-user me-1"></i>
+                                                        {message.sender?.name || 'Admin'}
+                                                    </small>
+                                                    <small className="text-muted">
+                                                        <i className="fas fa-clock me-1"></i>
+                                                        {formatDate(message.createdAt)}
+                                                    </small>
+                                                    {!message.isRead && (
+                                                        <span className="badge bg-success new-badge-spacing">
+                                                            <i className="fas fa-envelope me-1"></i>
+                                                            NEW
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="message-actions-section">
+                                                <button
+                                                    className="btn btn-sm btn-outline-danger"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(message._id);
+                                                    }}
+                                                    title="Delete message"
+                                                    aria-label="Delete message"
+                                                >
+                                                    <i className="fas fa-trash"></i>
+                                                    <span className="d-none d-sm-inline ms-1">Delete</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="mt-3">
+                                            <div className="card-text text-muted card-text-justified message-preview">
+                                                {message.message}
+                                            </div>
+                                            {message.message.length > 150 && (
+                                                <small className="text-primary mt-2 d-block">
+                                                    <i className="fas fa-arrow-right me-1"></i>
+                                                    Click to read full message...
+                                                </small>
+                                            )}
+                                        </div>
+                                        
+                                        {message.attachments?.length > 0 && (
+                                            <div className="mt-3 pt-3 border-top">
+                                                <small className="text-muted">
+                                                    <i className="fas fa-paperclip me-1"></i>
+                                                    {message.attachments.length} attachment{message.attachments.length !== 1 ? 's' : ''}
+                                                </small>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    {/* Pagination */}
+                    {pagination.totalPages > 1 && (
+                        <nav className="mt-4">
+                            <ul className="pagination justify-content-center">
+                                <li className={`page-item ${pagination.currentPage === 1 ? 'disabled' : ''}`}>
+                                    <button
+                                        className="page-link"
+                                        onClick={() => handlePageChange(pagination.currentPage - 1)}
+                                        disabled={pagination.currentPage === 1}
+                                        aria-label="Previous page"
+                                    >
+                                        <i className="fas fa-chevron-left me-1 d-none d-md-inline"></i>
+                                        <span className="d-inline d-md-none">‹</span>
+                                        <span className="d-none d-md-inline">Previous</span>
+                                    </button>
+                                </li>
+                                
+                                {[...Array(pagination.totalPages)].map((_, index) => {
+                                    const pageNum = index + 1;
+                                    // Show only nearby pages for better UX
+                                    if (
+                                        pageNum === 1 || 
+                                        pageNum === pagination.totalPages ||
+                                        (pageNum >= pagination.currentPage - 2 && pageNum <= pagination.currentPage + 2)
+                                    ) {
+                                        return (
+                                            <li 
+                                                key={pageNum}
+                                                className={`page-item ${pagination.currentPage === pageNum ? 'active' : ''}`}
+                                            >
+                                                <button
+                                                    className="page-link"
+                                                    onClick={() => handlePageChange(pageNum)}
+                                                    aria-label={`Page ${pageNum}`}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            </li>
+                                        );
+                                    } else if (
+                                        pageNum === pagination.currentPage - 3 ||
+                                        pageNum === pagination.currentPage + 3
+                                    ) {
+                                        return (
+                                            <li key={pageNum} className="page-item disabled">
+                                                <span className="page-link">...</span>
+                                            </li>
+                                        );
+                                    }
+                                    return null;
+                                })}
+                                
+                                <li className={`page-item ${pagination.currentPage === pagination.totalPages ? 'disabled' : ''}`}>
+                                    <button
+                                        className="page-link"
+                                        onClick={() => handlePageChange(pagination.currentPage + 1)}
+                                        disabled={pagination.currentPage === pagination.totalPages}
+                                        aria-label="Next page"
+                                    >
+                                        <span className="d-none d-md-inline">Next</span>
+                                        <span className="d-inline d-md-none">›</span>
+                                        <i className="fas fa-chevron-right ms-1 d-none d-md-inline"></i>
+                                    </button>
+                                </li>
+                            </ul>
+                            <div className="text-center mt-2">
+                                <small className="text-muted">
+                                    Page {pagination.currentPage} of {pagination.totalPages} • 
+                                    Showing {messages.length} of {pagination.totalItems} messages
+                                </small>
+                            </div>
+                        </nav>
+                    )}
+                </>
+            )}
+        </>
+    );
+
+    const renderContactTab = () => (
+        <div className="card contact-admin-card">
+            <div className="card-body">
+                <div className="text-center mb-4">
+                    <i className="fas fa-phone-alt fa-3x text-primary mb-3"></i>
+                    <h3 className="card-title mb-3">Contact Administrator</h3>
+                    <p className="card-text text-muted justified-text">
+                        Have questions about important messages or need clarification? 
+                        Contact the administrator directly through our contact form.
+                        We're here to help you with any questions or concerns regarding 
+                        important announcements and information.
+                    </p>
+                </div>
+                
+                <div className="row g-4">
+                    <div className="col-md-6">
+                        <div className="card h-100 border-0 shadow-sm">
+                            <div className="card-body text-center">
+                                <i className="fas fa-question-circle fa-2x text-info mb-3"></i>
+                                <h5 className="card-title mb-3">Need Clarification?</h5>
+                                <p className="card-text text-muted">
+                                    If you need more details about any important message you've received, 
+                                    don't hesitate to reach out.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="col-md-6">
+                        <div className="card h-100 border-0 shadow-sm">
+                            <div className="card-body text-center">
+                                <i className="fas fa-comments fa-2x text-success mb-3"></i>
+                                <h5 className="card-title mb-3">Get Assistance</h5>
+                                <p className="card-text text-muted">
+                                    Have questions or concerns about the information provided? 
+                                    We're here to assist you.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="text-center mt-5">
+                    <button
+                        className="btn btn-primary btn-lg contact-btn"
+                        onClick={handleNavigateToContact}
+                    >
+                        <i className="fas fa-paper-plane me-2"></i>
+                        Go to Contact Form
+                    </button>
+                    <p className="text-muted mt-3 small">
+                        You'll be redirected to the contact form where you can send your message directly to the administrator.
+                    </p>
+                </div>
+            </div>
+            <div className="card-footer text-muted text-center">
+                <small>
+                    <i className="fas fa-info-circle me-1"></i>
+                    Typically respond within 24 hours during business days
+                </small>
+            </div>
+        </div>
+    );
+
     return (
         <>
             <style>{customStyles}</style>
@@ -527,31 +990,62 @@ const ImportantInfoUser = () => {
                                 Important Information
                             </h2>
                             <div className="d-flex align-items-center gap-3">
-                                {unreadCount > 0 && (
+                                {activeTab === 'messages' && unreadCount > 0 && (
                                     <span className="badge bg-danger">
                                         <i className="fas fa-bell me-1"></i>
                                         {unreadCount} New
                                     </span>
                                 )}
                                 
-                                <button 
-                                    className="btn btn-outline-primary refresh-btn"
-                                    onClick={handleRefresh}
-                                    disabled={refreshing}
-                                    title="Refresh messages"
-                                >
-                                    {refreshing ? (
-                                        <span className="spinner-border spinner-border-sm" role="status">
-                                            <span className="visually-hidden">Loading...</span>
-                                        </span>
-                                    ) : (
-                                        <>
-                                            <i className="fas fa-sync-alt me-1"></i>
-                                            <span className="d-none d-md-inline">Refresh</span>
-                                        </>
-                                    )}
-                                </button>
+                                {activeTab === 'messages' && (
+                                    <button 
+                                        className="btn btn-outline-primary refresh-btn"
+                                        onClick={handleRefresh}
+                                        disabled={refreshing}
+                                        title="Refresh messages"
+                                    >
+                                        {refreshing ? (
+                                            <span className="spinner-border spinner-border-sm" role="status">
+                                                <span className="visually-hidden">Loading...</span>
+                                            </span>
+                                        ) : (
+                                            <>
+                                                <i className="fas fa-sync-alt me-1"></i>
+                                                <span className="d-none d-md-inline">Refresh</span>
+                                            </>
+                                        )}
+                                    </button>
+                                )}
                             </div>
+                        </div>
+                        
+                        {/* Tab Navigation */}
+                        <div className="important-info-tabs">
+                            <ul className="nav nav-tabs border-0">
+                                <li className="nav-item">
+                                    <button
+                                        className={`nav-link ${activeTab === 'messages' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('messages')}
+                                    >
+                                        <i className="fas fa-envelope me-1"></i>
+                                        Messages
+                                        {unreadCount > 0 && (
+                                            <span className="badge bg-danger ms-1">
+                                                {unreadCount}
+                                            </span>
+                                        )}
+                                    </button>
+                                </li>
+                                <li className="nav-item">
+                                    <button
+                                        className={`nav-link ${activeTab === 'contact' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('contact')}
+                                    >
+                                        <i className="fas fa-phone me-1"></i>
+                                        Contact Admin
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
                         
                         {error && (
@@ -562,7 +1056,7 @@ const ImportantInfoUser = () => {
                             </div>
                         )}
                         
-                        {socketConnected && (
+                        {socketConnected && activeTab === 'messages' && (
                             <div className="alert alert-info mb-4">
                                 <i className="fas fa-wifi me-2"></i>
                                 <span className="alert-text-justified">
@@ -571,298 +1065,8 @@ const ImportantInfoUser = () => {
                             </div>
                         )}
                         
-                        {loading && !messages.length ? (
-                            <div className="text-center py-5">
-                                <div className="spinner-border text-primary" role="status">
-                                    <span className="visually-hidden">Loading...</span>
-                                </div>
-                                <p className="mt-2">Loading important information...</p>
-                            </div>
-                        ) : messages.length === 0 ? (
-                            <div className="card">
-                                <div className="card-body empty-state">
-                                    <i className="fas fa-inbox empty-state-icon text-muted"></i>
-                                    <h5 className="card-title">No important information available</h5>
-                                    <p className="card-text text-muted mb-4 justified-text">
-                                        Check back later for updates from the administration. Important announcements and notifications will appear here when available.
-                                    </p>
-                                    <button 
-                                        className="btn btn-primary mt-2"
-                                        onClick={handleRefresh}
-                                        disabled={refreshing}
-                                    >
-                                        <i className="fas fa-sync-alt me-2"></i>
-                                        Check for new messages
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                {/* Message Viewer */}
-                                {selectedMessage && (
-                                    <div className="card mb-4">
-                                        <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                                            <h5 className="mb-0">
-                                                <i className="fas fa-eye me-2"></i>
-                                                Viewing Message
-                                            </h5>
-                                            <button
-                                                className="btn btn-sm btn-light"
-                                                onClick={closeMessageViewer}
-                                                aria-label="Close message viewer"
-                                            >
-                                                <i className="fas fa-times"></i>
-                                            </button>
-                                        </div>
-                                        <div className="card-body">
-                                            <div className="message-header-row mb-3">
-                                                <div className="message-title-section">
-                                                    <h4 className="mb-1">{selectedMessage.title}</h4>
-                                                    <div className="d-flex flex-wrap gap-2 mt-1">
-                                                        {selectedMessage.isUrgent && (
-                                                            <span className="badge bg-danger">URGENT</span>
-                                                        )}
-                                                        {!selectedMessage.isRead && (
-                                                            <span className="badge bg-success">NEW</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="message-actions-section">
-                                                    <button
-                                                        className="btn btn-sm btn-outline-danger"
-                                                        onClick={() => handleDelete(selectedMessage._id)}
-                                                        aria-label="Delete message"
-                                                    >
-                                                        <i className="fas fa-trash me-1"></i>
-                                                        <span className="d-none d-sm-inline">Delete</span>
-                                                        <span className="d-inline d-sm-none">Del</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="mb-3">
-                                                <small className="text-muted d-block mb-1">
-                                                    <i className="fas fa-user me-1"></i>
-                                                    From: {selectedMessage.sender?.name || 'Admin'}
-                                                </small>
-                                                <small className="text-muted d-block">
-                                                    <i className="fas fa-clock me-1"></i>
-                                                    Sent: {formatDate(selectedMessage.createdAt)}
-                                                </small>
-                                            </div>
-                                            
-                                            <div className="message-viewer-content">
-                                                <div className="message-content-display justified-text">
-                                                    {selectedMessage.message}
-                                                </div>
-                                            </div>
-                                            
-                                            {selectedMessage.attachments?.length > 0 && (
-                                                <div className="mt-4">
-                                                    <h6 className="border-bottom pb-2 mb-3">
-                                                        <i className="fas fa-paperclip me-2"></i>
-                                                        Attachments ({selectedMessage.attachments.length})
-                                                    </h6>
-                                                    <div className="list-group">
-                                                        {selectedMessage.attachments.map((attachment, index) => (
-                                                            <a
-                                                                key={index}
-                                                                href={attachment.url}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="list-group-item list-group-item-action attachment-list-item d-flex justify-content-between align-items-center"
-                                                            >
-                                                                <div className="text-truncate">
-                                                                    <i className={`fas fa-file-${attachment.type?.includes('pdf') ? 'pdf' : attachment.type?.includes('image') ? 'image' : 'word'} me-2`}></i>
-                                                                    <span className="fw-medium">
-                                                                        {attachment.filename || attachment.originalname}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="d-flex align-items-center">
-                                                                    <small className="text-muted me-3 d-none d-sm-block">
-                                                                        {(attachment.size / 1024).toFixed(1)} KB
-                                                                    </small>
-                                                                    <i className="fas fa-download text-primary"></i>
-                                                                </div>
-                                                            </a>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="card-footer text-muted d-flex justify-content-between align-items-center">
-                                            <small className="alert-text-justified">
-                                                <i className="fas fa-info-circle me-1"></i>
-                                                {selectedMessage.isRead ? 'Read' : 'Unread'} • 
-                                                Deleted messages cannot be recovered
-                                            </small>
-                                            <button
-                                                className="btn btn-sm btn-outline-secondary"
-                                                onClick={closeMessageViewer}
-                                            >
-                                                <i className="fas fa-times me-1"></i>
-                                                Close
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                {/* Messages List */}
-                                <div className="row g-3">
-                                    {messages.map((message) => (
-                                        <div key={message._id} className="col-12">
-                                            <div 
-                                                className={`card message-card ${!message.isRead ? 'unread' : ''} ${selectedMessage?._id === message._id ? 'selected' : ''}`}
-                                                onClick={() => handleViewMessage(message)}
-                                                style={{ cursor: 'pointer' }}
-                                            >
-                                                <div className="card-body position-relative">
-                                                    {!message.isRead && (
-                                                        <div className="unread-indicator"></div>
-                                                    )}
-                                                    
-                                                    <div className="message-header-row">
-                                                        <div className="message-title-section">
-                                                            <h5 className="card-title mb-1">
-                                                                {message.title}
-                                                                {message.isUrgent && (
-                                                                    <span className="badge bg-danger ms-2">URGENT</span>
-                                                                )}
-                                                            </h5>
-                                                            <div className="d-flex flex-wrap gap-2 align-items-center mt-1">
-                                                                <small className="text-muted">
-                                                                    <i className="fas fa-user me-1"></i>
-                                                                    {message.sender?.name || 'Admin'}
-                                                                </small>
-                                                                <small className="text-muted">
-                                                                    <i className="fas fa-clock me-1"></i>
-                                                                    {formatDate(message.createdAt)}
-                                                                </small>
-                                                                {!message.isRead && (
-                                                                    <span className="badge bg-success new-badge-spacing">
-                                                                        <i className="fas fa-envelope me-1"></i>
-                                                                        NEW
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <div className="message-actions-section">
-                                                            <button
-                                                                className="btn btn-sm btn-outline-danger"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDelete(message._id);
-                                                                }}
-                                                                title="Delete message"
-                                                                aria-label="Delete message"
-                                                            >
-                                                                <i className="fas fa-trash"></i>
-                                                                <span className="d-none d-sm-inline ms-1">Delete</span>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div className="mt-3">
-                                                        <div className="card-text text-muted card-text-justified message-preview">
-                                                            {message.message}
-                                                        </div>
-                                                        {message.message.length > 150 && (
-                                                            <small className="text-primary mt-2 d-block">
-                                                                <i className="fas fa-arrow-right me-1"></i>
-                                                                Click to read full message...
-                                                            </small>
-                                                        )}
-                                                    </div>
-                                                    
-                                                    {message.attachments?.length > 0 && (
-                                                        <div className="mt-3 pt-3 border-top">
-                                                            <small className="text-muted">
-                                                                <i className="fas fa-paperclip me-1"></i>
-                                                                {message.attachments.length} attachment{message.attachments.length !== 1 ? 's' : ''}
-                                                            </small>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                
-                                {/* Pagination */}
-                                {pagination.totalPages > 1 && (
-                                    <nav className="mt-4">
-                                        <ul className="pagination justify-content-center">
-                                            <li className={`page-item ${pagination.currentPage === 1 ? 'disabled' : ''}`}>
-                                                <button
-                                                    className="page-link"
-                                                    onClick={() => handlePageChange(pagination.currentPage - 1)}
-                                                    disabled={pagination.currentPage === 1}
-                                                    aria-label="Previous page"
-                                                >
-                                                    <i className="fas fa-chevron-left me-1 d-none d-md-inline"></i>
-                                                    <span className="d-inline d-md-none">‹</span>
-                                                    <span className="d-none d-md-inline">Previous</span>
-                                                </button>
-                                            </li>
-                                            
-                                            {[...Array(pagination.totalPages)].map((_, index) => {
-                                                const pageNum = index + 1;
-                                                // Show only nearby pages for better UX
-                                                if (
-                                                    pageNum === 1 || 
-                                                    pageNum === pagination.totalPages ||
-                                                    (pageNum >= pagination.currentPage - 2 && pageNum <= pagination.currentPage + 2)
-                                                ) {
-                                                    return (
-                                                        <li 
-                                                            key={pageNum}
-                                                            className={`page-item ${pagination.currentPage === pageNum ? 'active' : ''}`}
-                                                        >
-                                                            <button
-                                                                className="page-link"
-                                                                onClick={() => handlePageChange(pageNum)}
-                                                                aria-label={`Page ${pageNum}`}
-                                                            >
-                                                                {pageNum}
-                                                            </button>
-                                                        </li>
-                                                    );
-                                                } else if (
-                                                    pageNum === pagination.currentPage - 3 ||
-                                                    pageNum === pagination.currentPage + 3
-                                                ) {
-                                                    return (
-                                                        <li key={pageNum} className="page-item disabled">
-                                                            <span className="page-link">...</span>
-                                                        </li>
-                                                    );
-                                                }
-                                                return null;
-                                            })}
-                                            
-                                            <li className={`page-item ${pagination.currentPage === pagination.totalPages ? 'disabled' : ''}`}>
-                                                <button
-                                                    className="page-link"
-                                                    onClick={() => handlePageChange(pagination.currentPage + 1)}
-                                                    disabled={pagination.currentPage === pagination.totalPages}
-                                                    aria-label="Next page"
-                                                >
-                                                    <span className="d-none d-md-inline">Next</span>
-                                                    <span className="d-inline d-md-none">›</span>
-                                                    <i className="fas fa-chevron-right ms-1 d-none d-md-inline"></i>
-                                                </button>
-                                            </li>
-                                        </ul>
-                                        <div className="text-center mt-2">
-                                            <small className="text-muted">
-                                                Page {pagination.currentPage} of {pagination.totalPages} • 
-                                                Showing {messages.length} of {pagination.totalItems} messages
-                                            </small>
-                                        </div>
-                                    </nav>
-                                )}
-                            </>
-                        )}
+                        {/* Render active tab content */}
+                        {activeTab === 'messages' ? renderMessagesTab() : renderContactTab()}
                     </div>
                 </div>
             </div>
